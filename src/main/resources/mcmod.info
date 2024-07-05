@@ -1,0 +1,16 @@
+[
+{
+  "modid": "warforge",
+  "name": "WarForge",
+  "description": "A fork of WarForge by Flan for the WarFactory server.",
+  "version": "1.2",
+  "mcversion": "1.12.2",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["Flan", "Reclipse", "Super"],
+  "credits": "Flan for making the mod itself, Reclipse and Super for maintaining it, CleanroomMC for the Dev Env.",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]

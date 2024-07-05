@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "GGG",
+    "GSG",
+    "OOO"
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:emerald"
+    },
+    "G": {
+      "item": "minecraft:glass"
+    },
+    "O": {
+      "item": "minecraft:gold_block"
+    }
+  },
+  "result": {
+    "item": "warforge:basicclaimblock"
+  }
+}

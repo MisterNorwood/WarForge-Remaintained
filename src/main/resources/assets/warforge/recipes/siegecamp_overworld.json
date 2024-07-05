@@ -1,0 +1,33 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " N ",
+    "FBC",
+    "OOO"
+  ],
+  "key": {
+    "B": 
+	{ 
+		"item": "minecraft:bed",
+		"data": 32767
+	},
+    "N": 
+	{
+      "item": "minecraft:banner",
+	  "data": 32767
+    },
+    "F": {
+      "item": "minecraft:furnace"
+    },
+	"C": {
+      "item": "minecraft:chest"
+    },
+	"O": {
+      "item": "minecraft:cobblestone"
+    }
+	
+  },
+  "result": {
+    "item": "warforge:siegecampblock"
+  }
+}

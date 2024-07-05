@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "GGG",
+    "GSG",
+    "OOO"
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:ghast_tear"
+    },
+    "G": {
+      "item": "minecraft:glowstone"
+    },
+    "O": {
+      "item": "minecraft:nether_brick"
+    }
+  },
+  "result": {
+    "item": "warforge:citadelblock"
+  }
+}
