@@ -1,6 +1,6 @@
 ## WarForge Remaintained
-A fork of (WarForge)[https://github.com/FlansMods/WarForge] by (Flan)[https://github.com/jamioflan] made for the (WarForge)[https://discord.gg/VqVYYWEGrE] event.
+A fork of [WarForge](https://github.com/FlansMods/WarForge) by [Flan](https://github.com/jamioflan) made for the [WarForge](https://discord.gg/VqVYYWEGrE) event.
 
 Maintained by Reclipse and Super.
 
-(Dev Environment)[https://github.com/CleanroomMC/TemplateDevEnv] by CleanroomMC
+[Dev Environment](https://github.com/CleanroomMC/TemplateDevEnv) by CleanroomMC
