@@ -70,11 +70,7 @@ import java.awt.Color;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 import org.apache.logging.log4j.Logger;
 
@@ -110,9 +106,10 @@ import com.mojang.authlib.GameProfile;
 import com.flansmod.warforge.server.Faction.Role;
 import com.flansmod.warforge.server.FactionStorage;
 import com.flansmod.warforge.server.Leaderboard;
+import zone.rong.mixinbooter.ILateMixinLoader;
 
 @Mod(modid = WarForgeMod.MODID, name = WarForgeMod.NAME, version = WarForgeMod.VERSION)
-public class WarForgeMod
+public class WarForgeMod implements ILateMixinLoader
 {
     public static final String MODID = "warforge";
     public static final String NAME = "WarForge Factions";
@@ -739,4 +736,8 @@ public class WarForgeMod
     	return sender instanceof MinecraftServer;
     }
 
+	@Override
+	public List<String> getMixinConfigs() {
+		return Collections.singletonList("mixins.warforge.json");
+	}
 }

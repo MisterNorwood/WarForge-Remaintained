@@ -78,14 +78,14 @@ public class ProtectionsModule
 	}
 	
 	@Nonnull
-	public ProtectionConfig GetProtections(UUID playerID, DimBlockPos pos)
+	public static ProtectionConfig GetProtections(UUID playerID, DimBlockPos pos)
 	{
 		return GetProtections(playerID, pos.ToChunkPos());
 	}
 	
 	// It is generally expected that you are asking about a loaded chunk, not that that should matter
 	@Nonnull
-	public ProtectionConfig GetProtections(UUID playerID, DimChunkPos pos)
+	public static ProtectionConfig GetProtections(UUID playerID, DimChunkPos pos)
 	{
 		UUID factionID = WarForgeMod.FACTIONS.GetClaim(pos);
 		if(factionID.equals(FactionStorage.SAFE_ZONE_ID))
