@@ -679,7 +679,7 @@ public class WarForgeMod
 		}
 	}
 	
-	private void Save()
+	private void Save(String event)
 	{
 		try
 		{
@@ -697,7 +697,7 @@ public class WarForgeMod
 				}
 				
 				CompressedStreamTools.writeCompressed(tags, new FileOutputStream(factionsFile));
-				LOGGER.info("Successfully saved warforgefactions.dat");
+				LOGGER.info("Successfully saved warforgefactions.dat on event - " + event);
 			}
 		}
 		catch(Exception e)
@@ -712,14 +712,15 @@ public class WarForgeMod
 	{
 		if(!event.getWorld().isRemote)
 		{
-			Save();
+			int dimensionID = event.getWorld().provider.getDimension();
+			Save("World Save - DIM " + dimensionID);
 		}
 	}
 	
 	@EventHandler
 	public void ServerStopped(FMLServerStoppingEvent event)
 	{
-		Save();
+		Save("Server Stop");
 		MC_SERVER = null;
 	}
 	
