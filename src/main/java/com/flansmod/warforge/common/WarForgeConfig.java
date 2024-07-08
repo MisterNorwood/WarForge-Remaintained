@@ -15,6 +15,7 @@ public class WarForgeConfig
 	
 	// World gen
 	public static final String CATEGORY_WORLD_GEN = "WorldGen";
+	public static boolean ENABLE_WORLD_GEN = false;
 	public static int DENSE_IRON_CELL_SIZE = 64;
 	public static int DENSE_IRON_DEPOSIT_RADIUS = 4;
 	public static int DENSE_IRON_MIN_INSTANCES_PER_CELL = 1;
@@ -319,6 +320,7 @@ public class WarForgeConfig
 		//SIEGECAMP_OTHER.syncConfig("SiegeOther", "Other sieges, defending or neutral");
 		
 		// World Generation Settings
+		ENABLE_WORLD_GEN = configFile.getBoolean("Enable worldgen", CATEGORY_WORLD_GEN, false, "Allow for dense ores to spawn");
 		DENSE_IRON_CELL_SIZE = configFile.getInt("Dense Iron - Cell Size", CATEGORY_WORLD_GEN, DENSE_IRON_CELL_SIZE, 8, 4096, "Divide the world into cells of this size and generate 1 or more deposits per cell");
 		DENSE_IRON_DEPOSIT_RADIUS = configFile.getInt("Dense Iron - Deposit Radius", CATEGORY_WORLD_GEN, DENSE_IRON_DEPOSIT_RADIUS, 1, 16, "Radius of a deposit");
 		DENSE_IRON_MIN_INSTANCES_PER_CELL = configFile.getInt("Dense Iron - Min Deposits Per Cell", CATEGORY_WORLD_GEN, DENSE_IRON_MIN_INSTANCES_PER_CELL, 0, 256, "Minimum number of deposits per cell");
