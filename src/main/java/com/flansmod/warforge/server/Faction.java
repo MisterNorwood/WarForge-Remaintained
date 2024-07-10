@@ -1,7 +1,5 @@
 package com.flansmod.warforge.server;
 
-import java.awt.Color;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -11,7 +9,6 @@ import com.flansmod.warforge.common.DimChunkPos;
 import com.flansmod.warforge.common.WarForgeConfig;
 import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.common.blocks.IClaim;
-import com.flansmod.warforge.common.blocks.TileEntitySiegeCamp;
 import com.flansmod.warforge.common.blocks.TileEntityYieldCollector;
 import com.flansmod.warforge.common.network.FactionDisplayInfo;
 import com.flansmod.warforge.common.network.PlayerDisplayInfo;
@@ -32,7 +29,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.World;
-import net.minecraftforge.fml.server.FMLServerHandler;
 
 public class Faction 
 {
@@ -81,6 +77,18 @@ public class Faction
 	}
 	
 	public UUID mUUID;
+
+	// Siege
+	private long lastSiegeTimestamp;
+
+	public void setLastSiegeTimestamp(long tick) {
+		this.lastSiegeTimestamp = tick;
+	}
+
+	public long getLastSiegeTimestamp() {
+		return this.lastSiegeTimestamp;
+	}
+
 	public String mName;
 	public DimBlockPos mCitadelPos;
 	public HashMap<DimBlockPos, Integer> mClaims;

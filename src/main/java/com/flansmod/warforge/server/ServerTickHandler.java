@@ -13,15 +13,14 @@ import net.minecraftforge.fml.common.gameevent.TickEvent.ServerTickEvent;
 public class ServerTickHandler 
 {	
 	@SubscribeEvent
-	public void OnTick(ServerTickEvent tick)
-	{
+	public void OnTick(ServerTickEvent tick) {
 		WarForgeMod.INSTANCE.UpdateServer();
 		WarForgeMod.INSTANCE.NETWORK.handleServerPackets();
 		WarForgeMod.PROTECTIONS.UpdateServer();
 		WarForgeMod.TELEPORTS.Update();
 		WarForgeMod.proxy.TickServer();
 		WarForgeMod.FACTIONS.Update();
+
+		// WarForgeMod.LOGGER.info("Current tick: " + WarForgeMod.ServerTick);
 	}
-	
-	
 }

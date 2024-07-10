@@ -140,6 +140,9 @@ public class WarForgeMod
 	public static long numberOfSiegeDaysTicked = 0L;
 	public static long numberOfYieldDaysTicked = 0L;
 	public static long timestampOfFirstDay = 0L;
+
+	// Timers
+	public static long ServerTick = 0L;
 	
     @EventHandler
     public void preInit(FMLPreInitializationEvent event)
@@ -218,7 +221,16 @@ public class WarForgeMod
      			* 60f // In seconds
      			* 1000f); // In milliseconds
     }
-    
+
+	public long GetCooldownIntoTicks(float cooldown) {
+		// From Minutes
+		return (long)(
+				cooldown
+				* 60L // Minutes -> Seconds
+				* 20L // Seconds -> Ticks
+				);
+	}
+
 	public long GetMSToNextSiegeAdvance() 
 	{
 		long elapsedMS = System.currentTimeMillis() - timestampOfFirstDay;
@@ -242,7 +254,9 @@ public class WarForgeMod
     	long dayLength = GetSiegeDayLengthMS();
     	
     	long dayNumber = (msTime - timestampOfFirstDay) / dayLength;
-    	
+
+		ServerTick++;
+
     	if(dayNumber > numberOfSiegeDaysTicked)
     	{
     		// Time to tick a new day

@@ -124,8 +124,7 @@ public class Siege
 		Faction attackers = WarForgeMod.FACTIONS.GetFaction(mAttackingFaction);
 		Faction defenders = WarForgeMod.FACTIONS.GetFaction(mDefendingFaction);
 		
-		if(attackers == null || defenders == null)
-		{
+		if (attackers == null || defenders == null) {
 			WarForgeMod.LOGGER.error("Invalid factions in siege. Cannot start");
 			return false;
 		}
@@ -259,6 +258,7 @@ public class Siege
 	{
 		
 	}
+
 	private boolean isPlayerInWarzone(DimBlockPos siegeCampPos, EntityPlayerMP player){
 			if(player.dimension != siegeCampPos.mDim){
 				return false;
@@ -363,10 +363,8 @@ public class Siege
 		
 		// Get the important locations
 		NBTTagList claimList = tags.getTagList("attackLocations", 11); // IntArray (see NBTBase.class)
-		if(claimList != null)
-		{
-			for(NBTBase base : claimList)
-			{
+		if (claimList != null) {
+			for(NBTBase base : claimList) {
 				NBTTagIntArray claimInfo = (NBTTagIntArray)base;
 				DimBlockPos pos = DimBlockPos.ReadFromNBT(claimInfo);
 				mAttackingSiegeCamps.add(pos);

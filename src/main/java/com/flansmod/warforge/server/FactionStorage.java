@@ -23,15 +23,12 @@ import net.minecraft.command.ICommandSender;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.World;
 
@@ -658,6 +655,12 @@ public class FactionStorage
     public boolean RequestStartSiege(EntityPlayer factionOfficer, DimBlockPos siegeCampPos, EnumFacing direction)
     {
     	Faction attacking = GetFactionOfPlayer(factionOfficer.getUniqueID());
+
+		if ((attacking.getLastSiegeTimestamp() - WarForgeMod.INSTANCE.GetCooldownIntoTicks(WarForgeConfig.SIEGE_COOLDOWN)) < WarForgeMod.ServerTick) {
+			factionOfficer.sendMessage(new TextComponentString("Your faction is on cooldown on starting a new siege"));
+			return false;
+		}
+
     	if(attacking == null)
     	{
     		factionOfficer.sendMessage(new TextComponentString("You are not in a faction"));
@@ -696,7 +699,9 @@ public class FactionStorage
     	RequestPlaceFlag((EntityPlayerMP)factionOfficer, siegeCampPos);
     	mSieges.put(defendingChunk, siege);
     	siege.Start();
-    	
+
+		attacking.setLastSiegeTimestamp(WarForgeMod.ServerTick);
+
     	return true;
     }
     
