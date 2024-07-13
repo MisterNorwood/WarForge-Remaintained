@@ -44,12 +44,14 @@ public class Faction
 		public Faction.Role mRole = Faction.Role.MEMBER;
 		public DimBlockPos mFlagPosition = DimBlockPos.ZERO;
 		public boolean mHasMovedFlagToday = false;
+		public long mMoveFlagCooldown = 0; // in Ticks
 		
 		public void ReadFromNBT(NBTTagCompound tags)
 		{
 			// Read and write role by string so enum order can change
 			mRole = Faction.Role.valueOf(tags.getString("role"));
 			mHasMovedFlagToday = tags.getBoolean("movedFlag");
+			mMoveFlagCooldown = tags.getLong("flagCooldown");
 			mFlagPosition = new DimBlockPos(
 					tags.getInteger("dim"),
 					tags.getInteger("x"),
@@ -61,6 +63,7 @@ public class Faction
 		{
 			tags.setString("role", mRole.name());
 			tags.setBoolean("movedFlag", mHasMovedFlagToday);
+			tags.setLong("flagCooldown", mMoveFlagCooldown);
 			tags.setInteger("dim", mFlagPosition.mDim);
 			tags.setInteger("x", mFlagPosition.getX());
 			tags.setInteger("y", mFlagPosition.getY());
@@ -158,6 +161,7 @@ public class Faction
 		mHasHadAnyLoginsToday = false;
 		mDaysUntilCitadelMoveAvailable--;
 	}
+	public void
 	
 	public FactionDisplayInfo CreateInfo()
 	{
