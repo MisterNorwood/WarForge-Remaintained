@@ -510,7 +510,7 @@ public class Faction
 		if(data != null)
 		{
 			//return !data.mHasMovedFlagToday;
-			if(data.mMoveFlagCooldown - System.currentTimeMillis() == 0)
+		if(data.mMoveFlagCooldown - System.currentTimeMillis() <= 0)
 				return true;
 		}
 		return false;

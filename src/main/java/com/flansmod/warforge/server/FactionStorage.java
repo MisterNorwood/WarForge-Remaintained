@@ -79,7 +79,10 @@ public class FactionStorage
     		return mFactions.get(factionID).IsPlayerInFaction(playerID);
     	return false;
     }
-    
+	public long getPlayerCooldown(UUID playerID){
+		return mFactions.get(playerID).mMembers.get(playerID).mMoveFlagCooldown;
+	}
+
     public boolean IsPlayerRoleInFaction(UUID playerID, UUID factionID, Faction.Role role)
     {
     	if(mFactions.containsKey(factionID))
