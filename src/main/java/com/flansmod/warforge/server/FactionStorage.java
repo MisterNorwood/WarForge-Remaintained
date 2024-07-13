@@ -661,6 +661,12 @@ public class FactionStorage
 
 		if ((attacking.getLastSiegeTimestamp() - WarForgeMod.INSTANCE.GetCooldownIntoTicks(WarForgeConfig.SIEGE_COOLDOWN_FAIL)) < WarForgeMod.ServerTick) {
 			factionOfficer.sendMessage(new TextComponentString("Your faction is on cooldown on starting a new siege"));
+
+			long s = WarForgeMod.INSTANCE.GetCooldownRemainingSeconds(WarForgeConfig.SIEGE_COOLDOWN_FAIL, attacking.getLastSiegeTimestamp()) % 60;
+			int m = WarForgeMod.INSTANCE.GetCooldownRemainingMinutes(WarForgeConfig.SIEGE_COOLDOWN_FAIL, attacking.getLastSiegeTimestamp()) % 60;
+			int h = WarForgeMod.INSTANCE.GetCooldownRemainingHours(WarForgeConfig.SIEGE_COOLDOWN_FAIL, attacking.getLastSiegeTimestamp());
+
+			factionOfficer.sendMessage(new TextComponentString(String.format("Cooldown remaining: %dh %dm %ds or %d ticks", h, m, s, s * 20)));
 			return false;
 		}
 

@@ -233,6 +233,33 @@ public class WarForgeMod
 				);
 	}
 
+	public long GetCooldownRemainingSeconds(float cooldown, long startOfCooldown) {
+		long ticks = GetCooldownIntoTicks(cooldown);
+		long elapsed = startOfCooldown - ticks;
+
+		return (long)(
+				(ServerTick - elapsed) * 20
+		);
+	}
+
+	public int GetCooldownRemainingMinutes(float cooldown, long startOfCooldown) {
+		long ticks = GetCooldownIntoTicks(cooldown);
+		long elapsed = startOfCooldown - ticks;
+
+		return (int)(
+				(ServerTick - elapsed) * 20 / 60
+		);
+	}
+
+	public int GetCooldownRemainingHours(float cooldown, long startOfCooldown) {
+		long ticks = GetCooldownIntoTicks(cooldown);
+		long elapsed = startOfCooldown - ticks;
+
+		return (int)(
+				(ServerTick - elapsed) * 20 / 60 / 60
+		);
+	}
+
 	public long GetMSToNextSiegeAdvance() 
 	{
 		long elapsedMS = System.currentTimeMillis() - timestampOfFirstDay;
