@@ -656,7 +656,7 @@ public class FactionStorage
     {
     	Faction attacking = GetFactionOfPlayer(factionOfficer.getUniqueID());
 
-		if ((attacking.getLastSiegeTimestamp() - WarForgeMod.INSTANCE.GetCooldownIntoTicks(WarForgeConfig.SIEGE_COOLDOWN)) < WarForgeMod.ServerTick) {
+		if ((attacking.getLastSiegeTimestamp() - WarForgeMod.INSTANCE.GetCooldownIntoTicks(WarForgeConfig.SIEGE_COOLDOWN_FAIL)) < WarForgeMod.ServerTick) {
 			factionOfficer.sendMessage(new TextComponentString("Your faction is on cooldown on starting a new siege"));
 			return false;
 		}
@@ -1031,7 +1031,8 @@ public class FactionStorage
 		{
 			for(HashMap.Entry<UUID, PlayerData> pDataKVP : kvp.getValue().mMembers.entrySet())
 			{
-				pDataKVP.getValue().mHasMovedFlagToday = false;
+				//pDataKVP.getValue().mHasMovedFlagToday = false;
+				pDataKVP.getValue().mMoveFlagCooldown = 0;
 			}
 		}
 	}
