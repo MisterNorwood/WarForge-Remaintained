@@ -1,7 +1,5 @@
 package com.flansmod.warforge.server;
 
-import java.awt.Color;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -11,7 +9,6 @@ import com.flansmod.warforge.common.DimChunkPos;
 import com.flansmod.warforge.common.WarForgeConfig;
 import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.common.blocks.IClaim;
-import com.flansmod.warforge.common.blocks.TileEntitySiegeCamp;
 import com.flansmod.warforge.common.blocks.TileEntityYieldCollector;
 import com.flansmod.warforge.common.network.FactionDisplayInfo;
 import com.flansmod.warforge.common.network.PlayerDisplayInfo;
@@ -32,7 +29,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.World;
-import net.minecraftforge.fml.server.FMLServerHandler;
+import org.lwjgl.Sys;
 
 public class Faction 
 {
@@ -47,13 +44,15 @@ public class Faction
 	{
 		public Faction.Role mRole = Faction.Role.MEMBER;
 		public DimBlockPos mFlagPosition = DimBlockPos.ZERO;
-		public boolean mHasMovedFlagToday = false;
+		//public boolean mHasMovedFlagToday = false;
+		public long mMoveFlagCooldown = 0; // in ms
 		
 		public void ReadFromNBT(NBTTagCompound tags)
 		{
 			// Read and write role by string so enum order can change
 			mRole = Faction.Role.valueOf(tags.getString("role"));
-			mHasMovedFlagToday = tags.getBoolean("movedFlag");
+			//mHasMovedFlagToday = tags.getBoolean("movedFlag");
+			mMoveFlagCooldown = tags.getLong("flagCooldown");
 			mFlagPosition = new DimBlockPos(
 					tags.getInteger("dim"),
 					tags.getInteger("x"),
@@ -64,11 +63,16 @@ public class Faction
 		public void WriteToNBT(NBTTagCompound tags)
 		{
 			tags.setString("role", mRole.name());
-			tags.setBoolean("movedFlag", mHasMovedFlagToday);
+			//tags.setBoolean("movedFlag", mHasMovedFlagToday);
+			tags.setLong("flagCooldown", mMoveFlagCooldown);
 			tags.setInteger("dim", mFlagPosition.mDim);
 			tags.setInteger("x", mFlagPosition.getX());
 			tags.setInteger("y", mFlagPosition.getY());
 			tags.setInteger("z", mFlagPosition.getZ());
+		}
+
+		public void addCooldown(){
+			mMoveFlagCooldown = System.currentTimeMillis() + (long)(WarForgeConfig.FLAG_COOLDOWN * 60 * 1000);
 		}
 	}
 	
@@ -81,6 +85,18 @@ public class Faction
 	}
 	
 	public UUID mUUID;
+
+	// Siege
+	private long lastSiegeTimestamp;
+
+	public void setLastSiegeTimestamp(long tick) {
+		this.lastSiegeTimestamp = tick;
+	}
+
+	public long getLastSiegeTimestamp() {
+		return this.lastSiegeTimestamp;
+	}
+
 	public String mName;
 	public DimBlockPos mCitadelPos;
 	public HashMap<DimBlockPos, Integer> mClaims;
@@ -142,15 +158,15 @@ public class Faction
 			mLegacy += WarForgeConfig.LEGACY_PER_DAY;
 		}
 		
-		for(HashMap.Entry<UUID, PlayerData> kvp : mMembers.entrySet())
-		{
-			kvp.getValue().mHasMovedFlagToday = false;
-		}
+//		for(HashMap.Entry<UUID, PlayerData> kvp : mMembers.entrySet())
+//		{
+//			kvp.getValue().mHasMovedFlagToday = false;
+//		}
 
 		mHasHadAnyLoginsToday = false;
 		mDaysUntilCitadelMoveAvailable--;
 	}
-	
+
 	public FactionDisplayInfo CreateInfo()
 	{
 		FactionDisplayInfo info = new FactionDisplayInfo();
@@ -353,7 +369,8 @@ public class Faction
 			return false;
 		}
 		
-		if(data.mHasMovedFlagToday)
+		//if(data.mHasMovedFlagToday)
+		if(!CanPlayerMoveFlag(player.getUniqueID()))
 		{
 			player.sendMessage(new TextComponentString("You have already moved your flag today. Check /f time"));
 			return false;
@@ -376,7 +393,8 @@ public class Faction
 		}
 		
 		data.mFlagPosition = claimPos;		
-		data.mHasMovedFlagToday = true;
+		//data.mHasMovedFlagToday = true;
+		data.addCooldown();
 		((IClaim)te).OnServerSetPlayerFlag(player.getName());
 		MessageAll(new TextComponentString(player.getName() + " placed their flag at " + claimPos.ToFancyString()));
 		player.sendMessage(new TextComponentString("Your flag can move again on the next siege day"));
@@ -439,7 +457,7 @@ public class Faction
 			DimBlockPos pos = kvp.getKey();
 			World world = WarForgeMod.MC_SERVER.getWorld(pos.mDim);
 			
-			// If its loaded, process immediately
+			// If It's loaded, process immediately
 			if(world.isBlockLoaded(pos))
 			{
 				TileEntity te = world.getTileEntity(pos.ToRegularPos());
@@ -491,7 +509,9 @@ public class Faction
 		PlayerData data = mMembers.get(uniqueID);
 		if(data != null)
 		{
-			return !data.mHasMovedFlagToday;
+			//return !data.mHasMovedFlagToday;
+		if(data.mMoveFlagCooldown - System.currentTimeMillis() <= 0)
+				return true;
 		}
 		return false;
 	}

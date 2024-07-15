@@ -296,7 +296,9 @@ public class CommandFactions extends CommandBase
 			}
 			case "time":
 			{
+
 				long day = WarForgeMod.INSTANCE.numberOfSiegeDaysTicked;
+				long flagCoolown = WarForgeMod.FACTIONS.getPlayerCooldown(sender.getCommandSenderEntity().getUniqueID());
 				long ms = WarForgeMod.INSTANCE.GetMSToNextYield();
 				long s = ms / 1000;
 				long m = s / 60;
@@ -320,6 +322,17 @@ public class CommandFactions extends CommandBase
 				+ String.format("%02d", (h % 24)) + ":"
 				+ String.format("%02d", (m % 60)) + ":"
 				+ String.format("%02d", (s % 60))));
+
+				ms = flagCoolown;
+				s = ms / 1000;
+				m = s / 60;
+				h = m / 60;
+				d = h / 24;
+
+				sender.sendMessage(new TextComponentString("You can move flag in "
+						+ String.format("%02d", (h % 24)) + ":"
+						+ String.format("%02d", (m % 60)) + ":"
+						+ String.format("%02d", (s % 60))));
 				break;
 			}
 			

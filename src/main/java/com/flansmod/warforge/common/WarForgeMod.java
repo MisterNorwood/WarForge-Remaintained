@@ -137,6 +137,9 @@ public class WarForgeMod implements ILateMixinLoader
 	public static long numberOfSiegeDaysTicked = 0L;
 	public static long numberOfYieldDaysTicked = 0L;
 	public static long timestampOfFirstDay = 0L;
+
+	// Timers
+	public static long ServerTick = 0L;
 	
     @EventHandler
     public void preInit(FMLPreInitializationEvent event)
@@ -201,21 +204,59 @@ public class WarForgeMod implements ILateMixinLoader
     public long GetSiegeDayLengthMS()
     {
     	 return (long)(
-    			 WarForgeConfig.SIEGE_DAY_LENGTH // In hours
-     			* 60f // In minutes
+    			 WarForgeConfig.SIEGE_DAY_LENGTH // In minutes
+     			//* 60f // In minutes
      			* 60f // In seconds
      			* 1000f); // In milliseconds
+		//fuck this janky shit, who thought you should represent it in fucking HOURS
     }
     
     public long GetYieldDayLengthMS()
     {
     	 return (long)(
-    			 WarForgeConfig.YIELD_DAY_LENGTH // In hours
-     			* 60f // In minutes
+    			 WarForgeConfig.YIELD_DAY_LENGTH //In minutes
+     			//* 60f // In minutes
      			* 60f // In seconds
      			* 1000f); // In milliseconds
+		//fuck this one too
     }
-    
+
+	public long GetCooldownIntoTicks(float cooldown) {
+		// From Minutes
+		return (long)(
+				cooldown
+				* 60L // Minutes -> Seconds
+				* 20L // Seconds -> Ticks
+				);
+	}
+
+	public long GetCooldownRemainingSeconds(float cooldown, long startOfCooldown) {
+		long ticks = GetCooldownIntoTicks(cooldown);
+		long elapsed = startOfCooldown - ticks;
+
+		return (long)(
+				(ServerTick - elapsed) * 20
+		);
+	}
+
+	public int GetCooldownRemainingMinutes(float cooldown, long startOfCooldown) {
+		long ticks = GetCooldownIntoTicks(cooldown);
+		long elapsed = startOfCooldown - ticks;
+
+		return (int)(
+				(ServerTick - elapsed) * 20 / 60
+		);
+	}
+
+	public int GetCooldownRemainingHours(float cooldown, long startOfCooldown) {
+		long ticks = GetCooldownIntoTicks(cooldown);
+		long elapsed = startOfCooldown - ticks;
+
+		return (int)(
+				(ServerTick - elapsed) * 20 / 60 / 60
+		);
+	}
+
 	public long GetMSToNextSiegeAdvance() 
 	{
 		long elapsedMS = System.currentTimeMillis() - timestampOfFirstDay;
@@ -239,7 +280,9 @@ public class WarForgeMod implements ILateMixinLoader
     	long dayLength = GetSiegeDayLengthMS();
     	
     	long dayNumber = (msTime - timestampOfFirstDay) / dayLength;
-    	
+
+		ServerTick++;
+
     	if(dayNumber > numberOfSiegeDaysTicked)
     	{
     		// Time to tick a new day
@@ -444,12 +487,15 @@ public class WarForgeMod implements ILateMixinLoader
     			return;
     		}
     		
+/*
     		if(!playerFaction.CanPlayerMoveFlag(player.getUniqueID()))
     		{
     			player.sendMessage(new TextComponentString("You have already moved your flag today. Check /f time"));
     			event.setCanceled(true);
     			return;
     		}
+    		// Replace with different way of determining cooldown
+*/
 
     		ArrayList<DimChunkPos> validTargets = new ArrayList<DimChunkPos>(4);
     		int numTargets = FACTIONS.GetAdjacentClaims(playerFaction.mUUID, pos, validTargets);

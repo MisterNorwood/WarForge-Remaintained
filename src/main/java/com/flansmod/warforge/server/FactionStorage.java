@@ -23,15 +23,12 @@ import net.minecraft.command.ICommandSender;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.EnumFacing;
-import net.minecraft.util.EnumHand;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.World;
 
@@ -82,7 +79,10 @@ public class FactionStorage
     		return mFactions.get(factionID).IsPlayerInFaction(playerID);
     	return false;
     }
-    
+	public long getPlayerCooldown(UUID playerID){
+		return mFactions.get(playerID).mMembers.get(playerID).mMoveFlagCooldown;
+	}
+
     public boolean IsPlayerRoleInFaction(UUID playerID, UUID factionID, Faction.Role role)
     {
     	if(mFactions.containsKey(factionID))
@@ -658,6 +658,18 @@ public class FactionStorage
     public boolean RequestStartSiege(EntityPlayer factionOfficer, DimBlockPos siegeCampPos, EnumFacing direction)
     {
     	Faction attacking = GetFactionOfPlayer(factionOfficer.getUniqueID());
+
+		if ((attacking.getLastSiegeTimestamp() - WarForgeMod.INSTANCE.GetCooldownIntoTicks(WarForgeConfig.SIEGE_COOLDOWN_FAIL)) < WarForgeMod.ServerTick) {
+			factionOfficer.sendMessage(new TextComponentString("Your faction is on cooldown on starting a new siege"));
+
+			long s = WarForgeMod.INSTANCE.GetCooldownRemainingSeconds(WarForgeConfig.SIEGE_COOLDOWN_FAIL, attacking.getLastSiegeTimestamp()) % 60;
+			int m = WarForgeMod.INSTANCE.GetCooldownRemainingMinutes(WarForgeConfig.SIEGE_COOLDOWN_FAIL, attacking.getLastSiegeTimestamp()) % 60;
+			int h = WarForgeMod.INSTANCE.GetCooldownRemainingHours(WarForgeConfig.SIEGE_COOLDOWN_FAIL, attacking.getLastSiegeTimestamp());
+
+			factionOfficer.sendMessage(new TextComponentString(String.format("Cooldown remaining: %dh %dm %ds or %d ticks", h, m, s, s * 20)));
+			return false;
+		}
+
     	if(attacking == null)
     	{
     		factionOfficer.sendMessage(new TextComponentString("You are not in a faction"));
@@ -696,7 +708,9 @@ public class FactionStorage
     	RequestPlaceFlag((EntityPlayerMP)factionOfficer, siegeCampPos);
     	mSieges.put(defendingChunk, siege);
     	siege.Start();
-    	
+
+		attacking.setLastSiegeTimestamp(WarForgeMod.ServerTick);
+
     	return true;
     }
     
@@ -1026,7 +1040,8 @@ public class FactionStorage
 		{
 			for(HashMap.Entry<UUID, PlayerData> pDataKVP : kvp.getValue().mMembers.entrySet())
 			{
-				pDataKVP.getValue().mHasMovedFlagToday = false;
+				//pDataKVP.getValue().mHasMovedFlagToday = false;
+				pDataKVP.getValue().mMoveFlagCooldown = 0;
 			}
 		}
 	}
