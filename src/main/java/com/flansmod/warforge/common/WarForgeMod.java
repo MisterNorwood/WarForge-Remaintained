@@ -231,7 +231,7 @@ public class WarForgeMod implements ILateMixinLoader
 	}
 
 	public long GetCooldownRemainingSeconds(float cooldown, long startOfCooldown) {
-		long ticks = GetCooldownIntoTicks(cooldown);
+		long ticks = (long) cooldown; // why did you convert it into ticks if its already in ticks
 		long elapsed = startOfCooldown - ticks;
 
 		return (long)(
@@ -240,7 +240,7 @@ public class WarForgeMod implements ILateMixinLoader
 	}
 
 	public int GetCooldownRemainingMinutes(float cooldown, long startOfCooldown) {
-		long ticks = GetCooldownIntoTicks(cooldown);
+		long ticks = (long) cooldown;
 		long elapsed = startOfCooldown - ticks;
 
 		return (int)(
@@ -249,7 +249,7 @@ public class WarForgeMod implements ILateMixinLoader
 	}
 
 	public int GetCooldownRemainingHours(float cooldown, long startOfCooldown) {
-		long ticks = GetCooldownIntoTicks(cooldown);
+		long ticks = (long) cooldown;
 		long elapsed = startOfCooldown - ticks;
 
 		return (int)(
