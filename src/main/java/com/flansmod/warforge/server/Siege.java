@@ -270,47 +270,17 @@ public class Siege
 		// First case, an attacker killed a defender
 		if(attackers.IsPlayerInFaction(killer.getUniqueID()) && defenders.IsPlayerInFaction(killed.getUniqueID()))
 		{
-			DimBlockPos attackerFlagPos = attackers.GetFlagPosition(killer.getUniqueID());
-			DimBlockPos defenderFlagPos = defenders.GetFlagPosition(killed.getUniqueID());
+			//Flags are no longer necessary for kills
+			mAttackProgress += WarForgeConfig.SIEGE_SWING_PER_DEFENDER_DEATH;
+			killed.sendMessage(new TextComponentString("Your death has shifted the siege progress by " + WarForgeConfig.SIEGE_SWING_PER_ATTACKER_DEATH));
 			
-			// Only valid if the attacker has their flag on one of the siege camps
-			boolean attackerFlagged = false;
-			for(DimBlockPos siegeCamp : mAttackingSiegeCamps)
-			{
-				if(siegeCamp.equals(attackerFlagPos))
-					attackerFlagged = true;
-			}
-			
-			boolean defenderFlagged = defenderFlagPos.equals(mDefendingClaim);
-			
-			if(attackerFlagged && defenderFlagged)
-			{
-				mAttackProgress += WarForgeConfig.SIEGE_SWING_PER_DEFENDER_DEATH;
-				killed.sendMessage(new TextComponentString("Your death has shifted the siege progress by " + WarForgeConfig.SIEGE_SWING_PER_ATTACKER_DEATH));
-			}
 		}
 		
 		// Other case, a defender killed an attacker
 		if(defenders.IsPlayerInFaction(killer.getUniqueID()) && attackers.IsPlayerInFaction(killed.getUniqueID()))
 		{
-			DimBlockPos attackerFlagPos = attackers.GetFlagPosition(killed.getUniqueID());
-			DimBlockPos defenderFlagPos = defenders.GetFlagPosition(killer.getUniqueID());
-			
-			// Only valid if the attacker has their flag on one of the siege camps
-			boolean attackerFlagged = false;
-			for(DimBlockPos siegeCamp : mAttackingSiegeCamps)
-			{
-				if(siegeCamp.equals(attackerFlagPos))
-					attackerFlagged = true;
-			}
-			
-			boolean defenderFlagged = defenderFlagPos.equals(mDefendingClaim);
-			
-			if(attackerFlagged && defenderFlagged)
-			{
-				mAttackProgress -= WarForgeConfig.SIEGE_SWING_PER_ATTACKER_DEATH;
-				killed.sendMessage(new TextComponentString("Your death has shifted the siege progress by " + WarForgeConfig.SIEGE_SWING_PER_ATTACKER_DEATH));
-			}
+			mAttackProgress -= WarForgeConfig.SIEGE_SWING_PER_ATTACKER_DEATH;
+			killed.sendMessage(new TextComponentString("Your death has shifted the siege progress by " + WarForgeConfig.SIEGE_SWING_PER_ATTACKER_DEATH));
 		}
 		
 		WarForgeMod.FACTIONS.SendSiegeInfoToNearby(mDefendingClaim.ToChunkPos());

@@ -47,7 +47,12 @@ public class BlockCitadel extends Block implements ITileEntityProvider
     public boolean isFullCube(IBlockState state) { return false; }
 	@Override
     public EnumBlockRenderType getRenderType(IBlockState state) { return EnumBlockRenderType.MODEL; }
-    /* Unused code that errors #3
+	@Override
+	public boolean canRenderInLayer(IBlockState state, BlockRenderLayer layer) {
+		return layer == BlockRenderLayer.TRANSLUCENT;
+	}
+
+	/* Unused code that errors #3
 	@SideOnly(Side.CLIENT)
     @Override
     public BlockRenderLayer getBlockLayer() { return BlockRenderLayer.CUTOUT; }
