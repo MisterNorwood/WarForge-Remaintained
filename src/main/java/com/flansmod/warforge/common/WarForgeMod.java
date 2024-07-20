@@ -403,6 +403,11 @@ public class WarForgeMod implements ILateMixinLoader
 			BlockPlacedOrRemoved(event, state);
 		}
 	}
+
+	public static boolean containsInt(final int[] base, int compare) {
+		for (int val : base) if (val == compare) return true;
+		return false;
+	}
     
     @SubscribeEvent
     public void PreBlockPlaced(RightClickBlock event)
@@ -445,6 +450,11 @@ public class WarForgeMod implements ILateMixinLoader
 			event.setCanceled(true);
 			return;
     	}
+		if(!containsInt(WarForgeConfig.CLAIM_DIM_WHITELIST, pos.mDim)){
+			player.sendMessage(new TextComponentString("You cannot claim chunks in this dimension"));
+			event.setCanceled(true);
+			return;
+		}
     	
     	// Cancel block placement for a couple of reasons
     	if(block == CONTENT.citadelBlock)

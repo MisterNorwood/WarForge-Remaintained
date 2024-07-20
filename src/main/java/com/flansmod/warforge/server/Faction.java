@@ -520,7 +520,8 @@ public class Faction
 	{
 		mColour = colour;
 	}
-	
+
+
 	public void ReadFromNBT(NBTTagCompound tags)
 	{
 		mClaims.clear();

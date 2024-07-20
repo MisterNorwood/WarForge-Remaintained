@@ -7,6 +7,7 @@ import java.util.List;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraftforge.common.config.Configuration;
+import scala.Array;
 
 public class WarForgeConfig 
 {
@@ -94,6 +95,7 @@ public class WarForgeConfig
 	
 	// Claims
 	public static final String CATEGORY_CLAIMS = "Claims";
+	public static int[] CLAIM_DIM_WHITELIST = new int[]{0};
 	public static int CLAIM_STRENGTH_CITADEL = 15;
 	public static int CLAIM_STRENGTH_REINFORCED = 10;
 	public static int CLAIM_STRENGTH_BASIC = 5;
@@ -401,6 +403,7 @@ public class WarForgeConfig
 
 		
 		// Claim Settings
+		CLAIM_DIM_WHITELIST = configFile.get(CATEGORY_CLAIMS, "Claim Dimension Whitelist", CLAIM_DIM_WHITELIST, "In which dimensions should player be able to claim chunks").getIntList();
 		CLAIM_STRENGTH_CITADEL = configFile.getInt("Citadel Claim Strength", CATEGORY_CLAIMS, CLAIM_STRENGTH_CITADEL, 1, 1024, "The strength of citadel claims");
 		CLAIM_STRENGTH_REINFORCED = configFile.getInt("Reinforced Claim Strength", CATEGORY_CLAIMS, CLAIM_STRENGTH_REINFORCED, 1, 1024, "The strength of reinforced claims");
 		CLAIM_STRENGTH_BASIC = configFile.getInt("Basic Claim Strength", CATEGORY_CLAIMS, CLAIM_STRENGTH_BASIC, 1, 1024, "The strength of basic claims");
