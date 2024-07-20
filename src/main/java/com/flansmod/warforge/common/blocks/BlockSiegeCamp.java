@@ -39,14 +39,30 @@ import net.minecraftforge.fml.relauncher.SideOnly;
 
 public class BlockSiegeCamp extends Block implements ITileEntityProvider
 {
+
+	//25s break time, no effective tool.
 	public BlockSiegeCamp(Material materialIn) 
 	{
 		super(materialIn);
 		this.setCreativeTab(CreativeTabs.COMBAT);
-		this.setBlockUnbreakable();
 		this.setResistance(30000000f);
+		this.setHardness(5f); // (*5) to get harvest time
 	}
-	
+	@Override
+	public boolean isToolEffective(String type, IBlockState state)
+	{
+		return false;
+	}
+	@Override
+	public String getHarvestTool(IBlockState state) {
+		return null;
+	}
+	@Override
+	public boolean canHarvestBlock(IBlockAccess world, BlockPos pos, EntityPlayer player)
+	{
+		return false;
+	}
+
 	@Override
     public boolean isOpaqueCube(IBlockState state) { return false; }
 	@Override
