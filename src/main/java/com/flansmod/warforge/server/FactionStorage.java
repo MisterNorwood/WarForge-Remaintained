@@ -309,6 +309,11 @@ public class FactionStorage
 
 	// cleaner separation between action to be done on completed sieges and the determination of these sieges
 	public void handleCompletedSiege(DimChunkPos chunkPos) {
+		handleCompletedSiege(chunkPos, true);
+	}
+
+	// cleanup is done by failing, passing, or cancelling siege through the TE class. If called without boolean, it is assumed to not be from inside TE
+	public void handleCompletedSiege(DimChunkPos chunkPos, boolean doCleanup) {
 		Siege siege = mSieges.get(chunkPos);
 
 		Faction attackers = GetFaction(siege.mAttackingFaction);
@@ -344,7 +349,7 @@ public class FactionStorage
 			defenders.mNotoriety += WarForgeConfig.NOTORIETY_PER_SIEGE_DEFEND_SUCCESS;
 		}
 
-		siege.OnCompleted(); // does nothing
+		if (doCleanup) siege.OnCompleted(successful);
 
 		// Then remove the siege
 		mSieges.remove(chunkPos);

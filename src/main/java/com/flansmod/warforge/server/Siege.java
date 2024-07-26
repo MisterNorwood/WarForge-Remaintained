@@ -89,7 +89,7 @@ public class Siege
 		mAttackingFaction = attacker;
 		mDefendingFaction = defender;
 		mDefendingClaim = defending;
-		
+
 		TileEntity te = WarForgeMod.MC_SERVER.getWorld(defending.mDim).getTileEntity(defending.ToRegularPos());
 		if(te instanceof IClaim)
 		{
@@ -250,14 +250,26 @@ public class Siege
 			}
 		}
 	}
-	
+
+	// called when siege is ended for any reason and not detected as completed normally
 	public void OnCancelled()
 	{
-		
+		// canceling is only run inside EndSiege, which is only run in TE, so no need for this to do anything
 	}
-	
-	public void OnCompleted()
+
+	// called when natural conclusion of siege occurs, not called from TE itself
+	public void OnCompleted(boolean successful)
 	{
+		// for every attacking siege camp attempt to locate it, and if an actual siege camp handle appropriately
+		for (DimBlockPos siegeCampPos : mAttackingSiegeCamps) {
+			TileEntity siegeCamp = WarForgeMod.MC_SERVER.getWorld(siegeCampPos.mDim).getTileEntity(siegeCampPos.ToRegularPos());
+			if (siegeCamp != null) {
+				if (siegeCamp instanceof TileEntitySiegeCamp) {
+					if (successful) ((TileEntitySiegeCamp) siegeCamp).passSiege();
+					else ((TileEntitySiegeCamp) siegeCamp).failSiege();
+				}
+			}
+		}
 	}
 
 	private boolean isPlayerInWarzone(DimBlockPos siegeCampPos, EntityPlayerMP player){

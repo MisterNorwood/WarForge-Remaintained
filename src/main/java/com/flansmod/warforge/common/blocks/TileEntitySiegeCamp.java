@@ -38,26 +38,6 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 		mPlacer = placer.getUniqueID();
 	}
 
-	// called whenever block should be destroyed
-	public void onDestroyed() {
-		// will fail the siege if it is on going, or just do the destruction actions if finished or never started
-		if (siegeStatus == 1) failSiege();
-		else destroy();
-	}
-
-	public void destroy() {
-		world.destroyBlock(getPos(), true); // destroy block of failed siege
-		siegeStatus = -1; // invalidate before destruction do that this code is not run in an infinite loop in getUpdateTag
-		world.markBlockRangeForRenderUpdate(pos, pos);
-		world.notifyBlockUpdate(getPos(), world.getBlockState(getPos()), world.getBlockState(getPos()), 3); // 2 is bit mask apparently indicating send to client
-		//world.scheduleBlockUpdate(pos, this.getBlockType(), 0, 0);
-		markDirty();
-
-		WarForgeMod.FACTIONS.getClaims().remove(GetPos().ToChunkPos());
-		WarForgeMod.FACTIONS.GetFaction(mFactionUUID).OnClaimLost(GetPos());
-		world.removeTileEntity(getPos());
-	}
-
 	@Override
 	public int GetDefenceStrength() { return 0; }
 
@@ -98,14 +78,21 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 		concludeSiege();
 	}
 
-	// forces siege to end
-	public void failSiege() {
-		siegeStatus = 2;
+	// stops siege without changing anything
+	public void cancelSiege() {
+		siegeStatus = 0;
 		concludeSiege();
 	}
 
-	public void concludeSiege(byte siegeStatus) {
-		this.siegeStatus = siegeStatus;
+	// sets siege to be successful
+	public void passSiege() {
+		siegeStatus = 3;
+		concludeSiege();
+	}
+
+	// forces siege to end as failure
+	public void failSiege() {
+		siegeStatus = 2;
 		concludeSiege();
 	}
 
@@ -131,7 +118,7 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 		// siege may not exist in server's record, leading to crash loop. This prevents the loop. Removes siege after info indicating update is done
 		try {
 			WarForgeMod.FACTIONS.getSieges().get(mSiegeTarget.ToChunkPos()).setAttackProgress(siegeStatus == 2 ? -5 : WarForgeMod.FACTIONS.getSieges().get(mSiegeTarget.ToChunkPos()).GetAttackSuccessThreshold()); // ends siege
-			WarForgeMod.FACTIONS.handleCompletedSiege(mSiegeTarget.ToChunkPos()); // performs check on completed sieges without invoking checks on unrelated sieges
+			WarForgeMod.FACTIONS.handleCompletedSiege(mSiegeTarget.ToChunkPos(), false); // performs check on completed sieges without invoking checks on unrelated sieges
 			WarForgeMod.FACTIONS.EndSiege(GetPos());
 		} catch (Exception e) {
 			WarForgeMod.LOGGER.atError().log("Got exception when attempting to force end siege of: " + e + " with siegeTarget of: " + mSiegeTarget + " and pos of: " + getPos());
@@ -139,6 +126,26 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 
 		mSiegeTarget = null;
 		if (siegeStatus == 2) destroy();
+	}
+
+	// called whenever block should be destroyed
+	public void onDestroyed() {
+		// will fail the siege if it is on going, or just do the destruction actions if finished or never started
+		if (siegeStatus == 1) failSiege();
+		else destroy();
+	}
+
+	public void destroy() {
+		world.destroyBlock(getPos(), true); // destroy block of failed siege
+		siegeStatus = -1; // invalidate before destruction do that this code is not run in an infinite loop in getUpdateTag
+		world.markBlockRangeForRenderUpdate(pos, pos);
+		world.notifyBlockUpdate(getPos(), world.getBlockState(getPos()), world.getBlockState(getPos()), 3); // 2 is bit mask apparently indicating send to client
+		//world.scheduleBlockUpdate(pos, this.getBlockType(), 0, 0);
+		markDirty();
+
+		WarForgeMod.FACTIONS.getClaims().remove(GetPos().ToChunkPos());
+		WarForgeMod.FACTIONS.GetFaction(mFactionUUID).OnClaimLost(GetPos());
+		world.removeTileEntity(getPos());
 	}
 
 	@Override
@@ -250,7 +257,7 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 		if (doCheckPerTick || tickTimer % 20 == 0) {
 			// send message to all players on defending team with necessary information to defend every 5 minutes
 			if (tickTimer % 6000 == 0) {
-				messageAllDefenders("warforge.info.siege_defense_info", getPos().toString());
+				messageAllDefenders("warforge.info.siege_defense_info", new DimBlockPos(world.provider.getDimension(), getPos()).ToFancyString());
 			}
 
 			// if there are no players in the radius
