@@ -1,15 +1,10 @@
 package com.flansmod.warforge.client;
 
 import java.util.List;
-import java.util.UUID;
 
 import com.flansmod.warforge.common.DimBlockPos;
-import com.flansmod.warforge.common.DimChunkPos;
 import com.flansmod.warforge.common.WarForgeMod;
-import com.flansmod.warforge.common.blocks.IClaim;
-import com.flansmod.warforge.common.blocks.TileEntityCitadel;
 import com.flansmod.warforge.common.blocks.TileEntitySiegeCamp;
-import com.flansmod.warforge.common.network.PacketCreateFaction;
 import com.flansmod.warforge.common.network.PacketPlaceFlag;
 import com.flansmod.warforge.common.network.PacketStartSiege;
 import com.flansmod.warforge.common.network.SiegeCampAttackInfo;
@@ -17,11 +12,13 @@ import com.flansmod.warforge.common.network.SiegeCampAttackInfo;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
-import net.minecraft.client.gui.GuiTextField;
 import net.minecraft.client.renderer.GlStateManager;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.ResourceLocation;
+
+/*
+	Controls gui to start raid, not on screen siege progression
+ */
 
 public class GuiSiegeCamp extends GuiScreen
 {

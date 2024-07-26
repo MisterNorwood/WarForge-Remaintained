@@ -1,8 +1,10 @@
 package com.flansmod.warforge.server;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 import com.flansmod.warforge.common.DimBlockPos;
 import com.flansmod.warforge.common.DimChunkPos;
@@ -100,6 +102,7 @@ public class Faction
 	public String mName;
 	public DimBlockPos mCitadelPos;
 	public HashMap<DimBlockPos, Integer> mClaims;
+
 	public HashMap<UUID, PlayerData> mMembers;
 	public HashMap<UUID, Float> mPendingInvites;
 	public HashMap<UUID, Integer> mKillCounter;
@@ -422,6 +425,13 @@ public class Faction
 		}
 		return null;
 	}
+
+	// checks all stored claim locations to check if they are siege blocks
+	public int calcNumSieges() {
+		int result = 0;
+		for (DimBlockPos claimPos : mClaims.keySet()) if (WarForgeMod.FACTIONS.getSieges().get(claimPos) != null) ++result;
+		return result;
+	}
 	
 	public void EvaluateVault() 
 	{
@@ -613,6 +623,9 @@ public class Faction
 			claimsList.appendTag(claimTags);
 		}
 		tags.setTag("claims", claimsList);
+
+		NBTTagList siegeList = new NBTTagList();
+
 		mCitadelPos.WriteToNBT(tags, "citadelPos");
 		
 		NBTTagList killsList = new NBTTagList();
@@ -650,9 +663,24 @@ public class Faction
 		EntityPlayer player = GetPlayer(playerID);
 		return player == null ? ("[" + playerID.toString() + "]") : player.getName();
 	}
+
+	// array list needed to be able to pre-allocate size, but not know if all players will pass check
+	public ArrayList<EntityPlayer> getPlayers(Predicate<EntityPlayer> playerCondition) {
+		ArrayList<EntityPlayer> players = new ArrayList<>(mMembers.keySet().size());
+		//mMembers.keySet() seems to have a null default
+		for(UUID playerID : mMembers.keySet())
+		{
+			EntityPlayer player = GetPlayer(playerID);
+			if(player != null && playerCondition.test(player)) players.add(player);
+		}
+
+		return players;
+	}
 	
 	private static EntityPlayer GetPlayer(UUID playerID)
 	{
 		return WarForgeMod.MC_SERVER.getPlayerList().getPlayerByUUID(playerID);
 	}
+
+
 }

@@ -63,6 +63,8 @@ public class Siege
 	
 	// Attack progress starts at 0 and can be moved to -5 or mAttackSuccessThreshold
 	public int GetAttackProgress() { return mAttackProgress; }
+	public void setAttackProgress(int progress) { mAttackProgress = progress; }
+
 	public int GetDefenceProgress() { return -mAttackProgress; }
 	public int GetAttackSuccessThreshold() { return mBaseDifficulty + mExtraDifficulty; }
 	
@@ -256,7 +258,6 @@ public class Siege
 	
 	public void OnCompleted()
 	{
-		
 	}
 
 	private boolean isPlayerInWarzone(DimBlockPos siegeCampPos, EntityPlayerMP player){

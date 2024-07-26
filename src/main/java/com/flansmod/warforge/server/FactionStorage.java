@@ -13,6 +13,7 @@ import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.common.blocks.IClaim;
 import com.flansmod.warforge.common.blocks.TileEntityCitadel;
 import com.flansmod.warforge.common.blocks.TileEntityClaim;
+import com.flansmod.warforge.common.blocks.TileEntitySiegeCamp;
 import com.flansmod.warforge.common.network.PacketSiegeCampProgressUpdate;
 import com.flansmod.warforge.common.network.SiegeCampProgressInfo;
 import com.flansmod.warforge.server.Faction.PlayerData;
@@ -30,9 +31,10 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraft.world.World;
 
-public class FactionStorage 
+public class FactionStorage
 {
     private HashMap<UUID, Faction> mFactions = new HashMap<UUID, Faction>();
     // This map contains every single claim, including siege camps.
@@ -79,6 +81,7 @@ public class FactionStorage
     		return mFactions.get(factionID).IsPlayerInFaction(playerID);
     	return false;
     }
+
 	public long getPlayerCooldown(UUID playerID){
 		return mFactions.get(playerID).mMembers.get(playerID).mMoveFlagCooldown;
 	}
@@ -134,7 +137,11 @@ public class FactionStorage
     	}
     	return names;
 	}
-	
+
+	public HashMap<DimChunkPos, Siege> getSieges() { return mSieges; }
+
+	public HashMap<DimChunkPos, UUID> getClaims() { return mClaims; }
+
     // This is called for any non-citadel claim. Citadels can be factionless, so this makes no sense
 	public void OnNonCitadelClaimPlaced(IClaim claim, EntityLivingBase placer) 
 	{
@@ -297,47 +304,51 @@ public class FactionStorage
 		
 		// Now process the results
 		for(DimChunkPos chunkPos : completedSieges)
-		{
-			Siege siege = mSieges.get(chunkPos);
-			
-			Faction attackers = GetFaction(siege.mAttackingFaction);
-			Faction defenders = GetFaction(siege.mDefendingFaction);
-			
-			if(attackers == null || defenders == null)
-			{
-				WarForgeMod.LOGGER.error("Invalid factions in completed siege. Nothing will happen.");
-				continue;
-			}
-			
-			DimBlockPos blockPos = defenders.GetSpecificPosForClaim(chunkPos);
-			boolean successful = siege.WasSuccessful();
-			if(successful)
-			{
-				defenders.OnClaimLost(blockPos);
-				mClaims.remove(blockPos.ToChunkPos());
-				attackers.MessageAll(new TextComponentString("Our faction won the siege on " + defenders.mName + " at " + blockPos.ToFancyString()));
-				attackers.mNotoriety += WarForgeConfig.NOTORIETY_PER_SIEGE_ATTACK_SUCCESS;
-				
-				if(WarForgeConfig.SIEGE_CAPTURE)
-				{
-					WarForgeMod.MC_SERVER.getWorld(blockPos.mDim).setBlockState(blockPos.ToRegularPos(), WarForgeMod.CONTENT.basicClaimBlock.getDefaultState());
-					TileEntity te = WarForgeMod.MC_SERVER.getWorld(blockPos.mDim).getTileEntity(blockPos.ToRegularPos());
-					OnNonCitadelClaimPlaced((IClaim)te, attackers);
-				}
-			}
-			else
-			{
-				attackers.MessageAll(new TextComponentString("Our siege on " + defenders.mName + " at " + blockPos.ToFancyString() + " was unsuccessful"));
-				defenders.MessageAll(new TextComponentString(attackers.mName + "'s siege on " + blockPos.ToFancyString() + " was unsuccessful"));
-				defenders.mNotoriety += WarForgeConfig.NOTORIETY_PER_SIEGE_DEFEND_SUCCESS;
-			}
-			
-			siege.OnCompleted();
-			
-			// Then remove the siege
-			mSieges.remove(chunkPos);
-		}
+			handleCompletedSiege(chunkPos);
     }
+
+	// cleaner separation between action to be done on completed sieges and the determination of these sieges
+	public void handleCompletedSiege(DimChunkPos chunkPos) {
+		Siege siege = mSieges.get(chunkPos);
+
+		Faction attackers = GetFaction(siege.mAttackingFaction);
+		Faction defenders = GetFaction(siege.mDefendingFaction);
+
+		if(attackers == null || defenders == null)
+		{
+			WarForgeMod.LOGGER.error("Invalid factions in completed siege. Nothing will happen.");
+			return;
+		}
+
+		DimBlockPos blockPos = defenders.GetSpecificPosForClaim(chunkPos);
+		boolean successful = siege.WasSuccessful();
+		if(successful)
+		{
+			defenders.OnClaimLost(blockPos);
+			mClaims.remove(blockPos.ToChunkPos());
+			attackers.MessageAll(new TextComponentTranslation("warforge.info.siege_won_attackers", defenders.mName, blockPos.ToFancyString()));
+			defenders.MessageAll(new TextComponentTranslation("warforge.info.siege_lost_defenders", defenders.mName, blockPos.ToFancyString()));
+			attackers.mNotoriety += WarForgeConfig.NOTORIETY_PER_SIEGE_ATTACK_SUCCESS;
+
+			if(WarForgeConfig.SIEGE_CAPTURE)
+			{
+				WarForgeMod.MC_SERVER.getWorld(blockPos.mDim).setBlockState(blockPos.ToRegularPos(), WarForgeMod.CONTENT.basicClaimBlock.getDefaultState());
+				TileEntity te = WarForgeMod.MC_SERVER.getWorld(blockPos.mDim).getTileEntity(blockPos.ToRegularPos());
+				OnNonCitadelClaimPlaced((IClaim)te, attackers);
+			}
+		}
+		else
+		{
+			attackers.MessageAll(new TextComponentTranslation("warforge.info.siege_lost_attackers", attackers.mName, blockPos.ToFancyString()));
+			defenders.MessageAll(new TextComponentTranslation("warforge.info.siege_won_defenders", defenders.mName, blockPos.ToFancyString()));
+			defenders.mNotoriety += WarForgeConfig.NOTORIETY_PER_SIEGE_DEFEND_SUCCESS;
+		}
+
+		siege.OnCompleted(); // does nothing
+
+		// Then remove the siege
+		mSieges.remove(chunkPos);
+	}
     
     public boolean RequestCreateFaction(TileEntityCitadel citadel, EntityPlayer player, String factionName, int colour)
     {
@@ -684,7 +695,7 @@ public class FactionStorage
     	
     	// TODO: Verify there aren't existing alliances
     	
-    	TileEntity siegeTE = WarForgeMod.proxy.GetTile(siegeCampPos);
+    	TileEntitySiegeCamp siegeTE = (TileEntitySiegeCamp) WarForgeMod.proxy.GetTile(siegeCampPos);
     	DimChunkPos defendingChunk = siegeCampPos.ToChunkPos().Offset(direction, 1);
     	UUID defendingFactionID = mClaims.get(defendingChunk);
     	Faction defending = GetFaction(defendingFactionID);
@@ -707,6 +718,7 @@ public class FactionStorage
     	
     	RequestPlaceFlag((EntityPlayerMP)factionOfficer, siegeCampPos);
     	mSieges.put(defendingChunk, siege);
+		siegeTE.setSiegeTarget(defendingPos);
     	siege.Start();
 
 		attacking.setLastSiegeTimestamp(WarForgeMod.ServerTick);
@@ -967,8 +979,7 @@ public class FactionStorage
 			NBTTagCompound factionTags = ((NBTTagCompound)baseTag);
 			UUID uuid = factionTags.getUniqueId("id");
 			Faction faction;
-			
-			
+
 			if(uuid.equals(SAFE_ZONE_ID))
 			{
 				faction = SAFE_ZONE;

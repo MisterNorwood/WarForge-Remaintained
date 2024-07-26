@@ -66,10 +66,13 @@ public class BlockCitadel extends Block implements ITileEntityProvider
 	@Override
 	public boolean canPlaceBlockAt(World world, BlockPos pos)
 	{
+		WarForgeMod.LOGGER.always().log("canPlaceBlockAt called at " + pos);
 		// Can't claim a chunk claimed by another faction
 		UUID existingClaim = WarForgeMod.FACTIONS.GetClaim(new DimChunkPos(world.provider.getDimension(), pos));
-		if(!existingClaim.equals(Faction.NULL))
+		if(!existingClaim.equals(Faction.NULL)) {
+			WarForgeMod.LOGGER.atError().log("Cannot place block because a faction of: " + WarForgeMod.FACTIONS.GetFaction(existingClaim) + " is present.");
 			return false;
+		}
 		
 		// Can only place on a solid surface
 		if(!world.getBlockState(pos.add(0, -1, 0)).isSideSolid(world, pos.add(0, -1, 0), EnumFacing.UP))

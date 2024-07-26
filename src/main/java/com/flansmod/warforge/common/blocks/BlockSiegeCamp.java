@@ -12,10 +12,8 @@ import com.flansmod.warforge.common.network.PacketSiegeCampInfo;
 import com.flansmod.warforge.common.network.SiegeCampAttackInfo;
 import com.flansmod.warforge.server.Faction;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockFurnace;
-import net.minecraft.block.BlockWorkbench;
-import net.minecraft.block.ITileEntityProvider;
+import net.minecraft.block.*;
+import net.minecraft.block.material.EnumPushReaction;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.creativetab.CreativeTabs;
@@ -41,26 +39,31 @@ public class BlockSiegeCamp extends Block implements ITileEntityProvider
 {
 
 	//25s break time, no effective tool.
-	public BlockSiegeCamp(Material materialIn) 
+	public BlockSiegeCamp(Material materialIn)
 	{
 		super(materialIn);
 		this.setCreativeTab(CreativeTabs.COMBAT);
 		this.setResistance(30000000f);
 		this.setHardness(5f); // (*5) to get harvest time
 	}
+
+	// these are likely redundant, as the default is no tool, but I guess it doesnt hurt
 	@Override
 	public boolean isToolEffective(String type, IBlockState state)
 	{
 		return false;
 	}
+
 	@Override
 	public String getHarvestTool(IBlockState state) {
 		return null;
 	}
+
+	// we want to give the siege block back
 	@Override
 	public boolean canHarvestBlock(IBlockAccess world, BlockPos pos, EntityPlayer player)
 	{
-		return false;
+		return true;
 	}
 
 	@Override
@@ -81,12 +84,13 @@ public class BlockSiegeCamp extends Block implements ITileEntityProvider
     public BlockRenderLayer getBlockLayer() { return BlockRenderLayer.CUTOUT; }
 	*/
 
+	// called on block place
 	@Override
-	public TileEntity createNewTileEntity(World worldIn, int meta)
-	{
+	public TileEntity createNewTileEntity(World worldIn, int meta) {
 		return new TileEntitySiegeCamp();
 	}
 
+	// called before block place
 	@Override
 	public boolean canPlaceBlockAt(World world, BlockPos pos)
 	{
@@ -104,7 +108,8 @@ public class BlockSiegeCamp extends Block implements ITileEntityProvider
 		
 		return true;
 	}
-	
+
+	// called after block place
 	@Override
     public void onBlockPlacedBy(World world, BlockPos pos, IBlockState state, EntityLivingBase placer, ItemStack stack)
     {
@@ -115,6 +120,7 @@ public class BlockSiegeCamp extends Block implements ITileEntityProvider
 			{
 				TileEntitySiegeCamp siegeCamp = (TileEntitySiegeCamp)te;
 				WarForgeMod.FACTIONS.OnNonCitadelClaimPlaced(siegeCamp, placer);
+				siegeCamp.OnPlacedBy(placer);
 				if(placer instanceof EntityPlayerMP)
 				{
 					WarForgeMod.FACTIONS.RequestPlaceFlag((EntityPlayerMP)placer, new DimBlockPos(world.provider.getDimension(), pos));
@@ -190,10 +196,71 @@ public class BlockSiegeCamp extends Block implements ITileEntityProvider
 		//player.openGui(WarForgeMod.INSTANCE, CommonProxy.GUI_TYPE_SIEGE_CAMP, world, pos.getX(), pos.getY(), pos.getZ());
 		return true;
 	}
-	
+
+	@Override
+	public EnumPushReaction getPushReaction(IBlockState state) {
+		return EnumPushReaction.IGNORE;
+	}
+
+	// called when block is removed on both client and server, but block is intact at time of call
+	/* UNFINISHED/ UNNECESSARY CURRENTLY
+	@Override
+	public boolean removedByPlayer(IBlockState state, World world, BlockPos pos, EntityPlayer player, boolean willHarvest) {
+		if (world.isRemote) return true; // don't do logic on client
+		TileEntity te = world.getTileEntity(pos);
+
+		if(te != null) {
+			TileEntitySiegeCamp siegeCamp = (TileEntitySiegeCamp)te;
+			siegeCamp.OnServerRemovePlayerFlag(siegeCamp.getPlacer().getName());
+		}
+
+		return true;
+	}
+	 */
+
+	/**
+	 * Called on both Client and Server when World#addBlockEvent is called. On the Server, this may perform additional
+	 * changes to the world, like pistons replacing the block with an extended base. On the client, the update may
+	 * involve replacing tile entities, playing sounds, or performing other visual actions to reflect the server side
+	 * changes.
+	 */
+	/*
+	boolean onBlockEventReceived(World worldIn, BlockPos pos, int id, int param) {
+		TileEntity te = worldIn.getTileEntity(pos);
+		if (worldIn.isRemote && te instanceof TileEntitySiegeCamp && param == 2) {
+			((TileEntitySiegeCamp) te).concludeSiege();
+			return true;
+		}
+
+		return false;
+	}
+	 */
+
+	// server side and allows client to have the possibility to accept events, alongside enabling server acceptance
+	@Deprecated
+	public boolean eventReceived(IBlockState state, World worldIn, BlockPos pos, int id, int param)
+	{
+		return true;
+	}
+
 	@Override
     public boolean canEntityDestroy(IBlockState state, IBlockAccess world, BlockPos pos, Entity entity)
     {
         return false;
     }
+
+	// called before te is updated and does not necessarily mean block is being removed by player
+	/*
+	@Override
+	public void breakBlock(World worldIn, BlockPos pos, IBlockState state) {
+		super.breakBlock(worldIn, pos, state);
+		if (worldIn.isRemote) return;
+		TileEntity te = worldIn.getTileEntity(pos);
+
+		if(te != null) {
+			TileEntitySiegeCamp siegeCamp = (TileEntitySiegeCamp)te;
+			if (siegeCamp != null) siegeCamp.onDestroyed();
+		}
+	}
+	 */
 }

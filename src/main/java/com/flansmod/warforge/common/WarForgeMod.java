@@ -1,52 +1,35 @@
 package com.flansmod.warforge.common;
 
+import com.flansmod.warforge.common.blocks.IClaim;
+import com.flansmod.warforge.common.blocks.TileEntitySiegeCamp;
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockEnderChest;
 import net.minecraft.block.BlockNewLeaf;
 import net.minecraft.block.BlockNewLog;
 import net.minecraft.block.BlockPlanks.EnumType;
-import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.command.CommandHandler;
 import net.minecraft.command.ICommandSender;
-import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
-import net.minecraft.inventory.ContainerChest;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompressedStreamTools;
-import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.dedicated.DedicatedServer;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.tileentity.TileEntityShulkerBox;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TextComponentString;
-import net.minecraft.world.gen.feature.WorldGenLakes;
+import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.config.Configuration;
-import net.minecraftforge.event.RegistryEvent;
-import net.minecraftforge.event.entity.EntityEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.entity.player.PlayerContainerEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock;
 import net.minecraftforge.event.terraingen.PopulateChunkEvent;
 import net.minecraftforge.event.world.BlockEvent;
 import net.minecraftforge.event.world.WorldEvent;
-import net.minecraftforge.event.world.BlockEvent.EntityPlaceEvent;
-import net.minecraftforge.fml.common.FMLCommonHandler;
-import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.Mod.Instance;
@@ -56,17 +39,11 @@ import net.minecraftforge.fml.common.event.FMLInterModComms;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLServerAboutToStartEvent;
-import net.minecraftforge.fml.common.event.FMLServerStartedEvent;
 import net.minecraftforge.fml.common.event.FMLServerStoppingEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.PlayerEvent.PlayerLoggedInEvent;
 import net.minecraftforge.fml.common.network.NetworkRegistry;
-import net.minecraftforge.fml.common.registry.GameRegistry;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.server.FMLServerHandler;
-import scala.util.parsing.json.JSON;
 
-import java.awt.Color;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -74,19 +51,8 @@ import java.util.*;
 
 import org.apache.logging.log4j.Logger;
 
-import com.flansmod.warforge.common.blocks.BlockBasicClaim;
-import com.flansmod.warforge.common.blocks.BlockCitadel;
-import com.flansmod.warforge.common.blocks.BlockSiegeCamp;
-import com.flansmod.warforge.common.blocks.BlockYieldProvider;
-import com.flansmod.warforge.common.blocks.IClaim;
-import com.flansmod.warforge.common.blocks.TileEntityBasicClaim;
-import com.flansmod.warforge.common.blocks.TileEntityCitadel;
-import com.flansmod.warforge.common.blocks.TileEntityReinforcedClaim;
-import com.flansmod.warforge.common.blocks.TileEntitySiegeCamp;
 import com.flansmod.warforge.common.network.PacketHandler;
-import com.flansmod.warforge.common.network.PacketSiegeCampProgressUpdate;
 import com.flansmod.warforge.common.network.PacketTimeUpdates;
-import com.flansmod.warforge.common.network.SiegeCampProgressInfo;
 import com.flansmod.warforge.common.potions.PotionsModule;
 import com.flansmod.warforge.common.world.WorldGenAncientTree;
 import com.flansmod.warforge.common.world.WorldGenBedrockOre;
@@ -98,11 +64,8 @@ import com.flansmod.warforge.common.world.WorldGenSlimeFountain;
 import com.flansmod.warforge.server.CommandFactions;
 import com.flansmod.warforge.server.Faction;
 import com.flansmod.warforge.server.ServerTickHandler;
-import com.flansmod.warforge.server.Siege;
 import com.flansmod.warforge.server.TeleportsModule;
 import com.google.common.io.Files;
-import com.google.gson.Gson;
-import com.mojang.authlib.GameProfile;
 import com.flansmod.warforge.server.Faction.Role;
 import com.flansmod.warforge.server.FactionStorage;
 import com.flansmod.warforge.server.Leaderboard;
@@ -140,7 +103,7 @@ public class WarForgeMod implements ILateMixinLoader
 
 	// Timers
 	public static long ServerTick = 0L;
-	
+
     @EventHandler
     public void preInit(FMLPreInitializationEvent event)
     {
@@ -205,20 +168,18 @@ public class WarForgeMod implements ILateMixinLoader
     {
     	 return (long)(
     			 WarForgeConfig.SIEGE_DAY_LENGTH // In minutes
-     			//* 60f // In minutes
+     			* 60f // In minutes
      			* 60f // In seconds
      			* 1000f); // In milliseconds
-		//fuck this janky shit, who thought you should represent it in fucking HOURS
     }
     
     public long GetYieldDayLengthMS()
     {
     	 return (long)(
-    			 WarForgeConfig.YIELD_DAY_LENGTH //In minutes
-     			//* 60f // In minutes
+    			 WarForgeConfig.YIELD_DAY_LENGTH // In hours
+     			* 60f // In minutes
      			* 60f // In seconds
      			* 1000f); // In milliseconds
-		//fuck this one too
     }
 
 	public long GetCooldownIntoTicks(float cooldown) {
@@ -281,7 +242,7 @@ public class WarForgeMod implements ILateMixinLoader
     	
     	long dayNumber = (msTime - timestampOfFirstDay) / dayLength;
 
-		ServerTick++;
+		++ServerTick;
 
     	if(dayNumber > numberOfSiegeDaysTicked)
     	{
@@ -391,16 +352,19 @@ public class WarForgeMod implements ILateMixinLoader
 		IBlockState state = event.getState();
 		if(state.getBlock() == CONTENT.citadelBlock
 		|| state.getBlock() == CONTENT.basicClaimBlock
-		|| state.getBlock() == CONTENT.reinforcedClaimBlock
-		|| state.getBlock() == CONTENT.siegeCampBlock)
+		|| state.getBlock() == CONTENT.reinforcedClaimBlock)
 		{
 			event.setCanceled(true);
 			return;
 		}
-		
+
 		if(!event.getWorld().isRemote) 
 		{
-			BlockPlacedOrRemoved(event, state);
+			if (state.getBlock() == CONTENT.siegeCampBlock) {
+				TileEntitySiegeCamp siegeBlock = (TileEntitySiegeCamp) event.getWorld().getTileEntity(event.getPos());
+				if (siegeBlock != null) siegeBlock.onDestroyed();
+			}
+			BlockPlacedOrRemoved(event, event.getState());
 		}
 	}
 
@@ -408,7 +372,7 @@ public class WarForgeMod implements ILateMixinLoader
 		for (int val : base) if (val == compare) return true;
 		return false;
 	}
-    
+
     @SubscribeEvent
     public void PreBlockPlaced(RightClickBlock event)
     {
@@ -444,12 +408,13 @@ public class WarForgeMod implements ILateMixinLoader
 
     	// All block placements are cancelled if there is already a block from this mod in that chunk
     	DimChunkPos pos = new DimBlockPos(event.getWorld().provider.getDimension(), placementPos).ToChunkPos();
-    	if(!FACTIONS.GetClaim(pos).equals(Faction.NULL))
-    	{
-    		player.sendMessage(new TextComponentString("This chunk already has a claim"));
+		if(!FACTIONS.GetClaim(pos).equals(Faction.NULL))
+		{
+			player.sendMessage(new TextComponentString("This chunk already has a claim"));
 			event.setCanceled(true);
 			return;
     	}
+
 		if(!containsInt(WarForgeConfig.CLAIM_DIM_WHITELIST, pos.mDim)){
 			player.sendMessage(new TextComponentString("You cannot claim chunks in this dimension"));
 			event.setCanceled(true);
@@ -504,8 +469,13 @@ public class WarForgeMod implements ILateMixinLoader
     			event.setCanceled(true);
     			return;
     		}
-    		// Replace with different way of determining cooldown
-*/
+ */
+
+			if (playerFaction.calcNumSieges() > 2) {
+				player.sendMessage(new TextComponentTranslation("warforge.info.too_many_siege_blocks"));
+				event.setCanceled(true);
+				return;
+			}
 
     		ArrayList<DimChunkPos> validTargets = new ArrayList<DimChunkPos>(4);
     		int numTargets = FACTIONS.GetAdjacentClaims(playerFaction.mUUID, pos, validTargets);
