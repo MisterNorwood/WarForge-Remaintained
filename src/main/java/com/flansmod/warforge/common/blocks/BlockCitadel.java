@@ -66,7 +66,6 @@ public class BlockCitadel extends Block implements ITileEntityProvider
 	@Override
 	public boolean canPlaceBlockAt(World world, BlockPos pos)
 	{
-		WarForgeMod.LOGGER.always().log("canPlaceBlockAt called at " + pos);
 		// Can't claim a chunk claimed by another faction
 		UUID existingClaim = WarForgeMod.FACTIONS.GetClaim(new DimChunkPos(world.provider.getDimension(), pos));
 		if(!existingClaim.equals(Faction.NULL)) {

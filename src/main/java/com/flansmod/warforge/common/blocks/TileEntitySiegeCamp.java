@@ -1,6 +1,5 @@
 package com.flansmod.warforge.common.blocks;
 
-import java.util.Objects;
 import java.util.UUID;
 
 import com.flansmod.warforge.common.DimBlockPos;
@@ -12,15 +11,12 @@ import com.flansmod.warforge.common.network.SiegeCampProgressInfo;
 import com.flansmod.warforge.server.Faction;
 
 import com.flansmod.warforge.server.Siege;
-import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ITickable;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentTranslation;
-import net.minecraft.world.World;
 import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.relauncher.Side;
 
@@ -39,26 +35,7 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 	}
 
 	public void OnPlacedBy(EntityLivingBase placer) {
-		WarForgeMod.LOGGER.always().log("OnPlaced by with placer: " + placer + " and faction of " + mFactionUUID);
 		mPlacer = placer.getUniqueID();
-
-        /*
-		// check for claim in every direction
-		EnumFacing dir = null;
-		while (dir != placer.getHorizontalFacing()) {
-			dir = placer.getHorizontalFacing();
-			UUID existingClaim = WarForgeMod.FACTIONS.GetClaim(new DimChunkPos(world.provider.getDimension(), pos).Offset(dir, 1));
-			WarForgeMod.LOGGER.always().log("onPlacedBy check with placer: " + placer + ", currDir: " + dir + ", UUID of: " + existingClaim);
-			if (existingClaim != null) {
-				mSiegeTarget = WarForgeMod.FACTIONS.GetFaction(existingClaim).mCitadelPos;
-				break;
-			}
-
-			// wrapping around is done automatically
-			dir = EnumFacing.byHorizontalIndex(EnumFacing.valueOf(dir.getName()).getHorizontalIndex() + 1);
-		}
-		 */
-
 	}
 
 	// called whenever block should be destroyed
@@ -69,7 +46,6 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 	}
 
 	public void destroy() {
-		WarForgeMod.LOGGER.always().log("Destroying siege block at " + getPos() + " with chunkPos: " + GetPos().ToChunkPos());
 		world.destroyBlock(getPos(), true); // destroy block of failed siege
 		siegeStatus = -1; // invalidate before destruction do that this code is not run in an infinite loop in getUpdateTag
 		world.markBlockRangeForRenderUpdate(pos, pos);
@@ -79,7 +55,6 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 
 		WarForgeMod.FACTIONS.getClaims().remove(GetPos().ToChunkPos());
 		WarForgeMod.FACTIONS.GetFaction(mFactionUUID).OnClaimLost(GetPos());
-		WarForgeMod.LOGGER.always().log("mClaims: " + WarForgeMod.FACTIONS.getClaims());
 		world.removeTileEntity(getPos());
 	}
 
@@ -101,11 +76,13 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 	public boolean CanBeSieged() { return false; }
 
 	// returns true to invalidate forcefull; run when chunk wants to replace dat
+	/*
 	@Override
 	public boolean shouldRefresh(World world, BlockPos pos, IBlockState oldState, IBlockState newState) {
 		WarForgeMod.LOGGER.always().log("shouldRefresh has been called in " + world + " at pos " + pos + " with oldSate of " + oldState + " and newState of " + newState);
 		return super.shouldRefresh(world, pos, oldState, newState);
 	}
+	 */
 
 	// called when player flag is removed, but not necessarily when siege ends?
 	@Override
@@ -117,14 +94,12 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 
 	// separated from overridden method to allow for testing and to make functionality apparent
 	public void endSiegePrepped() {
-		WarForgeMod.LOGGER.always().log("ending siege from prep");
 		siegeStatus = 2; // siege is failed as all player flags from placing group are lost
 		concludeSiege();
 	}
 
 	// forces siege to end
 	public void failSiege() {
-		WarForgeMod.LOGGER.always().log("ending siege as failure");
 		siegeStatus = 2;
 		concludeSiege();
 	}
@@ -141,8 +116,6 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 			return;
 		}
 
-		WarForgeMod.LOGGER.always().log("Concluding Siege with siegeStatus: " + siegeStatus);
-
 		// update siege info and notify all nearby
 		Siege siege = WarForgeMod.FACTIONS.getSieges().get(mSiegeTarget.ToChunkPos());
 		if(siege != null) {
@@ -150,13 +123,9 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 			info.mProgress = siegeStatus == 2 ? -5 : info.mCompletionPoint;
 			PacketSiegeCampProgressUpdate packet = new PacketSiegeCampProgressUpdate();
 			packet.mInfo = info;
-			WarForgeMod.LOGGER.always().log("Sending siege packet update with siege: " + siege + ", progress: " + info.mProgress + ", packetInfo progress of: " + packet.mInfo.mProgress + ", getAttacking: " + getAttacking() + ", getDefending: " + getDefending());
-			for (EntityPlayer attacker : getAttacking().getPlayers(entityPlayer -> true)) {
-				if (attacker != null) WarForgeMod.NETWORK.sendTo(packet, (EntityPlayerMP) attacker);
-			}
-			for (EntityPlayer defender : getDefending().getPlayers(entityPlayer -> true)) {
-				if (defender != null) WarForgeMod.NETWORK.sendTo(packet, (EntityPlayerMP) defender);
-			}
+
+			for (EntityPlayer attacker : getAttacking().getPlayers(entityPlayer -> true)) if (attacker != null) WarForgeMod.NETWORK.sendTo(packet, (EntityPlayerMP) attacker);
+			for (EntityPlayer defender : getDefending().getPlayers(entityPlayer -> true)) if (defender != null) WarForgeMod.NETWORK.sendTo(packet, (EntityPlayerMP) defender);
 		}
 
 		// siege may not exist in server's record, leading to crash loop. This prevents the loop. Removes siege after info indicating update is done
@@ -164,7 +133,6 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 			WarForgeMod.FACTIONS.getSieges().get(mSiegeTarget.ToChunkPos()).setAttackProgress(siegeStatus == 2 ? -5 : WarForgeMod.FACTIONS.getSieges().get(mSiegeTarget.ToChunkPos()).GetAttackSuccessThreshold()); // ends siege
 			WarForgeMod.FACTIONS.handleCompletedSiege(mSiegeTarget.ToChunkPos()); // performs check on completed sieges without invoking checks on unrelated sieges
 			WarForgeMod.FACTIONS.EndSiege(GetPos());
-			WarForgeMod.LOGGER.always().log("mClaims: " + WarForgeMod.FACTIONS.getClaims());
 		} catch (Exception e) {
 			WarForgeMod.LOGGER.atError().log("Got exception when attempting to force end siege of: " + e + " with siegeTarget of: " + mSiegeTarget + " and pos of: " + getPos());
 		}
@@ -274,30 +242,15 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 		if (world.isRemote) return;
 
 		// do not do logic with invalid values
-		if (mPlacer == Faction.NULL || mSiegeTarget == null) {
-			if (System.currentTimeMillis() % 5000L < 100) WarForgeMod.LOGGER.always().log("Doing Update Failed due to null values with mPlacer: " + mPlacer + " mSiegeTarget: " + mSiegeTarget);
-			return;
-		}
+		if (mPlacer == Faction.NULL || mSiegeTarget == null) return;
 
 		tickTimer &= 0b01111111_11111111_11111111_11111111; // ensure positive
 
 		// only perform the check every second if the timer is greater than one second, or every tick if an attacker must always be present
 		if (doCheckPerTick || tickTimer % 20 == 0) {
-			WarForgeMod.LOGGER.always().log("Doing update with mPlacer as " + mPlacer + ", mSiegeTarget: " + mSiegeTarget + ", tickTimer: " + tickTimer + ", doCheckPerTick: " + doCheckPerTick +  ", abandondedSiegeTickTimer: " + abandonedSiegeTickTimer + ", desertionTimer: " + WarForgeConfig.ATTACKER_DESERTION_TIMER);
-
 			// send message to all players on defending team with necessary information to defend every 5 minutes
 			if (tickTimer % 6000 == 0) {
-				WarForgeMod.LOGGER.always().log("Sending information to player with mSiegeTarget: " + mSiegeTarget);
 				messageAllDefenders("warforge.info.siege_defense_info", getPos().toString());
-			}
-
-			// logging
-			for (EntityPlayer player : world.getPlayers(EntityPlayer.class, Objects::nonNull)) {
-				if (player == null) {
-					WarForgeMod.LOGGER.always().log("this predicate doesn't work and a null was found");
-					continue;
-				}
-				WarForgeMod.LOGGER.always().log("Player <" + player + ">, isPosInRad of: " + isPlayerInRad(player) + ", isInAttackerFaction of: " + (getFac(player) == null ? "null player faction" : getFac(player).equals(getPlayerFac(mPlacer))));
 			}
 
 			// if there are no players in the radius
