@@ -88,7 +88,7 @@ public class WarForgeMod implements ILateMixinLoader
 	
 	public static MinecraftServer MC_SERVER = null;
 	public static Random rand = new Random();
-	public static CombatLogHandler CombatLog = new CombatLogHandler();
+	public static CombatLogHandler combatLog = new CombatLogHandler();
 	
 	
 	public static long numberOfSiegeDaysTicked = 0L;
@@ -264,6 +264,10 @@ public class WarForgeMod implements ILateMixinLoader
     		FACTIONS.AdvanceYieldDay();
     		shouldUpdate = true;
     	}
+		if(!combatLog.isEmpty()){
+			combatLog.doEnforcements(System.currentTimeMillis());
+
+		}
     	
     	if(shouldUpdate)
     	{
@@ -505,7 +509,6 @@ public class WarForgeMod implements ILateMixinLoader
 	    	
 	    	FACTIONS.SendAllSiegeInfoToNearby();
     	}
-		PlayerMP
     }
     
     // Discord integration
@@ -734,8 +737,10 @@ public class WarForgeMod implements ILateMixinLoader
 	@EventHandler
 	public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
 		EntityPlayer player = event.player;
+		DimBlockPos playerPos = new DimBlockPos(player);
 		Faction playerFaction = FACTIONS.GetFactionOfPlayer(player.getUniqueID());
 		if(FACTIONS.isPlayerDefending(player.getUniqueID())){
+			combatLog.add(playerPos,player.getUniqueID(), System.currentTimeMillis());
 
 
 		}

@@ -38,7 +38,8 @@ public class FactionStorage
     
     // This is all the currently active sieges, keyed by the defending position
     private HashMap<DimChunkPos, Siege> mSieges = new HashMap<DimChunkPos, Siege>();
-    
+	//This is all chunks that are under the "Grace" period 
+	private HashMap<DimChunkPos, Long> mStalled = new HashMap<DimChunkPos, Long>();
     
     // SafeZone and WarZone
     public static UUID SAFE_ZONE_ID = Faction.CreateUUID("safezone");
