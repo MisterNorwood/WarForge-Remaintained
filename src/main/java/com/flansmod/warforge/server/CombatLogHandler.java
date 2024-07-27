@@ -1,6 +1,7 @@
 package com.flansmod.warforge.server;
 
 import com.flansmod.warforge.common.DimBlockPos;
+import com.flansmod.warforge.common.WarForgeConfig;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
@@ -39,7 +40,6 @@ public class CombatLogHandler {
     }
 
     private List<PlayerInfo> enforcementList;
-    public static final long threshold = 60*1000; //60 seconds in MS
 
     public CombatLogHandler() {
         enforcementList = new ArrayList<>();
@@ -51,7 +51,7 @@ public class CombatLogHandler {
         enforcementList.add(new PlayerInfo(logoffPos, playerID, logoffTimestamp));
 
     }
-    public void enforce(PlayerInfo player){
+    private void enforce(PlayerInfo player){
         MinecraftServer server = FMLCommonHandler.instance().getMinecraftServerInstance();
         if (server == null) return;
 
@@ -95,9 +95,11 @@ public class CombatLogHandler {
             }
         }
     }
+
     public void doEnforcements(long timestamp) {
         for (PlayerInfo info : enforcementList) {
-            if (info.logoffTimestamp - timestamp > threshold) enforce(info);
+            // if the difference in the timestamp between when the player logged out and when this check is done exceeds the threshold, then enforcement is done
+            if (((int) (timestamp - info.logoffTimestamp)) > WarForgeConfig.COMBAT_LOG_THRESHOLD) enforce(info);
         }
     }
     public boolean isEmpty(){

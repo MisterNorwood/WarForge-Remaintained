@@ -1,8 +1,10 @@
 package com.flansmod.warforge.server;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 import com.flansmod.warforge.common.DimBlockPos;
 import com.flansmod.warforge.common.DimChunkPos;
@@ -644,11 +646,31 @@ public class Faction
 		}
 		tags.setTag("members", memberList);
 	}
+
+	// checks all stored claim locations to check if they are siege blocks
+	public int calcNumSieges() {
+		int result = 0;
+		for (DimBlockPos claimPos : mClaims.keySet()) if (WarForgeMod.FACTIONS.getSieges().get(claimPos) != null) ++result;
+		return result;
+	}
 	
 	private static String GetPlayerName(UUID playerID)
 	{
 		EntityPlayer player = GetPlayer(playerID);
 		return player == null ? ("[" + playerID.toString() + "]") : player.getName();
+	}
+
+	// array list needed to be able to pre-allocate size, but not know if all players will pass check
+	public ArrayList<EntityPlayer> getPlayers(Predicate<EntityPlayer> playerCondition) {
+		ArrayList<EntityPlayer> players = new ArrayList<>(mMembers.keySet().size());
+		//mMembers.keySet() seems to have a null default
+		for(UUID playerID : mMembers.keySet())
+		{
+			EntityPlayer player = GetPlayer(playerID);
+			if(player != null && playerCondition.test(player)) players.add(player);
+		}
+
+		return players;
 	}
 	
 	private static EntityPlayer GetPlayer(UUID playerID)

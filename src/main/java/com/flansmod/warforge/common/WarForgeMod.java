@@ -1,6 +1,8 @@
 package com.flansmod.warforge.common;
 
 import com.flansmod.warforge.server.*;
+import com.flansmod.warforge.api.ObjectIntPair;
+import com.flansmod.warforge.common.blocks.TileEntitySiegeCamp;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockNewLeaf;
 import net.minecraft.block.BlockNewLog;
@@ -16,12 +18,12 @@ import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompressedStreamTools;
-import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.*;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TextComponentString;
+import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock;
@@ -88,16 +90,20 @@ public class WarForgeMod implements ILateMixinLoader
 	
 	public static MinecraftServer MC_SERVER = null;
 	public static Random rand = new Random();
-	public static CombatLogHandler combatLog = new CombatLogHandler();
-	
+	public static CombatLogHandler COMBAT_LOG = new CombatLogHandler();
+
 	
 	public static long numberOfSiegeDaysTicked = 0L;
 	public static long numberOfYieldDaysTicked = 0L;
 	public static long timestampOfFirstDay = 0L;
 
+	// realistically a long is overkill for notating the time left, but it avoids type conversion
+	public static HashMap<DimChunkPos, ObjectIntPair<UUID>> conqueredChunks;
+	public static long previousUpdateTimestamp = 0L;
+
 	// Timers
 	public static long ServerTick = 0L;
-	
+
     @EventHandler
     public void preInit(FMLPreInitializationEvent event)
     {
@@ -161,21 +167,19 @@ public class WarForgeMod implements ILateMixinLoader
     public long GetSiegeDayLengthMS()
     {
     	 return (long)(
-    			 WarForgeConfig.SIEGE_DAY_LENGTH // In minutes
-     			//* 60f // In minutes
+    			 WarForgeConfig.SIEGE_DAY_LENGTH // In hours
+     			* 60f // In minutes
      			* 60f // In seconds
      			* 1000f); // In milliseconds
-		//fuck this janky shit, who thought you should represent it in fucking HOURS
     }
     
     public long GetYieldDayLengthMS()
     {
     	 return (long)(
-    			 WarForgeConfig.YIELD_DAY_LENGTH //In minutes
-     			//* 60f // In minutes
+    			 WarForgeConfig.YIELD_DAY_LENGTH // In hours
+     			* 60f // In minutes
      			* 60f // In seconds
      			* 1000f); // In milliseconds
-		//fuck this one too
     }
 
 	public long GetCooldownIntoTicks(float cooldown) {
@@ -235,10 +239,12 @@ public class WarForgeMod implements ILateMixinLoader
     	boolean shouldUpdate = false;
     	long msTime = System.currentTimeMillis();
     	long dayLength = GetSiegeDayLengthMS();
-    	
+
+		updateConqueredChunks(msTime);
+
     	long dayNumber = (msTime - timestampOfFirstDay) / dayLength;
 
-		ServerTick++;
+		++ServerTick;
 
     	if(dayNumber > numberOfSiegeDaysTicked)
     	{
@@ -264,11 +270,9 @@ public class WarForgeMod implements ILateMixinLoader
     		FACTIONS.AdvanceYieldDay();
     		shouldUpdate = true;
     	}
-		if(!combatLog.isEmpty()){
-			combatLog.doEnforcements(System.currentTimeMillis());
 
-		}
-    	
+		COMBAT_LOG.doEnforcements(System.currentTimeMillis());
+
     	if(shouldUpdate)
     	{
 	    	PacketTimeUpdates packet = new PacketTimeUpdates();
@@ -281,7 +285,18 @@ public class WarForgeMod implements ILateMixinLoader
     	}
     	
     }
-    
+
+	public static void updateConqueredChunks(long msUpdateTime) {
+		int msPassed = (int) (msUpdateTime - previousUpdateTimestamp); // the difference is likely less than 596h (max time storage of int using ms)
+		for (DimChunkPos chunkPosKey : conqueredChunks.keySet()) {
+			ObjectIntPair<UUID> chunkEntry = conqueredChunks.get(chunkPosKey);
+			if (chunkEntry.getRight() < msPassed) conqueredChunks.remove(chunkPosKey);
+			else chunkEntry.setRight(chunkEntry.getRight() - msPassed);
+		}
+
+		previousUpdateTimestamp = msUpdateTime; // current update is now previous, as update has been performed
+	}
+
     @SubscribeEvent
     public void PlayerInteractBlock(RightClickBlock event)
     {
@@ -352,16 +367,19 @@ public class WarForgeMod implements ILateMixinLoader
 		IBlockState state = event.getState();
 		if(state.getBlock() == CONTENT.citadelBlock
 		|| state.getBlock() == CONTENT.basicClaimBlock
-		|| state.getBlock() == CONTENT.reinforcedClaimBlock
-		|| state.getBlock() == CONTENT.siegeCampBlock)
+		|| state.getBlock() == CONTENT.reinforcedClaimBlock)
 		{
 			event.setCanceled(true);
 			return;
 		}
-		
+
 		if(!event.getWorld().isRemote) 
 		{
-			BlockPlacedOrRemoved(event, state);
+			if (state.getBlock() == CONTENT.siegeCampBlock) {
+				TileEntitySiegeCamp siegeBlock = (TileEntitySiegeCamp) event.getWorld().getTileEntity(event.getPos());
+				if (siegeBlock != null) siegeBlock.onDestroyed();
+			}
+			BlockPlacedOrRemoved(event, event.getState());
 		}
 	}
 
@@ -369,7 +387,7 @@ public class WarForgeMod implements ILateMixinLoader
 		for (int val : base) if (val == compare) return true;
 		return false;
 	}
-    
+
     @SubscribeEvent
     public void PreBlockPlaced(RightClickBlock event)
     {
@@ -405,12 +423,21 @@ public class WarForgeMod implements ILateMixinLoader
 
     	// All block placements are cancelled if there is already a block from this mod in that chunk
     	DimChunkPos pos = new DimBlockPos(event.getWorld().provider.getDimension(), placementPos).ToChunkPos();
-    	if(!FACTIONS.GetClaim(pos).equals(Faction.NULL))
-    	{
-    		player.sendMessage(new TextComponentString("This chunk already has a claim"));
+		if(!FACTIONS.GetClaim(pos).equals(Faction.NULL))
+		{
+			player.sendMessage(new TextComponentString("This chunk already has a claim"));
 			event.setCanceled(true);
 			return;
     	}
+
+		if (conqueredChunks.get(pos) != null && conqueredChunks.get(pos).getLeft() != playerFaction.mUUID) {
+			player.sendMessage(new TextComponentTranslation("warforge.info.chunk_is_conquered",
+					WarForgeMod.FACTIONS.GetFaction(conqueredChunks.get(pos).getLeft()).mName,
+					formatTime(conqueredChunks.get(pos).getRight())));
+			event.setCanceled(true);
+			return;
+		}
+
 		if(!containsInt(WarForgeConfig.CLAIM_DIM_WHITELIST, pos.mDim)){
 			player.sendMessage(new TextComponentString("You cannot claim chunks in this dimension"));
 			event.setCanceled(true);
@@ -465,8 +492,13 @@ public class WarForgeMod implements ILateMixinLoader
     			event.setCanceled(true);
     			return;
     		}
-    		// Replace with different way of determining cooldown
-*/
+ */
+
+			if (playerFaction.calcNumSieges() > 2) {
+				player.sendMessage(new TextComponentTranslation("warforge.info.too_many_siege_blocks"));
+				event.setCanceled(true);
+				return;
+			}
 
     		ArrayList<DimChunkPos> validTargets = new ArrayList<DimChunkPos>(4);
     		int numTargets = FACTIONS.GetAdjacentClaims(playerFaction.mUUID, pos, validTargets);
@@ -481,7 +513,23 @@ public class WarForgeMod implements ILateMixinLoader
     	}
     	
     }
-    
+
+	public static String formatTime(int ms) {
+		int seconds = ms / 1000;
+		int minutes = seconds / 60;
+		int hours = minutes / 60;
+		int days = hours / 24;
+
+		StringBuilder timeBuilder = new StringBuilder();
+		if (days != 0) timeBuilder.append(days).append("d ");
+		if (hours != 0) timeBuilder.append(hours).append("h ");
+		if (minutes != 0) timeBuilder.append(minutes).append("min ");
+		if (seconds != 0) timeBuilder.append(seconds).append("s ");
+		timeBuilder.append(ms - seconds * 1000).append("ms");
+
+		return timeBuilder.toString();
+	}
+
     @SubscribeEvent
     public void PlayerJoinedGame(PlayerLoggedInEvent event)
     {
@@ -634,21 +682,75 @@ public class WarForgeMod implements ILateMixinLoader
 	private void ReadFromNBT(NBTTagCompound tags)
 	{
 		FACTIONS.ReadFromNBT(tags);
-		
+		conqueredChunks = new HashMap<>();
+		readConqueredChunks(tags);
+
 		timestampOfFirstDay = tags.getLong("zero-timestamp");
 		numberOfSiegeDaysTicked = tags.getLong("num-days-elapsed");
 		numberOfYieldDaysTicked = tags.getLong("num-yields-awarded");
 	}
-	
+
+	private void readConqueredChunks(NBTTagCompound tags) {
+		conqueredChunks = new HashMap<>();
+		NBTTagCompound conqueredChunksDataList = tags.getCompoundTag("conqueredChunks");
+
+		// 11 is type id for int array
+		int index = 0;
+		while (true) {
+			NBTTagList keyValPair = conqueredChunksDataList.getTagList(new StringBuilder("conqueredChunk_").append(index).toString(), 11);
+			if (keyValPair == null || keyValPair.isEmpty()) break; // exit once invalid is found, as it is assumed this is the first non-existent/ invalid index
+			int dimInfo[] = keyValPair.getIntArrayAt(0);
+			DimChunkPos chunkPosKey = new DimChunkPos(dimInfo[0], dimInfo[1], dimInfo[2]);
+			UUID factionID = BEIntArrayToUUID(keyValPair.getIntArrayAt(1));
+
+			conqueredChunks.put(chunkPosKey, new ObjectIntPair<>(factionID, keyValPair.getIntArrayAt(2)[0]));
+			++index;
+		}
+	}
+
 	private void WriteToNBT(NBTTagCompound tags)
 	{
 		FACTIONS.WriteToNBT(tags);
-		
+		writeConqueredChunks(tags);
+
 		tags.setLong("zero-timestamp", timestampOfFirstDay);
 		tags.setLong("num-days-elapsed", numberOfSiegeDaysTicked);
 		tags.setLong("num-yields-awarded", numberOfYieldDaysTicked);
 	}
-	
+
+	private void writeConqueredChunks(NBTTagCompound tags) {
+		NBTTagCompound conqueredChunksDataList = new NBTTagCompound();
+		int index = 0;
+		for (DimChunkPos chunkPosKey : conqueredChunks.keySet()) {
+			// values in tag list must all be same, so all types are changed to use int arrays
+			NBTTagList keyValPair = new NBTTagList();
+			keyValPair.appendTag(new NBTTagIntArray(new int[] {chunkPosKey.mDim, chunkPosKey.x, chunkPosKey.z}));
+			keyValPair.appendTag(new NBTTagIntArray(UUIDToBEIntArray(conqueredChunks.get(chunkPosKey).getLeft())));
+			keyValPair.appendTag(new NBTTagIntArray(new int[] {conqueredChunks.get(chunkPosKey).getRight()}));
+
+			conqueredChunksDataList.setTag(new StringBuilder("conqueredChunk_").append(index).toString(), keyValPair);
+		}
+
+		tags.setTag("conqueredChunks", conqueredChunksDataList);
+	}
+
+	// returns big endian (decreasing sig/ biggest sig first) array
+	public static int[] UUIDToBEIntArray(UUID uniqueID) {
+		return new int[] {
+				(int) (uniqueID.getMostSignificantBits() >>> 32),
+				(int) uniqueID.getMostSignificantBits(),
+				(int) (uniqueID.getLeastSignificantBits() >>> 32),
+				(int) uniqueID.getLeastSignificantBits()
+		};
+	}
+
+	public static UUID BEIntArrayToUUID(int[] bigEndianArray) {
+		return new UUID(
+				((long) bigEndianArray[0]) << 32 | ((long) bigEndianArray[1]),
+				((long) bigEndianArray[2]) << 32 | ((long) bigEndianArray[4])
+		);
+	}
+
 	private static File getFactionsFile()
 	{
 		if(MC_SERVER.isDedicatedServer())
@@ -673,6 +775,7 @@ public class WarForgeMod implements ILateMixinLoader
 	public void ServerAboutToStart(FMLServerAboutToStartEvent event)
 	{
 		MC_SERVER = event.getServer();
+		previousUpdateTimestamp = System.currentTimeMillis();
 		CommandHandler handler = ((CommandHandler)MC_SERVER.getCommandManager());
 		handler.registerCommand(new CommandFactions());
 		
@@ -738,11 +841,8 @@ public class WarForgeMod implements ILateMixinLoader
 	public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
 		EntityPlayer player = event.player;
 		DimBlockPos playerPos = new DimBlockPos(player);
-		Faction playerFaction = FACTIONS.GetFactionOfPlayer(player.getUniqueID());
 		if(FACTIONS.isPlayerDefending(player.getUniqueID())){
-			combatLog.add(playerPos,player.getUniqueID(), System.currentTimeMillis());
-
-
+			COMBAT_LOG.add(playerPos, player.getUniqueID(), System.currentTimeMillis());
 		}
 	}
     // Helpers
