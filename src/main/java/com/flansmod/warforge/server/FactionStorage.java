@@ -1,10 +1,7 @@
 package com.flansmod.warforge.server;
 
 import java.awt.Color;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 import com.flansmod.warforge.common.DimBlockPos;
 import com.flansmod.warforge.common.DimChunkPos;
@@ -79,6 +76,18 @@ public class FactionStorage
     		return mFactions.get(factionID).IsPlayerInFaction(playerID);
     	return false;
     }
+
+	public boolean isPlayerDefending(UUID playerID){
+		Faction faction = GetFactionOfPlayer(playerID);
+		List<Siege> Sieges = new ArrayList<>(mSieges.values());
+		for(Siege siege : Sieges){
+			if(siege.mDefendingFaction == faction.mUUID){
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public long getPlayerCooldown(UUID playerID){
 		return mFactions.get(playerID).mMembers.get(playerID).mMoveFlagCooldown;
 	}

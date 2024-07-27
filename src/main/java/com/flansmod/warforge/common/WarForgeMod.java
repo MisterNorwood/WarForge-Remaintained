@@ -1,52 +1,33 @@
 package com.flansmod.warforge.common;
 
+import com.flansmod.warforge.server.*;
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockEnderChest;
 import net.minecraft.block.BlockNewLeaf;
 import net.minecraft.block.BlockNewLog;
 import net.minecraft.block.BlockPlanks.EnumType;
-import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.command.CommandHandler;
 import net.minecraft.command.ICommandSender;
-import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
-import net.minecraft.inventory.ContainerChest;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.CompressedStreamTools;
-import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.dedicated.DedicatedServer;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.tileentity.TileEntityShulkerBox;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TextComponentString;
-import net.minecraft.world.gen.feature.WorldGenLakes;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.config.Configuration;
-import net.minecraftforge.event.RegistryEvent;
-import net.minecraftforge.event.entity.EntityEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.entity.player.PlayerContainerEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock;
 import net.minecraftforge.event.terraingen.PopulateChunkEvent;
 import net.minecraftforge.event.world.BlockEvent;
 import net.minecraftforge.event.world.WorldEvent;
-import net.minecraftforge.event.world.BlockEvent.EntityPlaceEvent;
-import net.minecraftforge.fml.common.FMLCommonHandler;
-import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.Mod.Instance;
@@ -56,17 +37,12 @@ import net.minecraftforge.fml.common.event.FMLInterModComms;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLServerAboutToStartEvent;
-import net.minecraftforge.fml.common.event.FMLServerStartedEvent;
 import net.minecraftforge.fml.common.event.FMLServerStoppingEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.PlayerEvent;
 import net.minecraftforge.fml.common.gameevent.PlayerEvent.PlayerLoggedInEvent;
 import net.minecraftforge.fml.common.network.NetworkRegistry;
-import net.minecraftforge.fml.common.registry.GameRegistry;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.server.FMLServerHandler;
-import scala.util.parsing.json.JSON;
 
-import java.awt.Color;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -74,19 +50,8 @@ import java.util.*;
 
 import org.apache.logging.log4j.Logger;
 
-import com.flansmod.warforge.common.blocks.BlockBasicClaim;
-import com.flansmod.warforge.common.blocks.BlockCitadel;
-import com.flansmod.warforge.common.blocks.BlockSiegeCamp;
-import com.flansmod.warforge.common.blocks.BlockYieldProvider;
-import com.flansmod.warforge.common.blocks.IClaim;
-import com.flansmod.warforge.common.blocks.TileEntityBasicClaim;
-import com.flansmod.warforge.common.blocks.TileEntityCitadel;
-import com.flansmod.warforge.common.blocks.TileEntityReinforcedClaim;
-import com.flansmod.warforge.common.blocks.TileEntitySiegeCamp;
 import com.flansmod.warforge.common.network.PacketHandler;
-import com.flansmod.warforge.common.network.PacketSiegeCampProgressUpdate;
 import com.flansmod.warforge.common.network.PacketTimeUpdates;
-import com.flansmod.warforge.common.network.SiegeCampProgressInfo;
 import com.flansmod.warforge.common.potions.PotionsModule;
 import com.flansmod.warforge.common.world.WorldGenAncientTree;
 import com.flansmod.warforge.common.world.WorldGenBedrockOre;
@@ -95,17 +60,8 @@ import com.flansmod.warforge.common.world.WorldGenDenseOre;
 import com.flansmod.warforge.common.world.WorldGenNetherPillar;
 import com.flansmod.warforge.common.world.WorldGenShulkerFossil;
 import com.flansmod.warforge.common.world.WorldGenSlimeFountain;
-import com.flansmod.warforge.server.CommandFactions;
-import com.flansmod.warforge.server.Faction;
-import com.flansmod.warforge.server.ServerTickHandler;
-import com.flansmod.warforge.server.Siege;
-import com.flansmod.warforge.server.TeleportsModule;
 import com.google.common.io.Files;
-import com.google.gson.Gson;
-import com.mojang.authlib.GameProfile;
 import com.flansmod.warforge.server.Faction.Role;
-import com.flansmod.warforge.server.FactionStorage;
-import com.flansmod.warforge.server.Leaderboard;
 import zone.rong.mixinbooter.ILateMixinLoader;
 
 @Mod(modid = WarForgeMod.MODID, name = WarForgeMod.NAME, version = WarForgeMod.VERSION)
@@ -132,6 +88,7 @@ public class WarForgeMod implements ILateMixinLoader
 	
 	public static MinecraftServer MC_SERVER = null;
 	public static Random rand = new Random();
+	public static CombatLogHandler CombatLog = new CombatLogHandler();
 	
 	
 	public static long numberOfSiegeDaysTicked = 0L;
@@ -548,6 +505,7 @@ public class WarForgeMod implements ILateMixinLoader
 	    	
 	    	FACTIONS.SendAllSiegeInfoToNearby();
     	}
+		PlayerMP
     }
     
     // Discord integration
@@ -772,7 +730,16 @@ public class WarForgeMod implements ILateMixinLoader
 		Save("Server Stop");
 		MC_SERVER = null;
 	}
-	
+
+	@EventHandler
+	public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+		EntityPlayer player = event.player;
+		Faction playerFaction = FACTIONS.GetFactionOfPlayer(player.getUniqueID());
+		if(FACTIONS.isPlayerDefending(player.getUniqueID())){
+
+
+		}
+	}
     // Helpers
 
     public static UUID GetUUID(ICommandSender sender)
