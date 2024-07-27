@@ -100,5 +100,10 @@ public class CombatLogHandler {
             if (info.logoffTimestamp - timestamp > threshold) enforce(info);
         }
     }
+    public boolean isEmpty(){
+        if(enforcementList.isEmpty())
+            return true;
+        return false;
+    }
 
 }
