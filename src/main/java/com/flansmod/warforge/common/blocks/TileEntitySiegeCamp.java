@@ -272,6 +272,10 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 					messageAllDefenders("warforge.info.siege_idle_exceeded_defender");
 					failSiege();
 				} else {
+					if (abandonedSiegeTickTimer / 20 == WarForgeConfig.ATTACKER_DESERTION_TIMER >>> 4) {
+						messageAllAttackers("warforge.info.siege_abandon_notification", abandonedSiegeTickTimer / 20, WarForgeConfig.ATTACKER_DESERTION_TIMER);
+					}
+					int ticksLeft = WarForgeConfig.ATTACKER_DESERTION_TIMER * 20 - abandonedSiegeTickTimer;
 					switch(WarForgeConfig.ATTACKER_DESERTION_TIMER * 20 - abandonedSiegeTickTimer) {
 						case 1200:
 							messageAllAttackers("warforge.info.siege_abandon_approaching_attacker", 60);

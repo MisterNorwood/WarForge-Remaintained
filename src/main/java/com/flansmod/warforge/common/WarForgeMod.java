@@ -316,9 +316,7 @@ public class WarForgeMod implements ILateMixinLoader
     		}
     	}
     }
-    
-    
-    
+
     @SubscribeEvent
     public void PlayerDied(LivingDeathEvent event)
     {
@@ -520,12 +518,18 @@ public class WarForgeMod implements ILateMixinLoader
 		int hours = minutes / 60;
 		int days = hours / 24;
 
+		// ensure entire time left is not represented in each format, but rather only leftover amounts for that unit
+
+		seconds -= minutes * 60;
+		minutes -= hours * 60;
+		hours -= days * 24;
+
 		StringBuilder timeBuilder = new StringBuilder();
-		if (days != 0) timeBuilder.append(days).append("d ");
-		if (hours != 0) timeBuilder.append(hours).append("h ");
-		if (minutes != 0) timeBuilder.append(minutes).append("min ");
-		if (seconds != 0) timeBuilder.append(seconds).append("s ");
-		timeBuilder.append(ms - seconds * 1000).append("ms");
+		if (days > 0) timeBuilder.append(days).append("d ");
+		if (hours > 0) timeBuilder.append(hours).append("h ");
+		if (minutes > 0) timeBuilder.append(minutes).append("min ");
+		if (seconds > 0) timeBuilder.append(seconds).append("s ");
+		timeBuilder.append(ms % 1000).append("ms");
 
 		return timeBuilder.toString();
 	}
@@ -698,8 +702,8 @@ public class WarForgeMod implements ILateMixinLoader
 		int index = 0;
 		while (true) {
 			NBTTagList keyValPair = conqueredChunksDataList.getTagList(new StringBuilder("conqueredChunk_").append(index).toString(), 11);
-			if (keyValPair == null || keyValPair.isEmpty()) break; // exit once invalid is found, as it is assumed this is the first non-existent/ invalid index
-			int dimInfo[] = keyValPair.getIntArrayAt(0);
+			if (keyValPair.isEmpty()) break; // exit once invalid (empty, since getTagList never returns null) is found, as it is assumed this is the first non-existent/ invalid index
+			int[] dimInfo = keyValPair.getIntArrayAt(0);
 			DimChunkPos chunkPosKey = new DimChunkPos(dimInfo[0], dimInfo[1], dimInfo[2]);
 			UUID factionID = BEIntArrayToUUID(keyValPair.getIntArrayAt(1));
 
@@ -729,6 +733,8 @@ public class WarForgeMod implements ILateMixinLoader
 			keyValPair.appendTag(new NBTTagIntArray(new int[] {conqueredChunks.get(chunkPosKey).getRight()}));
 
 			conqueredChunksDataList.setTag(new StringBuilder("conqueredChunk_").append(index).toString(), keyValPair);
+
+			++index;
 		}
 
 		tags.setTag("conqueredChunks", conqueredChunksDataList);
@@ -747,7 +753,7 @@ public class WarForgeMod implements ILateMixinLoader
 	public static UUID BEIntArrayToUUID(int[] bigEndianArray) {
 		return new UUID(
 				((long) bigEndianArray[0]) << 32 | ((long) bigEndianArray[1]),
-				((long) bigEndianArray[2]) << 32 | ((long) bigEndianArray[4])
+				((long) bigEndianArray[2]) << 32 | ((long) bigEndianArray[3])
 		);
 	}
 

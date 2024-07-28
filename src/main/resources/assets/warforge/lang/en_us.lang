@@ -30,6 +30,7 @@ warforge.info.too_many_siege_blocks=Your faction has reached the maximum number 
 warforge.info.siege_count=Your faction's current number of sieges: %d.
 warforge.info.extraneous_siege_block_info=Your faction currently has an extraneous siege block at: %s.
 warforge.info.siege_defense_info=Your faction is currently targeted by a siege block at: %s.
+warforge.info.siege_abandon_notification=No members of your faction have been in the siege chunks area [3x3] for %d seconds. Your siege will be considered abandoned in %d seconds, unless at least one member returns.
 warforge.info.siege_idle_exceeded_attacker=Your faction was away from the siege for too long; the siege is lost.
 warforge.info.siege_idle_exceeded_defender=The enemy faction abandoned their posts; the siege is won.
 warforge.info.siege_abandon_approaching_attacker=There are %d seconds left until your siege is considered abandoned; return to the 3x3 of chunks centered on your siege block's chunk.
