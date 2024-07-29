@@ -18,12 +18,14 @@ import com.flansmod.warforge.server.Faction.PlayerData;
 import com.flansmod.warforge.server.Faction.Role;
 import com.mojang.authlib.GameProfile;
 
+import it.unimi.dsi.fastutil.Hash;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.NBTBase;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.nbt.NBTTagIntArray;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.DamageSource;
@@ -40,8 +42,9 @@ public class FactionStorage {
     
     // This is all the currently active sieges, keyed by the defending position
     private HashMap<DimChunkPos, Siege> mSieges = new HashMap<DimChunkPos, Siege>();
+
 	//This is all chunks that are under the "Grace" period
-	private HashMap<DimChunkPos, Long> mStalled = new HashMap<DimChunkPos, Long>();
+	public HashMap<DimChunkPos, ObjectIntPair<UUID>> conqueredChunks = new HashMap<>();
     
     // SafeZone and WarZone
     public static UUID SAFE_ZONE_ID = Faction.CreateUUID("safezone");
@@ -193,6 +196,18 @@ public class FactionStorage {
 			entry.getValue().Update();
 		}
     }
+
+	public void updateConqueredChunks(long msUpdateTime) {
+		int msPassed = (int) (msUpdateTime - WarForgeMod.previousUpdateTimestamp); // the difference is likely less than 596h (max time storage of int using ms)
+
+		for (DimChunkPos chunkPosKey : conqueredChunks.keySet()) {
+			ObjectIntPair<UUID> chunkEntry = conqueredChunks.get(chunkPosKey);
+			if (chunkEntry.getRight() < msPassed) conqueredChunks.remove(chunkPosKey);
+			else chunkEntry.setRight(chunkEntry.getRight() - msPassed);
+		}
+
+		WarForgeMod.previousUpdateTimestamp = msUpdateTime; // current update is now previous, as update has been performed
+	}
     
     public void AdvanceSiegeDay()
     {
@@ -305,7 +320,7 @@ public class FactionStorage {
 		DimBlockPos blockPos = defenders.GetSpecificPosForClaim(chunkPos);
 		boolean successful = siege.WasSuccessful();
 		if(successful) {
-			if (WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD > 0) WarForgeMod.conqueredChunks.put(chunkPos, new ObjectIntPair<>(attackers.mUUID, WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD));
+			if (WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD > 0) conqueredChunks.put(chunkPos, new ObjectIntPair<>(attackers.mUUID, WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD));
 			defenders.OnClaimLost(blockPos);
 			mClaims.remove(blockPos.ToChunkPos());
 			attackers.MessageAll(new TextComponentTranslation("warforge.info.siege_won_attackers", defenders.mName, blockPos.ToFancyString()));
@@ -317,7 +332,7 @@ public class FactionStorage {
 				OnNonCitadelClaimPlaced((IClaim)te, attackers);
 			}
 		} else {
-			if (WarForgeConfig.DEFENDER_CONQUERED_CHUNK_PERIOD > 0) WarForgeMod.conqueredChunks.put(chunkPos, new ObjectIntPair<>(defenders.mUUID, WarForgeConfig.DEFENDER_CONQUERED_CHUNK_PERIOD)); // defenders get won claims defended
+			if (WarForgeConfig.DEFENDER_CONQUERED_CHUNK_PERIOD > 0) conqueredChunks.put(chunkPos, new ObjectIntPair<>(defenders.mUUID, WarForgeConfig.DEFENDER_CONQUERED_CHUNK_PERIOD)); // defenders get won claims defended
 			attackers.MessageAll(new TextComponentTranslation("warforge.info.siege_lost_attackers", attackers.mName, blockPos.ToFancyString()));
 			defenders.MessageAll(new TextComponentTranslation("warforge.info.siege_won_defenders", defenders.mName, blockPos.ToFancyString()));
 			defenders.mNotoriety += WarForgeConfig.NOTORIETY_PER_SIEGE_DEFEND_SUCCESS;
@@ -651,9 +666,9 @@ public class FactionStorage {
 			return false;
 		}
 
-		if (WarForgeMod.conqueredChunks.get(defendingPos.ToChunkPos()) != null) {
+		if (conqueredChunks.get(defendingPos.ToChunkPos()) != null) {
 			factionOfficer.sendMessage(new TextComponentTranslation("warforge.info.chunk_is_conquered",
-					defending.mName, WarForgeMod.formatTime(WarForgeMod.conqueredChunks.get(defendingPos.ToChunkPos()).getRight())));
+					defending.mName, WarForgeMod.formatTime(conqueredChunks.get(defendingPos.ToChunkPos()).getRight())));
 			return false;
 		}
 
@@ -920,6 +935,27 @@ public class FactionStorage {
 
 			mSieges.put(new DimChunkPos(dim, x, z), siege);
 		}
+
+		conqueredChunks = new HashMap<>();
+		readConqueredChunks(tags);
+	}
+
+	private void readConqueredChunks(NBTTagCompound tags) {
+		conqueredChunks = new HashMap<>();
+		NBTTagCompound conqueredChunksDataList = tags.getCompoundTag("conqueredChunks");
+
+		// 11 is type id for int array
+		int index = 0;
+		while (true) {
+			NBTTagList keyValPair = conqueredChunksDataList.getTagList(new StringBuilder("conqueredChunk_").append(index).toString(), 11);
+			if (keyValPair.isEmpty()) break; // exit once invalid (empty, since getTagList never returns null) is found, as it is assumed this is the first non-existent/ invalid index
+			int[] dimInfo = keyValPair.getIntArrayAt(0);
+			DimChunkPos chunkPosKey = new DimChunkPos(dimInfo[0], dimInfo[1], dimInfo[2]);
+			UUID factionID = BEIntArrayToUUID(keyValPair.getIntArrayAt(1));
+
+			conqueredChunks.put(chunkPosKey, new ObjectIntPair<>(factionID, keyValPair.getIntArrayAt(2)[0]));
+			++index;
+		}
 	}
 
 	public void WriteToNBT(NBTTagCompound tags) {
@@ -941,7 +977,45 @@ public class FactionStorage {
 			kvp.getValue().WriteToNBT(siegeTags);
 			siegeList.appendTag(siegeTags);
 		}
+
 		tags.setTag("sieges", siegeList);
+
+		writeConqueredChunks(tags);
+	}
+
+	private void writeConqueredChunks(NBTTagCompound tags) {
+		NBTTagCompound conqueredChunksDataList = new NBTTagCompound();
+		int index = 0;
+		for (DimChunkPos chunkPosKey : conqueredChunks.keySet()) {
+			// values in tag list must all be same, so all types are changed to use int arrays
+			NBTTagList keyValPair = new NBTTagList();
+			keyValPair.appendTag(new NBTTagIntArray(new int[] {chunkPosKey.mDim, chunkPosKey.x, chunkPosKey.z}));
+			keyValPair.appendTag(new NBTTagIntArray(UUIDToBEIntArray(conqueredChunks.get(chunkPosKey).getLeft())));
+			keyValPair.appendTag(new NBTTagIntArray(new int[] {conqueredChunks.get(chunkPosKey).getRight()}));
+
+			conqueredChunksDataList.setTag(new StringBuilder("conqueredChunk_").append(index).toString(), keyValPair);
+
+			++index;
+		}
+
+		tags.setTag("conqueredChunks", conqueredChunksDataList);
+	}
+
+	// returns big endian (decreasing sig/ biggest sig first) array
+	public static int[] UUIDToBEIntArray(UUID uniqueID) {
+		return new int[] {
+				(int) (uniqueID.getMostSignificantBits() >>> 32),
+				(int) uniqueID.getMostSignificantBits(),
+				(int) (uniqueID.getLeastSignificantBits() >>> 32),
+				(int) uniqueID.getLeastSignificantBits()
+		};
+	}
+
+	public static UUID BEIntArrayToUUID(int[] bigEndianArray) {
+		return new UUID(
+				((long) bigEndianArray[0]) << 32 | ((long) bigEndianArray[1]),
+				((long) bigEndianArray[2]) << 32 | ((long) bigEndianArray[3])
+		);
 	}
 
 	public void OpResetFlagCooldowns() {

@@ -126,7 +126,7 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 		}
 
 		// on success, mark conquered chunk as conquered so that attackers may start siege again without enemy claiming over them
-		if (siegeStatus == 3 && WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD > 0) WarForgeMod.conqueredChunks.put(mSiegeTarget.ToChunkPos(), new ObjectIntPair<>(mFactionUUID, WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD));
+		if (siegeStatus == 3 && WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD > 0) WarForgeMod.FACTIONS.conqueredChunks.put(mSiegeTarget.ToChunkPos(), new ObjectIntPair<>(mFactionUUID, WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD));
 
 		mSiegeTarget = null;
 		if (siegeStatus == 2) destroy();

@@ -96,9 +96,6 @@ public class WarForgeMod implements ILateMixinLoader
 	public static long numberOfSiegeDaysTicked = 0L;
 	public static long numberOfYieldDaysTicked = 0L;
 	public static long timestampOfFirstDay = 0L;
-
-	// realistically a long is overkill for notating the time left, but it avoids type conversion
-	public static HashMap<DimChunkPos, ObjectIntPair<UUID>> conqueredChunks;
 	public static long previousUpdateTimestamp = 0L;
 
 	// Timers
@@ -240,7 +237,7 @@ public class WarForgeMod implements ILateMixinLoader
     	long msTime = System.currentTimeMillis();
     	long dayLength = GetSiegeDayLengthMS();
 
-		updateConqueredChunks(msTime);
+		FACTIONS.updateConqueredChunks(msTime);
 
     	long dayNumber = (msTime - timestampOfFirstDay) / dayLength;
 
@@ -285,20 +282,6 @@ public class WarForgeMod implements ILateMixinLoader
     	}
     	
     }
-
-	public static void updateConqueredChunks(long msUpdateTime) {
-		int msPassed = (int) (msUpdateTime - previousUpdateTimestamp); // the difference is likely less than 596h (max time storage of int using ms)
-		if(conqueredChunks == null)
-			conqueredChunks = new HashMap<>();
-
-		for (DimChunkPos chunkPosKey : conqueredChunks.keySet()) {
-			ObjectIntPair<UUID> chunkEntry = conqueredChunks.get(chunkPosKey);
-			if (chunkEntry.getRight() < msPassed) conqueredChunks.remove(chunkPosKey);
-			else chunkEntry.setRight(chunkEntry.getRight() - msPassed);
-		}
-
-		previousUpdateTimestamp = msUpdateTime; // current update is now previous, as update has been performed
-	}
 
     @SubscribeEvent
     public void PlayerInteractBlock(RightClickBlock event)
@@ -431,10 +414,10 @@ public class WarForgeMod implements ILateMixinLoader
 			return;
     	}
 
-		if (conqueredChunks.get(pos) != null && conqueredChunks.get(pos).getLeft() != playerFaction.mUUID) {
+		if (FACTIONS.conqueredChunks.get(pos) != null && !FACTIONS.conqueredChunks.get(pos).getLeft().equals(playerFaction.mUUID)) {
 			player.sendMessage(new TextComponentTranslation("warforge.info.chunk_is_conquered",
-					WarForgeMod.FACTIONS.GetFaction(conqueredChunks.get(pos).getLeft()).mName,
-					formatTime(conqueredChunks.get(pos).getRight())));
+					WarForgeMod.FACTIONS.GetFaction(FACTIONS.conqueredChunks.get(pos).getLeft()).mName,
+					formatTime(FACTIONS.conqueredChunks.get(pos).getRight())));
 			event.setCanceled(true);
 			return;
 		}
@@ -689,75 +672,19 @@ public class WarForgeMod implements ILateMixinLoader
 	private void ReadFromNBT(NBTTagCompound tags)
 	{
 		FACTIONS.ReadFromNBT(tags);
-		conqueredChunks = new HashMap<>();
-		readConqueredChunks(tags);
 
 		timestampOfFirstDay = tags.getLong("zero-timestamp");
 		numberOfSiegeDaysTicked = tags.getLong("num-days-elapsed");
 		numberOfYieldDaysTicked = tags.getLong("num-yields-awarded");
 	}
 
-	private void readConqueredChunks(NBTTagCompound tags) {
-		conqueredChunks = new HashMap<>();
-		NBTTagCompound conqueredChunksDataList = tags.getCompoundTag("conqueredChunks");
-
-		// 11 is type id for int array
-		int index = 0;
-		while (true) {
-			NBTTagList keyValPair = conqueredChunksDataList.getTagList(new StringBuilder("conqueredChunk_").append(index).toString(), 11);
-			if (keyValPair.isEmpty()) break; // exit once invalid (empty, since getTagList never returns null) is found, as it is assumed this is the first non-existent/ invalid index
-			int[] dimInfo = keyValPair.getIntArrayAt(0);
-			DimChunkPos chunkPosKey = new DimChunkPos(dimInfo[0], dimInfo[1], dimInfo[2]);
-			UUID factionID = BEIntArrayToUUID(keyValPair.getIntArrayAt(1));
-
-			conqueredChunks.put(chunkPosKey, new ObjectIntPair<>(factionID, keyValPair.getIntArrayAt(2)[0]));
-			++index;
-		}
-	}
-
 	private void WriteToNBT(NBTTagCompound tags)
 	{
 		FACTIONS.WriteToNBT(tags);
-		writeConqueredChunks(tags);
 
 		tags.setLong("zero-timestamp", timestampOfFirstDay);
 		tags.setLong("num-days-elapsed", numberOfSiegeDaysTicked);
 		tags.setLong("num-yields-awarded", numberOfYieldDaysTicked);
-	}
-
-	private void writeConqueredChunks(NBTTagCompound tags) {
-		NBTTagCompound conqueredChunksDataList = new NBTTagCompound();
-		int index = 0;
-		for (DimChunkPos chunkPosKey : conqueredChunks.keySet()) {
-			// values in tag list must all be same, so all types are changed to use int arrays
-			NBTTagList keyValPair = new NBTTagList();
-			keyValPair.appendTag(new NBTTagIntArray(new int[] {chunkPosKey.mDim, chunkPosKey.x, chunkPosKey.z}));
-			keyValPair.appendTag(new NBTTagIntArray(UUIDToBEIntArray(conqueredChunks.get(chunkPosKey).getLeft())));
-			keyValPair.appendTag(new NBTTagIntArray(new int[] {conqueredChunks.get(chunkPosKey).getRight()}));
-
-			conqueredChunksDataList.setTag(new StringBuilder("conqueredChunk_").append(index).toString(), keyValPair);
-
-			++index;
-		}
-
-		tags.setTag("conqueredChunks", conqueredChunksDataList);
-	}
-
-	// returns big endian (decreasing sig/ biggest sig first) array
-	public static int[] UUIDToBEIntArray(UUID uniqueID) {
-		return new int[] {
-				(int) (uniqueID.getMostSignificantBits() >>> 32),
-				(int) uniqueID.getMostSignificantBits(),
-				(int) (uniqueID.getLeastSignificantBits() >>> 32),
-				(int) uniqueID.getLeastSignificantBits()
-		};
-	}
-
-	public static UUID BEIntArrayToUUID(int[] bigEndianArray) {
-		return new UUID(
-				((long) bigEndianArray[0]) << 32 | ((long) bigEndianArray[1]),
-				((long) bigEndianArray[2]) << 32 | ((long) bigEndianArray[3])
-		);
 	}
 
 	private static File getFactionsFile()
