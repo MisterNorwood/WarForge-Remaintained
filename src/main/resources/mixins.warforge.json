@@ -1,0 +1,13 @@
+{
+	"package": "com.flansmod.warforge.common.mixins",
+	"required": true,
+	"refmap": "mixins.warforge.refmap.json",
+	"target": "@env(DEFAULT)",
+	"minVersion": "0.8.5",
+	"compatibilityLevel": "JAVA_8",
+	"mixins": [
+		"SurvivalHelperMixin"
+	],
+	"server": [],
+	"client": []
+}

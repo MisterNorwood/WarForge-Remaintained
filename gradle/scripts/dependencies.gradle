@@ -59,4 +59,6 @@ dependencies {
     // implementation ('com.google.code.gson:gson:2.8.6') {
     //     transitive = false
     // }
+
+    implementation rfg.deobf("curse.maven:effortlessbuilding-302113:2847346")
 }

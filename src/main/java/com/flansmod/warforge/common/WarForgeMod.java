@@ -1,52 +1,35 @@
 package com.flansmod.warforge.common;
 
+import com.flansmod.warforge.server.*;
+import com.flansmod.warforge.api.ObjectIntPair;
+import com.flansmod.warforge.common.blocks.TileEntitySiegeCamp;
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockEnderChest;
 import net.minecraft.block.BlockNewLeaf;
 import net.minecraft.block.BlockNewLog;
 import net.minecraft.block.BlockPlanks.EnumType;
-import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.command.CommandHandler;
 import net.minecraft.command.ICommandSender;
-import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
-import net.minecraft.inventory.ContainerChest;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.CompressedStreamTools;
-import net.minecraft.nbt.NBTBase;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
+import net.minecraft.nbt.*;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.dedicated.DedicatedServer;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.tileentity.TileEntityShulkerBox;
-import net.minecraft.util.EnumFacing;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TextComponentString;
-import net.minecraft.world.gen.feature.WorldGenLakes;
+import net.minecraft.util.text.TextComponentTranslation;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.common.config.Configuration;
-import net.minecraftforge.event.RegistryEvent;
-import net.minecraftforge.event.entity.EntityEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.entity.player.PlayerContainerEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock;
 import net.minecraftforge.event.terraingen.PopulateChunkEvent;
 import net.minecraftforge.event.world.BlockEvent;
 import net.minecraftforge.event.world.WorldEvent;
-import net.minecraftforge.event.world.BlockEvent.EntityPlaceEvent;
-import net.minecraftforge.fml.common.FMLCommonHandler;
-import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.Mod.Instance;
@@ -56,41 +39,21 @@ import net.minecraftforge.fml.common.event.FMLInterModComms;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLServerAboutToStartEvent;
-import net.minecraftforge.fml.common.event.FMLServerStartedEvent;
 import net.minecraftforge.fml.common.event.FMLServerStoppingEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.PlayerEvent;
 import net.minecraftforge.fml.common.gameevent.PlayerEvent.PlayerLoggedInEvent;
 import net.minecraftforge.fml.common.network.NetworkRegistry;
-import net.minecraftforge.fml.common.registry.GameRegistry;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.server.FMLServerHandler;
-import scala.util.parsing.json.JSON;
 
-import java.awt.Color;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
 import org.apache.logging.log4j.Logger;
 
-import com.flansmod.warforge.common.blocks.BlockBasicClaim;
-import com.flansmod.warforge.common.blocks.BlockCitadel;
-import com.flansmod.warforge.common.blocks.BlockSiegeCamp;
-import com.flansmod.warforge.common.blocks.BlockYieldProvider;
-import com.flansmod.warforge.common.blocks.IClaim;
-import com.flansmod.warforge.common.blocks.TileEntityBasicClaim;
-import com.flansmod.warforge.common.blocks.TileEntityCitadel;
-import com.flansmod.warforge.common.blocks.TileEntityReinforcedClaim;
-import com.flansmod.warforge.common.blocks.TileEntitySiegeCamp;
 import com.flansmod.warforge.common.network.PacketHandler;
-import com.flansmod.warforge.common.network.PacketSiegeCampProgressUpdate;
 import com.flansmod.warforge.common.network.PacketTimeUpdates;
-import com.flansmod.warforge.common.network.SiegeCampProgressInfo;
 import com.flansmod.warforge.common.potions.PotionsModule;
 import com.flansmod.warforge.common.world.WorldGenAncientTree;
 import com.flansmod.warforge.common.world.WorldGenBedrockOre;
@@ -99,20 +62,12 @@ import com.flansmod.warforge.common.world.WorldGenDenseOre;
 import com.flansmod.warforge.common.world.WorldGenNetherPillar;
 import com.flansmod.warforge.common.world.WorldGenShulkerFossil;
 import com.flansmod.warforge.common.world.WorldGenSlimeFountain;
-import com.flansmod.warforge.server.CommandFactions;
-import com.flansmod.warforge.server.Faction;
-import com.flansmod.warforge.server.ServerTickHandler;
-import com.flansmod.warforge.server.Siege;
-import com.flansmod.warforge.server.TeleportsModule;
 import com.google.common.io.Files;
-import com.google.gson.Gson;
-import com.mojang.authlib.GameProfile;
 import com.flansmod.warforge.server.Faction.Role;
-import com.flansmod.warforge.server.FactionStorage;
-import com.flansmod.warforge.server.Leaderboard;
+import zone.rong.mixinbooter.ILateMixinLoader;
 
 @Mod(modid = WarForgeMod.MODID, name = WarForgeMod.NAME, version = WarForgeMod.VERSION)
-public class WarForgeMod
+public class WarForgeMod implements ILateMixinLoader
 {
     public static final String MODID = "warforge";
     public static final String NAME = "WarForge Factions";
@@ -135,12 +90,20 @@ public class WarForgeMod
 	
 	public static MinecraftServer MC_SERVER = null;
 	public static Random rand = new Random();
-	
+	public static CombatLogHandler COMBAT_LOG = new CombatLogHandler();
+
 	
 	public static long numberOfSiegeDaysTicked = 0L;
 	public static long numberOfYieldDaysTicked = 0L;
 	public static long timestampOfFirstDay = 0L;
-	
+
+	// realistically a long is overkill for notating the time left, but it avoids type conversion
+	public static HashMap<DimChunkPos, ObjectIntPair<UUID>> conqueredChunks;
+	public static long previousUpdateTimestamp = 0L;
+
+	// Timers
+	public static long ServerTick = 0L;
+
     @EventHandler
     public void preInit(FMLPreInitializationEvent event)
     {
@@ -218,7 +181,43 @@ public class WarForgeMod
      			* 60f // In seconds
      			* 1000f); // In milliseconds
     }
-    
+
+	public long GetCooldownIntoTicks(float cooldown) {
+		// From Minutes
+		return (long)(
+				cooldown
+				* 60L // Minutes -> Seconds
+				* 20L // Seconds -> Ticks
+				);
+	}
+
+	public long GetCooldownRemainingSeconds(float cooldown, long startOfCooldown) {
+		long ticks = (long) cooldown; // why did you convert it into ticks if its already in ticks
+		long elapsed = startOfCooldown - ticks;
+
+		return (long)(
+				(ServerTick - elapsed) * 20
+		);
+	}
+
+	public int GetCooldownRemainingMinutes(float cooldown, long startOfCooldown) {
+		long ticks = (long) cooldown;
+		long elapsed = startOfCooldown - ticks;
+
+		return (int)(
+				(ServerTick - elapsed) * 20 / 60
+		);
+	}
+
+	public int GetCooldownRemainingHours(float cooldown, long startOfCooldown) {
+		long ticks = (long) cooldown;
+		long elapsed = startOfCooldown - ticks;
+
+		return (int)(
+				(ServerTick - elapsed) * 20 / 60 / 60
+		);
+	}
+
 	public long GetMSToNextSiegeAdvance() 
 	{
 		long elapsedMS = System.currentTimeMillis() - timestampOfFirstDay;
@@ -240,9 +239,13 @@ public class WarForgeMod
     	boolean shouldUpdate = false;
     	long msTime = System.currentTimeMillis();
     	long dayLength = GetSiegeDayLengthMS();
-    	
+
+		updateConqueredChunks(msTime);
+
     	long dayNumber = (msTime - timestampOfFirstDay) / dayLength;
-    	
+
+		++ServerTick;
+
     	if(dayNumber > numberOfSiegeDaysTicked)
     	{
     		// Time to tick a new day
@@ -267,7 +270,9 @@ public class WarForgeMod
     		FACTIONS.AdvanceYieldDay();
     		shouldUpdate = true;
     	}
-    	
+
+		COMBAT_LOG.doEnforcements(System.currentTimeMillis());
+
     	if(shouldUpdate)
     	{
 	    	PacketTimeUpdates packet = new PacketTimeUpdates();
@@ -280,7 +285,18 @@ public class WarForgeMod
     	}
     	
     }
-    
+
+	public static void updateConqueredChunks(long msUpdateTime) {
+		int msPassed = (int) (msUpdateTime - previousUpdateTimestamp); // the difference is likely less than 596h (max time storage of int using ms)
+		for (DimChunkPos chunkPosKey : conqueredChunks.keySet()) {
+			ObjectIntPair<UUID> chunkEntry = conqueredChunks.get(chunkPosKey);
+			if (chunkEntry.getRight() < msPassed) conqueredChunks.remove(chunkPosKey);
+			else chunkEntry.setRight(chunkEntry.getRight() - msPassed);
+		}
+
+		previousUpdateTimestamp = msUpdateTime; // current update is now previous, as update has been performed
+	}
+
     @SubscribeEvent
     public void PlayerInteractBlock(RightClickBlock event)
     {
@@ -300,9 +316,7 @@ public class WarForgeMod
     		}
     	}
     }
-    
-    
-    
+
     @SubscribeEvent
     public void PlayerDied(LivingDeathEvent event)
     {
@@ -351,19 +365,27 @@ public class WarForgeMod
 		IBlockState state = event.getState();
 		if(state.getBlock() == CONTENT.citadelBlock
 		|| state.getBlock() == CONTENT.basicClaimBlock
-		|| state.getBlock() == CONTENT.reinforcedClaimBlock
-		|| state.getBlock() == CONTENT.siegeCampBlock)
+		|| state.getBlock() == CONTENT.reinforcedClaimBlock)
 		{
 			event.setCanceled(true);
 			return;
 		}
-		
+
 		if(!event.getWorld().isRemote) 
 		{
-			BlockPlacedOrRemoved(event, state);
+			if (state.getBlock() == CONTENT.siegeCampBlock) {
+				TileEntitySiegeCamp siegeBlock = (TileEntitySiegeCamp) event.getWorld().getTileEntity(event.getPos());
+				if (siegeBlock != null) siegeBlock.onDestroyed();
+			}
+			BlockPlacedOrRemoved(event, event.getState());
 		}
 	}
-    
+
+	public static boolean containsInt(final int[] base, int compare) {
+		for (int val : base) if (val == compare) return true;
+		return false;
+	}
+
     @SubscribeEvent
     public void PreBlockPlaced(RightClickBlock event)
     {
@@ -399,12 +421,26 @@ public class WarForgeMod
 
     	// All block placements are cancelled if there is already a block from this mod in that chunk
     	DimChunkPos pos = new DimBlockPos(event.getWorld().provider.getDimension(), placementPos).ToChunkPos();
-    	if(!FACTIONS.GetClaim(pos).equals(Faction.NULL))
-    	{
-    		player.sendMessage(new TextComponentString("This chunk already has a claim"));
+		if(!FACTIONS.GetClaim(pos).equals(Faction.NULL))
+		{
+			player.sendMessage(new TextComponentString("This chunk already has a claim"));
 			event.setCanceled(true);
 			return;
     	}
+
+		if (conqueredChunks.get(pos) != null && conqueredChunks.get(pos).getLeft() != playerFaction.mUUID) {
+			player.sendMessage(new TextComponentTranslation("warforge.info.chunk_is_conquered",
+					WarForgeMod.FACTIONS.GetFaction(conqueredChunks.get(pos).getLeft()).mName,
+					formatTime(conqueredChunks.get(pos).getRight())));
+			event.setCanceled(true);
+			return;
+		}
+
+		if(!containsInt(WarForgeConfig.CLAIM_DIM_WHITELIST, pos.mDim)){
+			player.sendMessage(new TextComponentString("You cannot claim chunks in this dimension"));
+			event.setCanceled(true);
+			return;
+		}
     	
     	// Cancel block placement for a couple of reasons
     	if(block == CONTENT.citadelBlock)
@@ -447,12 +483,20 @@ public class WarForgeMod
     			return;
     		}
     		
+/*
     		if(!playerFaction.CanPlayerMoveFlag(player.getUniqueID()))
     		{
     			player.sendMessage(new TextComponentString("You have already moved your flag today. Check /f time"));
     			event.setCanceled(true);
     			return;
     		}
+ */
+
+			if (playerFaction.calcNumSieges() > 2) {
+				player.sendMessage(new TextComponentTranslation("warforge.info.too_many_siege_blocks"));
+				event.setCanceled(true);
+				return;
+			}
 
     		ArrayList<DimChunkPos> validTargets = new ArrayList<DimChunkPos>(4);
     		int numTargets = FACTIONS.GetAdjacentClaims(playerFaction.mUUID, pos, validTargets);
@@ -467,7 +511,29 @@ public class WarForgeMod
     	}
     	
     }
-    
+
+	public static String formatTime(int ms) {
+		int seconds = ms / 1000;
+		int minutes = seconds / 60;
+		int hours = minutes / 60;
+		int days = hours / 24;
+
+		// ensure entire time left is not represented in each format, but rather only leftover amounts for that unit
+
+		seconds -= minutes * 60;
+		minutes -= hours * 60;
+		hours -= days * 24;
+
+		StringBuilder timeBuilder = new StringBuilder();
+		if (days > 0) timeBuilder.append(days).append("d ");
+		if (hours > 0) timeBuilder.append(hours).append("h ");
+		if (minutes > 0) timeBuilder.append(minutes).append("min ");
+		if (seconds > 0) timeBuilder.append(seconds).append("s ");
+		timeBuilder.append(ms % 1000).append("ms");
+
+		return timeBuilder.toString();
+	}
+
     @SubscribeEvent
     public void PlayerJoinedGame(PlayerLoggedInEvent event)
     {
@@ -620,21 +686,77 @@ public class WarForgeMod
 	private void ReadFromNBT(NBTTagCompound tags)
 	{
 		FACTIONS.ReadFromNBT(tags);
-		
+		conqueredChunks = new HashMap<>();
+		readConqueredChunks(tags);
+
 		timestampOfFirstDay = tags.getLong("zero-timestamp");
 		numberOfSiegeDaysTicked = tags.getLong("num-days-elapsed");
 		numberOfYieldDaysTicked = tags.getLong("num-yields-awarded");
 	}
-	
+
+	private void readConqueredChunks(NBTTagCompound tags) {
+		conqueredChunks = new HashMap<>();
+		NBTTagCompound conqueredChunksDataList = tags.getCompoundTag("conqueredChunks");
+
+		// 11 is type id for int array
+		int index = 0;
+		while (true) {
+			NBTTagList keyValPair = conqueredChunksDataList.getTagList(new StringBuilder("conqueredChunk_").append(index).toString(), 11);
+			if (keyValPair.isEmpty()) break; // exit once invalid (empty, since getTagList never returns null) is found, as it is assumed this is the first non-existent/ invalid index
+			int[] dimInfo = keyValPair.getIntArrayAt(0);
+			DimChunkPos chunkPosKey = new DimChunkPos(dimInfo[0], dimInfo[1], dimInfo[2]);
+			UUID factionID = BEIntArrayToUUID(keyValPair.getIntArrayAt(1));
+
+			conqueredChunks.put(chunkPosKey, new ObjectIntPair<>(factionID, keyValPair.getIntArrayAt(2)[0]));
+			++index;
+		}
+	}
+
 	private void WriteToNBT(NBTTagCompound tags)
 	{
 		FACTIONS.WriteToNBT(tags);
-		
+		writeConqueredChunks(tags);
+
 		tags.setLong("zero-timestamp", timestampOfFirstDay);
 		tags.setLong("num-days-elapsed", numberOfSiegeDaysTicked);
 		tags.setLong("num-yields-awarded", numberOfYieldDaysTicked);
 	}
-	
+
+	private void writeConqueredChunks(NBTTagCompound tags) {
+		NBTTagCompound conqueredChunksDataList = new NBTTagCompound();
+		int index = 0;
+		for (DimChunkPos chunkPosKey : conqueredChunks.keySet()) {
+			// values in tag list must all be same, so all types are changed to use int arrays
+			NBTTagList keyValPair = new NBTTagList();
+			keyValPair.appendTag(new NBTTagIntArray(new int[] {chunkPosKey.mDim, chunkPosKey.x, chunkPosKey.z}));
+			keyValPair.appendTag(new NBTTagIntArray(UUIDToBEIntArray(conqueredChunks.get(chunkPosKey).getLeft())));
+			keyValPair.appendTag(new NBTTagIntArray(new int[] {conqueredChunks.get(chunkPosKey).getRight()}));
+
+			conqueredChunksDataList.setTag(new StringBuilder("conqueredChunk_").append(index).toString(), keyValPair);
+
+			++index;
+		}
+
+		tags.setTag("conqueredChunks", conqueredChunksDataList);
+	}
+
+	// returns big endian (decreasing sig/ biggest sig first) array
+	public static int[] UUIDToBEIntArray(UUID uniqueID) {
+		return new int[] {
+				(int) (uniqueID.getMostSignificantBits() >>> 32),
+				(int) uniqueID.getMostSignificantBits(),
+				(int) (uniqueID.getLeastSignificantBits() >>> 32),
+				(int) uniqueID.getLeastSignificantBits()
+		};
+	}
+
+	public static UUID BEIntArrayToUUID(int[] bigEndianArray) {
+		return new UUID(
+				((long) bigEndianArray[0]) << 32 | ((long) bigEndianArray[1]),
+				((long) bigEndianArray[2]) << 32 | ((long) bigEndianArray[3])
+		);
+	}
+
 	private static File getFactionsFile()
 	{
 		if(MC_SERVER.isDedicatedServer())
@@ -659,6 +781,7 @@ public class WarForgeMod
 	public void ServerAboutToStart(FMLServerAboutToStartEvent event)
 	{
 		MC_SERVER = event.getServer();
+		previousUpdateTimestamp = System.currentTimeMillis();
 		CommandHandler handler = ((CommandHandler)MC_SERVER.getCommandManager());
 		handler.registerCommand(new CommandFactions());
 		
@@ -719,7 +842,15 @@ public class WarForgeMod
 		Save("Server Stop");
 		MC_SERVER = null;
 	}
-	
+
+	@EventHandler
+	public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+		EntityPlayer player = event.player;
+		DimBlockPos playerPos = new DimBlockPos(player);
+		if(FACTIONS.isPlayerDefending(player.getUniqueID())){
+			COMBAT_LOG.add(playerPos, player.getUniqueID(), System.currentTimeMillis());
+		}
+	}
     // Helpers
 
     public static UUID GetUUID(ICommandSender sender)
@@ -736,4 +867,8 @@ public class WarForgeMod
     	return sender instanceof MinecraftServer;
     }
 
+	@Override
+	public List<String> getMixinConfigs() {
+		return Collections.singletonList("mixins.warforge.json");
+	}
 }

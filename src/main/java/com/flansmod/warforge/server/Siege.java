@@ -21,8 +21,11 @@ import net.minecraft.nbt.NBTTagIntArray;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.text.TextComponentString;
+
+import javax.xml.crypto.dsig.dom.DOMSignContext;
 
 public class Siege 
 {
@@ -51,7 +54,8 @@ public class Siege
 	 * 		- Elapsed days with no attacker logins
 	 */
 	private int mAttackProgress = 0;
-	
+
+
 	
 	
 	// This is defined by the chunk we are attacking and what type it is
@@ -59,6 +63,8 @@ public class Siege
 	
 	// Attack progress starts at 0 and can be moved to -5 or mAttackSuccessThreshold
 	public int GetAttackProgress() { return mAttackProgress; }
+	public void setAttackProgress(int progress) { mAttackProgress = progress; }
+
 	public int GetDefenceProgress() { return -mAttackProgress; }
 	public int GetAttackSuccessThreshold() { return mBaseDifficulty + mExtraDifficulty; }
 	
@@ -120,8 +126,7 @@ public class Siege
 		Faction attackers = WarForgeMod.FACTIONS.GetFaction(mAttackingFaction);
 		Faction defenders = WarForgeMod.FACTIONS.GetFaction(mDefendingFaction);
 		
-		if(attackers == null || defenders == null)
-		{
+		if (attackers == null || defenders == null) {
 			WarForgeMod.LOGGER.error("Invalid factions in siege. Cannot start");
 			return false;
 		}
@@ -245,45 +250,121 @@ public class Siege
 			}
 		}
 	}
-	
+
+	// called when siege is ended for any reason and not detected as completed normally
 	public void OnCancelled()
 	{
-		
+
+		// canceling is only run inside EndSiege, which is only run in TE, so no need for this to do anything
 	}
-	
-	public void OnCompleted()
+
+	// called when natural conclusion of siege occurs, not called from TE itself
+	public void OnCompleted(boolean successful)
 	{
-		
+		// for every attacking siege camp attempt to locate it, and if an actual siege camp handle appropriately
+		for (DimBlockPos siegeCampPos : mAttackingSiegeCamps) {
+			TileEntity siegeCamp = WarForgeMod.MC_SERVER.getWorld(siegeCampPos.mDim).getTileEntity(siegeCampPos.ToRegularPos());
+			if (siegeCamp != null) {
+				if (siegeCamp instanceof TileEntitySiegeCamp) {
+					if (successful) ((TileEntitySiegeCamp) siegeCamp).passSiege();
+					else ((TileEntitySiegeCamp) siegeCamp).failSiege();
+				}
+			}
+		}
 	}
+
+	private boolean isPlayerInWarzone(DimBlockPos siegeCampPos, EntityPlayerMP player){
+			if(player.dimension != siegeCampPos.mDim){
+				return false;
+			}
+		// Get the chunk coordinates of the dimBlockPos using toChunkPos
+		ChunkPos chunkSiegeCampPos = new ChunkPos(siegeCampPos);
+
+		// Get the chunk coordinates of the player
+		ChunkPos playerChunkPos = new ChunkPos(player.getPosition());
+
+		// Check if the player's chunk coordinates are within a 3x3 chunk area
+		int minChunkX = chunkSiegeCampPos.x - 1;
+		int maxChunkX = chunkSiegeCampPos.x + 1;
+		int minChunkZ = chunkSiegeCampPos.z - 1;
+		int maxChunkZ = chunkSiegeCampPos.z + 1;
+
+		// Check if the player's chunk coordinates are within the 3x3 area
+		return (playerChunkPos.x >= minChunkX && playerChunkPos.x <= maxChunkX) &&
+				(playerChunkPos.z >= minChunkZ && playerChunkPos.z <= maxChunkZ);
+	}
+
 	
-	public void OnPVPKill(EntityPlayerMP killer, EntityPlayerMP killed)
-	{
+	public void OnPVPKill(EntityPlayerMP killer, EntityPlayerMP killed) {
 		Faction attackers = WarForgeMod.FACTIONS.GetFaction(mAttackingFaction);
 		Faction defenders = WarForgeMod.FACTIONS.GetFaction(mDefendingFaction);
-		
-		if(attackers == null || defenders == null || WarForgeMod.MC_SERVER == null)
-		{
+
+		if (attackers == null || defenders == null || WarForgeMod.MC_SERVER == null) {
 			WarForgeMod.LOGGER.error("Invalid factions in siege.");
 			return;
 		}
-		
+
 		// First case, an attacker killed a defender
-		if(attackers.IsPlayerInFaction(killer.getUniqueID()) && defenders.IsPlayerInFaction(killed.getUniqueID()))
-		{
-			//Flags are no longer necessary for kills
-			mAttackProgress += WarForgeConfig.SIEGE_SWING_PER_DEFENDER_DEATH;
-			killed.sendMessage(new TextComponentString("Your death has shifted the siege progress by " + WarForgeConfig.SIEGE_SWING_PER_ATTACKER_DEATH));
+		if (attackers.IsPlayerInFaction(killer.getUniqueID()) && defenders.IsPlayerInFaction(killed.getUniqueID())) {
+//			DimBlockPos attackerFlagPos = attackers.GetFlagPosition(killer.getUniqueID());
+//			DimBlockPos defenderFlagPos = defenders.GetFlagPosition(killed.getUniqueID());
+
+			// Only valid if the attacker has their flag on one of the siege camps
+/*
+			boolean attackerFlagged = false;
+			for(DimBlockPos siegeCamp : mAttackingSiegeCamps)
+			{
+				if(siegeCamp.equals(attackerFlagPos))
+					attackerFlagged = true;
+			}
 			
+			boolean defenderFlagged = defenderFlagPos.equals(mDefendingClaim);
+*/
+
+//			if(attackerFlagged && defenderFlagged)
+			boolean attackValid = false;
+			for (DimBlockPos siegeCamp : mAttackingSiegeCamps) {
+				if (isPlayerInWarzone(siegeCamp, killer) && isPlayerInWarzone(siegeCamp, killed)) {
+					attackValid = true;
+				}
+
+				if (attackValid) {
+					mAttackProgress += WarForgeConfig.SIEGE_SWING_PER_DEFENDER_DEATH;
+					killed.sendMessage(new TextComponentString("Your death has shifted the siege progress by " + WarForgeConfig.SIEGE_SWING_PER_ATTACKER_DEATH));
+				}
+			}
+
+			// Other case, a defender killed an attacker
+			if (defenders.IsPlayerInFaction(killer.getUniqueID()) && attackers.IsPlayerInFaction(killed.getUniqueID())) {
+//				DimBlockPos attackerFlagPos = attackers.GetFlagPosition(killed.getUniqueID());
+//				DimBlockPos defenderFlagPos = defenders.GetFlagPosition(killer.getUniqueID());
+
+				// Only valid if the attacker has their flag on one of the siege camps
+//				boolean attackerFlagged = false;
+//				for (DimBlockPos siegeCamp : mAttackingSiegeCamps) {
+//					if (siegeCamp.equals(attackerFlagPos))
+//						attackerFlagged = true;
+//				}
+//
+//				boolean defenderFlagged = defenderFlagPos.equals(mDefendingClaim);
+//
+//				if (attackerFlagged && defenderFlagged) {
+
+				boolean defendValid = false;
+				for (DimBlockPos siegeCamp : mAttackingSiegeCamps) {
+					if (isPlayerInWarzone(siegeCamp, killer) && isPlayerInWarzone(siegeCamp, killed)) {
+						defendValid = true;
+					}
+
+					if (defendValid) {
+						mAttackProgress -= WarForgeConfig.SIEGE_SWING_PER_ATTACKER_DEATH;
+						killed.sendMessage(new TextComponentString("Your death has shifted the siege progress by " + WarForgeConfig.SIEGE_SWING_PER_ATTACKER_DEATH));
+					}
+				}
+
+				WarForgeMod.FACTIONS.SendSiegeInfoToNearby(mDefendingClaim.ToChunkPos());
+			}
 		}
-		
-		// Other case, a defender killed an attacker
-		if(defenders.IsPlayerInFaction(killer.getUniqueID()) && attackers.IsPlayerInFaction(killed.getUniqueID()))
-		{
-			mAttackProgress -= WarForgeConfig.SIEGE_SWING_PER_ATTACKER_DEATH;
-			killed.sendMessage(new TextComponentString("Your death has shifted the siege progress by " + WarForgeConfig.SIEGE_SWING_PER_ATTACKER_DEATH));
-		}
-		
-		WarForgeMod.FACTIONS.SendSiegeInfoToNearby(mDefendingClaim.ToChunkPos());
 	}
 	
 	public void ReadFromNBT(NBTTagCompound tags)
@@ -296,10 +377,8 @@ public class Siege
 		
 		// Get the important locations
 		NBTTagList claimList = tags.getTagList("attackLocations", 11); // IntArray (see NBTBase.class)
-		if(claimList != null)
-		{
-			for(NBTBase base : claimList)
-			{
+		if (claimList != null) {
+			for(NBTBase base : claimList) {
 				NBTTagIntArray claimInfo = (NBTTagIntArray)base;
 				DimBlockPos pos = DimBlockPos.ReadFromNBT(claimInfo);
 				mAttackingSiegeCamps.add(pos);
