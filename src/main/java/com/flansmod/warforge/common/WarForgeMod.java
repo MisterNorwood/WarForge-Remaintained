@@ -288,6 +288,9 @@ public class WarForgeMod implements ILateMixinLoader
 
 	public static void updateConqueredChunks(long msUpdateTime) {
 		int msPassed = (int) (msUpdateTime - previousUpdateTimestamp); // the difference is likely less than 596h (max time storage of int using ms)
+		if(conqueredChunks == null)
+			conqueredChunks = new HashMap<>();
+
 		for (DimChunkPos chunkPosKey : conqueredChunks.keySet()) {
 			ObjectIntPair<UUID> chunkEntry = conqueredChunks.get(chunkPosKey);
 			if (chunkEntry.getRight() < msPassed) conqueredChunks.remove(chunkPosKey);
