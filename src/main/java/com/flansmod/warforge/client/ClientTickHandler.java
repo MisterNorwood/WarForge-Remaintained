@@ -737,7 +737,7 @@ public class ClientTickHandler
 			}
 			
 			// Slower update speed on fast graphics
-			if(WarForgeConfig.DO_FANCY_RENDERING || player.world.rand.nextInt(WarForgeConfig.RANDOM_BORDER_REDRAW_DENOMINATOR) == 0)
+			if(player.world.rand.nextInt(WarForgeConfig.RANDOM_BORDER_REDRAW_DENOMINATOR) == 0)
 				UpdateRandomMesh();
 			
 			// Render each chunk we have border data for
