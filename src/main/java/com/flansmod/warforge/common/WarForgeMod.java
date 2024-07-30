@@ -416,12 +416,17 @@ public class WarForgeMod implements ILateMixinLoader
 			return;
     	}
 
-		if (FACTIONS.conqueredChunks.get(pos) != null && !FACTIONS.conqueredChunks.get(pos).getLeft().equals(playerFaction.mUUID)) {
-			player.sendMessage(new TextComponentTranslation("warforge.info.chunk_is_conquered",
-					WarForgeMod.FACTIONS.GetFaction(FACTIONS.conqueredChunks.get(pos).getLeft()).mName,
-					formatTime(FACTIONS.conqueredChunks.get(pos).getRight())));
-			event.setCanceled(true);
-			return;
+		ObjectIntPair<UUID> conqueredChunkInfo = FACTIONS.conqueredChunks.get(pos);
+		if (conqueredChunkInfo != null) {
+			// remove invalid entries if necessary, and if not then do actual comparison
+			if (conqueredChunkInfo.getLeft() == null || conqueredChunkInfo.getLeft().equals(Faction.NULL)) FACTIONS.conqueredChunks.remove(pos);
+			else if (!conqueredChunkInfo.getLeft().equals(playerFaction.mUUID)) {
+				player.sendMessage(new TextComponentTranslation("warforge.info.chunk_is_conquered",
+						WarForgeMod.FACTIONS.GetFaction(FACTIONS.conqueredChunks.get(pos).getLeft()).mName,
+						formatTime(FACTIONS.conqueredChunks.get(pos).getRight())));
+				event.setCanceled(true);
+				return;
+			}
 		}
 
 		if(!containsInt(WarForgeConfig.CLAIM_DIM_WHITELIST, pos.mDim)){
