@@ -165,11 +165,13 @@ public class WarForgeConfig
 	
 	public static final String CATEGORY_CLIENT = "Client";
 	public static float SHOW_NEW_AREA_TIMER = 200.0f;
+	public static int RANDOM_BORDER_REDRAW_DENOMINATOR = 5;
     public static int FACTION_NAME_LENGTH_MAX = 32;
 	public static boolean BLOCK_ENDER_CHEST = false;
 	public static boolean SHOW_YIELD_TIMERS = true;
 	public static int CITADEL_MOVE_NUM_DAYS = 7;
-	
+
+	public static boolean DO_FANCY_RENDERING = true;
 	public static boolean SHOW_OPPONENT_BORDERS = true;
 	public static boolean SHOW_ALLY_BORDERS = true;
 	
@@ -490,8 +492,11 @@ public class WarForgeConfig
 		ENABLE_SPAWN_POTION_EFFECT = configFile.getBoolean("Enable /spawn Potion", CATEGORY_WARPS, ENABLE_SPAWN_POTION_EFFECT, "Allow players to craft a potion that takes them to the world spawn");
 		ALLOW_SPAWN_BETWEEN_DIMENSIONS = configFile.getBoolean("Allow /spawn across dimensions", CATEGORY_WARPS, ALLOW_SPAWN_BETWEEN_DIMENSIONS, "Allow players to use /spawn when in a different dimension to the world spawn");
 		NUM_TICKS_FOR_WARP_COMMANDS = configFile.getInt("Num Ticks for Warps", CATEGORY_WARPS, NUM_TICKS_FOR_WARP_COMMANDS, 0, 20 * 60 * 5, "How many ticks must the player stand still for a warp command to take effect");
-	
-		
+
+		// Graphics controls
+		DO_FANCY_RENDERING = configFile.getBoolean("Enable WarForge Fancy Rendering", CATEGORY_CLIENT, DO_FANCY_RENDERING, "Controls whether or not fancy graphics will be enabled for this mod's rendering.");
+		RANDOM_BORDER_REDRAW_DENOMINATOR = configFile.getInt("Random Border Redraw Denominator", CATEGORY_CLIENT, RANDOM_BORDER_REDRAW_DENOMINATOR, 1, Integer.MAX_VALUE, "Sets the bound on a random number generated, which when equal to 0 calls the border redraw. Effectively 1/this chance to redraw every frame");
+
 		String botChannelString = configFile.getString("Discord Bot Channel ID", Configuration.CATEGORY_GENERAL, "" + FACTIONS_BOT_CHANNEL_ID, "https://github.com/Chikachi/DiscordIntegration/wiki/IMC-Feature");
 		FACTIONS_BOT_CHANNEL_ID = Long.parseLong(botChannelString);
 		

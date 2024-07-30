@@ -713,7 +713,7 @@ public class ClientTickHandler
 			GlStateManager.disableCull();
 			Minecraft.getMinecraft().entityRenderer.disableLightmap();
 			
-			if(Minecraft.getMinecraft().isFancyGraphicsEnabled())
+			if(WarForgeConfig.DO_FANCY_RENDERING)
 			{
 				Minecraft.getMinecraft().renderEngine.bindTexture(texture);
 				GlStateManager.enableAlpha();
@@ -737,7 +737,7 @@ public class ClientTickHandler
 			}
 			
 			// Slower update speed on fast graphics
-			if(Minecraft.getMinecraft().isFancyGraphicsEnabled() || player.world.rand.nextInt(5) == 0)
+			if(WarForgeConfig.DO_FANCY_RENDERING || player.world.rand.nextInt(WarForgeConfig.RANDOM_BORDER_REDRAW_DENOMINATOR) == 0)
 				UpdateRandomMesh();
 			
 			// Render each chunk we have border data for
