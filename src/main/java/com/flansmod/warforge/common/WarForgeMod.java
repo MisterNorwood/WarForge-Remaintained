@@ -449,6 +449,7 @@ public class WarForgeMod implements ILateMixinLoader
     			event.setCanceled(true);
     			return;
     		}
+
     		if(!playerFaction.IsPlayerRoleInFaction(player.getUniqueID(), Role.OFFICER))
     		{
     			player.sendMessage(new TextComponentString("You are not an officer of your faction"));
@@ -464,6 +465,7 @@ public class WarForgeMod implements ILateMixinLoader
     			event.setCanceled(true);
     			return;
     		}
+
     		if(!playerFaction.IsPlayerRoleInFaction(player.getUniqueID(), Role.OFFICER))
     		{
     			player.sendMessage(new TextComponentString("You are not an officer of your faction"));
@@ -486,11 +488,11 @@ public class WarForgeMod implements ILateMixinLoader
 				return;
 			}
 
-    		ArrayList<DimChunkPos> validTargets = new ArrayList<DimChunkPos>(4);
-    		int numTargets = FACTIONS.GetAdjacentClaims(playerFaction.mUUID, pos, validTargets);
+    		ArrayList<DimChunkPos> validTargets = new ArrayList<>(Arrays.asList(new DimChunkPos[4]));
+    		int numTargets = FACTIONS.GetAdjacentClaims(playerFaction.mUUID, new DimBlockPos(event.getWorld().provider.getDimension(), event.getPos()), validTargets);
     		if(numTargets == 0)
     		{
-    			player.sendMessage(new TextComponentString("There are no adjacent claims to siege"));
+    			player.sendMessage(new TextComponentString("There are no adjacent claims to siege; Siege camp Y level must be w/in " + WarForgeConfig.VERTICAL_SIEGE_DIST + " of target."));
     			event.setCanceled(true);
     			return;
     		}

@@ -1,5 +1,6 @@
 package com.flansmod.warforge.common.blocks;
 
+import java.util.Objects;
 import java.util.UUID;
 
 import com.flansmod.warforge.api.ObjectIntPair;
@@ -112,8 +113,8 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 			PacketSiegeCampProgressUpdate packet = new PacketSiegeCampProgressUpdate();
 			packet.mInfo = info;
 
-			for (EntityPlayer attacker : getAttacking().getPlayers(entityPlayer -> true)) if (attacker != null) WarForgeMod.NETWORK.sendTo(packet, (EntityPlayerMP) attacker);
-			for (EntityPlayer defender : getDefending().getPlayers(entityPlayer -> true)) if (defender != null) WarForgeMod.NETWORK.sendTo(packet, (EntityPlayerMP) defender);
+			for (EntityPlayer attacker : getAttacking().getPlayers(Objects::nonNull)) WarForgeMod.NETWORK.sendTo(packet, (EntityPlayerMP) attacker);
+			for (EntityPlayer defender : getDefending().getPlayers(Objects::nonNull)) WarForgeMod.NETWORK.sendTo(packet, (EntityPlayerMP) defender);
 		}
 
 		// siege may not exist in server's record, leading to crash loop. This prevents the loop. Removes siege after info indicating update is done

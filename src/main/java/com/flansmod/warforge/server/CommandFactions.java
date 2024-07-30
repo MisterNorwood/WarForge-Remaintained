@@ -350,15 +350,20 @@ public class CommandFactions extends CommandBase
 					{
 						factionToSend = WarForgeMod.FACTIONS.GetFactionOfPlayer(((EntityPlayerMP)sender).getUniqueID());
 					}
+
 					if(factionToSend == null)
 					{
 						sender.sendMessage(new TextComponentString("Could not find that faction"));
 					}
-					else
-					{
-						PacketFactionInfo packet = new PacketFactionInfo();
-						packet.mInfo = factionToSend.CreateInfo();
-						WarForgeMod.NETWORK.sendTo(packet, (EntityPlayerMP)sender);
+					else {
+						Faction senderFaction = WarForgeMod.FACTIONS.GetFactionOfPlayer(((EntityPlayerMP) sender).getUniqueID());
+						if (senderFaction == null || senderFaction.mUUID.equals(Faction.NULL) || !senderFaction.equals(factionToSend)) {
+							sender.sendMessage(new TextComponentString("Information cannot be provided to non-faction members"));
+						} else {
+							PacketFactionInfo packet = new PacketFactionInfo();
+							packet.mInfo = factionToSend.CreateInfo();
+							WarForgeMod.NETWORK.sendTo(packet, (EntityPlayerMP)sender);
+						}
 					}
 				}
 				else

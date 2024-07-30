@@ -745,21 +745,24 @@ public class FactionStorage {
 
 	}
 
-	public int GetAdjacentClaims(UUID excludingFaction, DimChunkPos pos, ArrayList<DimChunkPos> positions) {
-		positions.clear();
-		DimChunkPos north = pos.North();
-		DimChunkPos east = pos.East();
-		DimChunkPos south = pos.South();
-		DimChunkPos west = pos.West();
-		if(IsClaimed(excludingFaction, north))
-			positions.add(north);
-		if(IsClaimed(excludingFaction, east))
-			positions.add(east);
-		if(IsClaimed(excludingFaction, south))
-			positions.add(south);
-		if(IsClaimed(excludingFaction, west))
-			positions.add(west);
-		return positions.size();
+	// returns arraylist with nulls for invalid claim directions, with positions in their horizontal ordering
+	public int GetAdjacentClaims(UUID excludingFaction, DimBlockPos pos, ArrayList<DimChunkPos> positions) {
+		// allows setting in horizontal index order, which is useful in some cases
+		if (positions.size() < 4) positions = new ArrayList<>(Arrays.asList(new DimChunkPos[4]));
+		int numValidTargets = 0;
+
+		// checks all horizontal directions
+		for (EnumFacing facing : EnumFacing.HORIZONTALS) {
+			DimChunkPos targetChunkPos = pos.ToChunkPos().Offset(facing, 1);
+			UUID targetID = GetClaim(targetChunkPos);
+			if (!IsClaimed(excludingFaction, targetChunkPos)) continue; // also screens for dimension
+			int targetY = GetFaction(targetID).GetSpecificPosForClaim(targetChunkPos).getY();
+			if (pos.getY() < targetY - WarForgeConfig.VERTICAL_SIEGE_DIST || pos.getY() > targetY + WarForgeConfig.VERTICAL_SIEGE_DIST) continue;
+			positions.set(facing.getHorizontalIndex(), targetChunkPos);
+			++numValidTargets;
+		}
+
+		return numValidTargets;
 	}
 
 	public boolean IsClaimed(UUID excludingFaction, DimChunkPos pos) {
