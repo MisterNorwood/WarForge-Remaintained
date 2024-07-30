@@ -12,6 +12,7 @@ import com.flansmod.warforge.common.network.PacketSiegeCampProgressUpdate;
 import com.flansmod.warforge.common.network.SiegeCampProgressInfo;
 import com.flansmod.warforge.server.Faction;
 
+import com.flansmod.warforge.server.FactionStorage;
 import com.flansmod.warforge.server.Siege;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
@@ -58,7 +59,7 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 	public boolean CanBeSieged() { return false; }
 
 	// returns true to invalidate forcefull; run when chunk wants to replace dat
-	/*
+    /*
 	@Override
 	public boolean shouldRefresh(World world, BlockPos pos, IBlockState oldState, IBlockState newState) {
 		WarForgeMod.LOGGER.always().log("shouldRefresh has been called in " + world + " at pos " + pos + " with oldSate of " + oldState + " and newState of " + newState);
@@ -126,8 +127,8 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 			WarForgeMod.LOGGER.atError().log("Got exception when attempting to force end siege of: " + e + " with siegeTarget of: " + mSiegeTarget + " and pos of: " + getPos());
 		}
 
-		// on success, mark conquered chunk as conquered so that attackers may start siege again without enemy claiming over them
-		if (siegeStatus == 3 && WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD > 0) WarForgeMod.FACTIONS.conqueredChunks.put(mSiegeTarget.ToChunkPos(), new ObjectIntPair<>(mFactionUUID, WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD));
+		// on success, mark conquered chunk as conquered so that attackers may start siege again without enemy claiming over them.
+		if (siegeStatus == 3 && WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD > 0) WarForgeMod.FACTIONS.conqueredChunks.put(mSiegeTarget.ToChunkPos(), new ObjectIntPair<>(FactionStorage.copyUUID(mFactionUUID), WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD));
 
 		mSiegeTarget = null;
 		if (siegeStatus == 2) destroy();
@@ -211,7 +212,7 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 	}
 
 	// called to create update data packet nbt info
-	/*
+    /*
 	@Override
 	public NBTTagCompound getUpdateTag() {
 		// You have to get parent tags so that x, y, z are added.

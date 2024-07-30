@@ -320,7 +320,7 @@ public class FactionStorage {
 		DimBlockPos blockPos = defenders.GetSpecificPosForClaim(chunkPos);
 		boolean successful = siege.WasSuccessful();
 		if(successful) {
-			if (WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD > 0) conqueredChunks.put(chunkPos, new ObjectIntPair<>(attackers.mUUID, WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD));
+			if (WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD > 0) conqueredChunks.put(chunkPos, new ObjectIntPair<>(copyUUID(attackers.mUUID), WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD));
 			defenders.OnClaimLost(blockPos);
 			mClaims.remove(blockPos.ToChunkPos());
 			attackers.MessageAll(new TextComponentTranslation("warforge.info.siege_won_attackers", defenders.mName, blockPos.ToFancyString()));
@@ -332,7 +332,7 @@ public class FactionStorage {
 				OnNonCitadelClaimPlaced((IClaim)te, attackers);
 			}
 		} else {
-			if (WarForgeConfig.DEFENDER_CONQUERED_CHUNK_PERIOD > 0) conqueredChunks.put(chunkPos, new ObjectIntPair<>(defenders.mUUID, WarForgeConfig.DEFENDER_CONQUERED_CHUNK_PERIOD)); // defenders get won claims defended
+			if (WarForgeConfig.DEFENDER_CONQUERED_CHUNK_PERIOD > 0) conqueredChunks.put(chunkPos, new ObjectIntPair<>(copyUUID(defenders.mUUID), WarForgeConfig.DEFENDER_CONQUERED_CHUNK_PERIOD)); // defenders get won claims defended
 			attackers.MessageAll(new TextComponentTranslation("warforge.info.siege_lost_attackers", attackers.mName, blockPos.ToFancyString()));
 			defenders.MessageAll(new TextComponentTranslation("warforge.info.siege_won_defenders", defenders.mName, blockPos.ToFancyString()));
 			defenders.mNotoriety += WarForgeConfig.NOTORIETY_PER_SIEGE_DEFEND_SUCCESS;
@@ -342,6 +342,11 @@ public class FactionStorage {
 
 		// Then remove the siege
 		mSieges.remove(chunkPos);
+	}
+
+	// copy UUID's are used in the case that the UUID referred to are nulled at some point, which is not ideal for chunk protection
+	public static UUID copyUUID(final UUID source) {
+		return new UUID(source.getMostSignificantBits(), source.getLeastSignificantBits());
 	}
     
     public boolean RequestCreateFaction(TileEntityCitadel citadel, EntityPlayer player, String factionName, int colour)

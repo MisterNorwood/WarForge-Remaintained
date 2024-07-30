@@ -419,7 +419,7 @@ public class WarForgeMod implements ILateMixinLoader
 		ObjectIntPair<UUID> conqueredChunkInfo = FACTIONS.conqueredChunks.get(pos);
 		if (conqueredChunkInfo != null) {
 			// remove invalid entries if necessary, and if not then do actual comparison
-			if (conqueredChunkInfo.getLeft() == null || conqueredChunkInfo.getLeft().equals(Faction.NULL)) FACTIONS.conqueredChunks.remove(pos);
+			if (conqueredChunkInfo.getLeft() == null || conqueredChunkInfo.getLeft().equals(Faction.NULL) || FACTIONS.GetFaction(conqueredChunkInfo.getLeft()) == null) FACTIONS.conqueredChunks.remove(pos);
 			else if (!conqueredChunkInfo.getLeft().equals(playerFaction.mUUID)) {
 				player.sendMessage(new TextComponentTranslation("warforge.info.chunk_is_conquered",
 						WarForgeMod.FACTIONS.GetFaction(FACTIONS.conqueredChunks.get(pos).getLeft()).mName,
