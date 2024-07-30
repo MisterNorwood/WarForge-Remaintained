@@ -47,8 +47,10 @@ import net.minecraftforge.fml.common.network.NetworkRegistry;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.util.*;
+import java.util.zip.GZIPInputStream;
 
 import org.apache.logging.log4j.Logger;
 
@@ -693,6 +695,7 @@ public class WarForgeMod implements ILateMixinLoader
 		{
 			return new File(MC_SERVER.getFolderName() + "/warforgefactions.dat");
 		}
+
 		return new File("saves/" + MC_SERVER.getFolderName() + "/warforgefactions.dat");
 	}
 	
@@ -717,13 +720,27 @@ public class WarForgeMod implements ILateMixinLoader
 		
 		try
 		{
-			NBTTagCompound tags = CompressedStreamTools.readCompressed(new FileInputStream(getFactionsFile()));
+			// try to read from data or backup, then generates a new file if both fail
+			File dataFile = getFactionsFile();
+			if (!dataFile.isFile()) {
+				// try to read from faction backup
+				dataFile = getFactionsFileBackup();
+				if (!dataFile.isFile()) {
+					dataFile = getFactionsFile(); // ensure path is correct
+					dataFile.createNewFile(); // create new data file
+
+					// puts file in correct format with empty tags
+					CompressedStreamTools.writeCompressed(new NBTTagCompound(), new FileOutputStream(dataFile));
+				}
+			}
+
+			NBTTagCompound tags = CompressedStreamTools.readCompressed(new FileInputStream(dataFile));
 			ReadFromNBT(tags);
-			LOGGER.info("Successfully loaded warforgefactions.dat");
+			LOGGER.info("Successfully loaded " + dataFile.getName());
 		}
 		catch(Exception e)
 		{
-			LOGGER.error("Failed to load warforgefactions.dat");
+			LOGGER.error("Failed to load data from warforgefactions.dat and backup; restart strongly recommended");
 			e.printStackTrace();
 		}
 	}
