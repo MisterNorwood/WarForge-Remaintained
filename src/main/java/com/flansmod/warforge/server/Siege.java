@@ -128,7 +128,7 @@ public class Siege {
 		}
 		
 		CalculateBasePower();
-		WarForgeMod.INSTANCE.MessageAll(new TextComponentString(attackers.mName + " started a siege against " + defenders.mName + " at " + mDefendingClaim.ToFancyString()), true);
+		WarForgeMod.INSTANCE.MessageAll(new TextComponentString(attackers.mName + " started a siege against " + defenders.mName), true);
 		WarForgeMod.FACTIONS.SendSiegeInfoToNearby(mDefendingClaim.ToChunkPos());
 		return true;
 	}
