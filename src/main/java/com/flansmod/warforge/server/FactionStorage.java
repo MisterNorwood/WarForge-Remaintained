@@ -330,6 +330,10 @@ public class FactionStorage {
 				WarForgeMod.MC_SERVER.getWorld(blockPos.mDim).setBlockState(blockPos.ToRegularPos(), WarForgeMod.CONTENT.basicClaimBlock.getDefaultState());
 				TileEntity te = WarForgeMod.MC_SERVER.getWorld(blockPos.mDim).getTileEntity(blockPos.ToRegularPos());
 				OnNonCitadelClaimPlaced((IClaim)te, attackers);
+			} else {
+				// if claim is not captured it should be destroyed
+				WarForgeMod.MC_SERVER.getWorld(blockPos.mDim).destroyBlock(blockPos.ToRegularPos(), true);
+				WarForgeMod.MC_SERVER.getWorld(blockPos.mDim).markBlockRangeForRenderUpdate(blockPos.ToRegularPos(), blockPos.ToRegularPos());
 			}
 		} else {
 			if (WarForgeConfig.DEFENDER_CONQUERED_CHUNK_PERIOD > 0) conqueredChunks.put(chunkPos, new ObjectIntPair<>(copyUUID(defenders.mUUID), WarForgeConfig.DEFENDER_CONQUERED_CHUNK_PERIOD)); // defenders get won claims defended
