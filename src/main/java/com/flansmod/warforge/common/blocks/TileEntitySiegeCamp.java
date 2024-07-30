@@ -265,7 +265,7 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 			}
 
 			// if there are no players in the radius
-			if (WarForgeMod.FACTIONS.GetFaction(mFactionUUID).getPlayers(entityPlayer -> isPlayerInRad(entityPlayer)).size() < 1) {
+			if (WarForgeMod.FACTIONS.GetFaction(mFactionUUID).getPlayers(entityPlayer -> isPlayerInWarzone(entityPlayer)).size() < 1) {
 				// end siege if idle timer reaches desertion timer
 				if (abandonedSiegeTickTimer >= WarForgeConfig.ATTACKER_DESERTION_TIMER * 20) {
 					messageAllAttackers("warforge.info.siege_idle_exceeded_attacker");
@@ -273,7 +273,7 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 					failSiege();
 				} else {
 					if (abandonedSiegeTickTimer / 20 == WarForgeConfig.ATTACKER_DESERTION_TIMER >>> 4) {
-						messageAllAttackers("warforge.info.siege_abandon_notification", abandonedSiegeTickTimer / 20, WarForgeConfig.ATTACKER_DESERTION_TIMER);
+						messageAllAttackers("warforge.notification.siege_abandon", abandonedSiegeTickTimer / 20, WarForgeConfig.ATTACKER_DESERTION_TIMER);
 					}
 					int ticksLeft = WarForgeConfig.ATTACKER_DESERTION_TIMER * 20 - abandonedSiegeTickTimer;
 					switch(WarForgeConfig.ATTACKER_DESERTION_TIMER * 20 - abandonedSiegeTickTimer) {
@@ -299,12 +299,10 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 		++tickTimer;
 	}
 
-	private boolean isPlayerInRad(EntityPlayer player) {
+	private boolean isPlayerInWarzone(EntityPlayer player) {
 		DimChunkPos playerChunk = new DimChunkPos(player.dimension, player.getPosition());
 		DimChunkPos blockChunk = new DimChunkPos(world.provider.getDimension(), getPos());
-
-		if (playerChunk.mDim == blockChunk.mDim && abs(blockChunk.x - playerChunk.x) < 2 && abs(blockChunk.z - playerChunk.z) < 2) return true;
-		return false;
+		return Siege.isPlayerInRadius(blockChunk, playerChunk);
 	}
 
 	private void messageAllAttackers(String translateKey, Object... args) {
@@ -329,10 +327,5 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 
 	private Faction getPlayerFac(UUID playerID) {
 		return WarForgeMod.FACTIONS.GetFactionOfPlayer(playerID);
-	}
-
-	private int abs(int n) {
-		if (n < 0) return n * -1;
-		return n;
 	}
 }

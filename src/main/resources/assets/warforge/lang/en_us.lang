@@ -28,9 +28,7 @@ effect.tprequest=Teleportation (tp to the nearest player with Telereception acti
 
 warforge.info.too_many_siege_blocks=Your faction has reached the maximum number of sieges.
 warforge.info.siege_count=Your faction's current number of sieges: %d.
-warforge.info.extraneous_siege_block_info=Your faction currently has an extraneous siege block at: %s.
 warforge.info.siege_defense_info=Your faction is currently targeted by a siege block at: %s.
-warforge.info.siege_abandon_notification=No members of your faction have been in the siege chunks area [3x3] for %d seconds. Your siege will be considered abandoned in %d seconds, unless at least one member returns.
 warforge.info.siege_idle_exceeded_attacker=Your faction was away from the siege for too long; the siege is lost.
 warforge.info.siege_idle_exceeded_defender=The enemy faction abandoned their posts; the siege is won.
 warforge.info.siege_abandon_approaching_attacker=There are %d seconds left until your siege is considered abandoned; return to the 3x3 of chunks centered on your siege block's chunk.
@@ -40,3 +38,6 @@ warforge.info.siege_lost_attackers=Your faction's [%s] siege at %s has failed.
 warforge.info.siege_won_defenders=Your faction [%s] successfully defended from the siege at %s.
 warforge.info.siege_lost_defenders=Your faction [%s] was unable to successfully repel the siege at %s and has lost territory.
 warforge.info.chunk_is_conquered=This chunk was conquered by %s and may not be sieged or claimed by any other faction for %s.
+
+warforge.notification.siege_abandon=No members of your faction have been in the siege chunks area [3x3] for %d seconds. Your siege will be considered abandoned in %d seconds, unless at least one member returns.
+warforge.notification.siege_death=%s's death has shifted the siege progress by %d; ATK: %d/%d, DEF: %d/5.
