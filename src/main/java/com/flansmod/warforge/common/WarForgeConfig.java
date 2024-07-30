@@ -137,7 +137,7 @@ public class WarForgeConfig
 	public static int SIEGE_SWING_PER_DEFENDER_FLAG = 1;
 	public static int SIEGE_SWING_PER_ATTACKER_FLAG = 1;
 	public static int SIEGE_DIFFICULTY_PER_DEFENDER_FLAG = 3;
-	public static boolean SIEGE_CAPTURE = true;
+	public static boolean SIEGE_CAPTURE = false;
 	public static float SIEGE_COOLDOWN_FAIL = 30f; // In minutes
 	public static float FLAG_COOLDOWN = 1f; // In minutes
 
