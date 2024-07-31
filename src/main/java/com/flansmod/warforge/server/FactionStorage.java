@@ -320,8 +320,13 @@ public class FactionStorage {
 		DimBlockPos blockPos = defenders.GetSpecificPosForClaim(chunkPos);
 		boolean successful = siege.WasSuccessful();
 		if(successful) {
-			if (WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD > 0) conqueredChunks.put(chunkPos, new ObjectIntPair<>(copyUUID(attackers.mUUID), WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD));
-			defenders.OnClaimLost(blockPos);
+			if (WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD > 0) {
+				conqueredChunks.put(chunkPos, new ObjectIntPair<>(copyUUID(attackers.mUUID), WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD));
+				for (DimBlockPos siegeCampPos : siege.mAttackingSiegeCamps)
+					if (siegeCampPos != null)
+						conqueredChunks.put(siegeCampPos.ToChunkPos(), new ObjectIntPair<>(copyUUID(attackers.mUUID), WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD));
+			}
+			defenders.OnClaimLost(blockPos); // drops block if SIEGE_CAPTURE is off, or drops nothing if it is on
 			mClaims.remove(blockPos.ToChunkPos());
 			attackers.MessageAll(new TextComponentTranslation("warforge.info.siege_won_attackers", defenders.mName, blockPos.ToFancyString()));
 			defenders.MessageAll(new TextComponentTranslation("warforge.info.siege_lost_defenders", defenders.mName, blockPos.ToFancyString()));
@@ -330,13 +335,14 @@ public class FactionStorage {
 				WarForgeMod.MC_SERVER.getWorld(blockPos.mDim).setBlockState(blockPos.ToRegularPos(), WarForgeMod.CONTENT.basicClaimBlock.getDefaultState());
 				TileEntity te = WarForgeMod.MC_SERVER.getWorld(blockPos.mDim).getTileEntity(blockPos.ToRegularPos());
 				OnNonCitadelClaimPlaced((IClaim)te, attackers);
-			} else {
-				// if claim is not captured it should be destroyed
-				WarForgeMod.MC_SERVER.getWorld(blockPos.mDim).destroyBlock(blockPos.ToRegularPos(), true);
-				WarForgeMod.MC_SERVER.getWorld(blockPos.mDim).markBlockRangeForRenderUpdate(blockPos.ToRegularPos(), blockPos.ToRegularPos());
 			}
 		} else {
-			if (WarForgeConfig.DEFENDER_CONQUERED_CHUNK_PERIOD > 0) conqueredChunks.put(chunkPos, new ObjectIntPair<>(copyUUID(defenders.mUUID), WarForgeConfig.DEFENDER_CONQUERED_CHUNK_PERIOD)); // defenders get won claims defended
+			if (WarForgeConfig.DEFENDER_CONQUERED_CHUNK_PERIOD > 0) {
+				conqueredChunks.put(chunkPos, new ObjectIntPair<>(copyUUID(defenders.mUUID), WarForgeConfig.DEFENDER_CONQUERED_CHUNK_PERIOD)); // defenders get won claims defended
+				for (DimBlockPos siegeCampPos : siege.mAttackingSiegeCamps)
+					if (siegeCampPos != null)
+						conqueredChunks.put(siegeCampPos.ToChunkPos(), new ObjectIntPair<>(copyUUID(defenders.mUUID), WarForgeConfig.DEFENDER_CONQUERED_CHUNK_PERIOD));
+			}
 			attackers.MessageAll(new TextComponentTranslation("warforge.info.siege_lost_attackers", attackers.mName, blockPos.ToFancyString()));
 			defenders.MessageAll(new TextComponentTranslation("warforge.info.siege_won_defenders", defenders.mName, blockPos.ToFancyString()));
 			defenders.mNotoriety += WarForgeConfig.NOTORIETY_PER_SIEGE_DEFEND_SUCCESS;
@@ -948,7 +954,6 @@ public class FactionStorage {
 			mSieges.put(new DimChunkPos(dim, x, z), siege);
 		}
 
-		conqueredChunks = new HashMap<>();
 		readConqueredChunks(tags);
 	}
 
@@ -978,6 +983,7 @@ public class FactionStorage {
 			kvp.getValue().WriteToNBT(factionTags);
 			factionList.appendTag(factionTags);
 		}
+
 		tags.setTag("factions", factionList);
 
 		NBTTagList siegeList = new NBTTagList();
@@ -1024,9 +1030,10 @@ public class FactionStorage {
 	}
 
 	public static UUID BEIntArrayToUUID(int[] bigEndianArray) {
+		// FUCKING SIGN EXTENSION
 		return new UUID(
-				((long) bigEndianArray[0]) << 32 | ((long) bigEndianArray[1]),
-				((long) bigEndianArray[2]) << 32 | ((long) bigEndianArray[3])
+				((bigEndianArray[0] & 0xFFFF_FFFFL) << 32) | (bigEndianArray[1] & 0xFFFF_FFFFL),
+				((bigEndianArray[2] & 0xFFFF_FFFFL) << 32) | (bigEndianArray[3] & 0xFFFF_FFFFL)
 		);
 	}
 
@@ -1038,7 +1045,4 @@ public class FactionStorage {
 			}
 		}
 	}
-
-
-
 }

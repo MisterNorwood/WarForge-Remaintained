@@ -734,6 +734,8 @@ public class WarForgeMod implements ILateMixinLoader
 				dataFile = getFactionsFileBackup();
 				if (!dataFile.isFile()) {
 					dataFile = getFactionsFile(); // ensure path is correct
+
+					if (!dataFile.getParentFile().exists()) return; // only make new file to read from if world folder has been made
 					dataFile.createNewFile(); // create new data file
 
 					// puts file in correct format with empty tags

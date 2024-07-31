@@ -319,14 +319,14 @@ public class Faction
 		mClaims.put(claim.GetPos(), 0);
 	}
 		
-	public void OnClaimLost(DimBlockPos claimBlockPos) 
+	public void OnClaimLost(DimBlockPos claimBlockPos)
 	{
 		// Destroy our claim block
 		World world = WarForgeMod.MC_SERVER.getWorld(claimBlockPos.mDim);
 		IBlockState claimBlock = world.getBlockState(claimBlockPos.ToRegularPos());
 		ItemStack drop = new ItemStack(Item.getItemFromBlock(claimBlock.getBlock()));
 		world.setBlockToAir(claimBlockPos);
-		world.spawnEntity(new EntityItem(world, claimBlockPos.getX() + 0.5d, claimBlockPos.getY() + 0.5d, claimBlockPos.getZ() + 0.5d, drop));
+		if (!WarForgeConfig.SIEGE_CAPTURE) world.spawnEntity(new EntityItem(world, claimBlockPos.getX() + 0.5d, claimBlockPos.getY() + 0.5d, claimBlockPos.getZ() + 0.5d, drop));
 		
 		// Uh oh
 		if(claimBlockPos.equals(mCitadelPos))

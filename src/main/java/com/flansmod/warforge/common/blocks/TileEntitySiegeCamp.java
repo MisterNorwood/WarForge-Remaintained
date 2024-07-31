@@ -93,9 +93,19 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 		concludeSiege();
 	}
 
+	public void cleanupPassedSiege() {
+		siegeStatus = 5;
+		concludeSiege();
+	}
+
 	// forces siege to end as failure
 	public void failSiege() {
 		siegeStatus = 2;
+		concludeSiege();
+	}
+
+	public void cleanupFailedSiege() {
+		siegeStatus = 4;
 		concludeSiege();
 	}
 
@@ -106,32 +116,27 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 			return;
 		}
 
-		// update siege info and notify all nearby
-		Siege siege = WarForgeMod.FACTIONS.getSieges().get(mSiegeTarget.ToChunkPos());
-		if(siege != null) {
-			SiegeCampProgressInfo info = siege.GetSiegeInfo();
-			info.mProgress = siegeStatus == 2 ? -5 : info.mCompletionPoint;
-			PacketSiegeCampProgressUpdate packet = new PacketSiegeCampProgressUpdate();
-			packet.mInfo = info;
-
-			for (EntityPlayer attacker : getAttacking().getPlayers(Objects::nonNull)) WarForgeMod.NETWORK.sendTo(packet, (EntityPlayerMP) attacker);
-			for (EntityPlayer defender : getDefending().getPlayers(Objects::nonNull)) WarForgeMod.NETWORK.sendTo(packet, (EntityPlayerMP) defender);
-		}
-
 		// siege may not exist in server's record, leading to crash loop. This prevents the loop. Removes siege after info indicating update is done
-		try {
-			WarForgeMod.FACTIONS.getSieges().get(mSiegeTarget.ToChunkPos()).setAttackProgress(siegeStatus == 2 ? -5 : WarForgeMod.FACTIONS.getSieges().get(mSiegeTarget.ToChunkPos()).GetAttackSuccessThreshold()); // ends siege
-			WarForgeMod.FACTIONS.handleCompletedSiege(mSiegeTarget.ToChunkPos(), false); // performs check on completed sieges without invoking checks on unrelated sieges
-			WarForgeMod.FACTIONS.EndSiege(GetPos());
-		} catch (Exception e) {
-			WarForgeMod.LOGGER.atError().log("Got exception when attempting to force end siege of: " + e + " with siegeTarget of: " + mSiegeTarget + " and pos of: " + getPos());
-		}
+		if (siegeStatus < 4) {
+			// update siege info and notify all nearby
+			Siege siege = WarForgeMod.FACTIONS.getSieges().get(mSiegeTarget.ToChunkPos());
+			if(siege != null) {
+				SiegeCampProgressInfo info = siege.GetSiegeInfo();
+				info.mProgress = siegeStatus == 2 ? -5 : info.mCompletionPoint;
+				PacketSiegeCampProgressUpdate packet = new PacketSiegeCampProgressUpdate();
+				packet.mInfo = info;
 
-		// on success, mark conquered chunk as conquered so that attackers may start siege again without enemy claiming over them.
-		if (siegeStatus == 3 && WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD > 0) {
-			// claim both the siege block chunk and the conquered claim chunk
-			WarForgeMod.FACTIONS.conqueredChunks.put(mSiegeTarget.ToChunkPos(), new ObjectIntPair<>(FactionStorage.copyUUID(mFactionUUID), WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD));
-			WarForgeMod.FACTIONS.conqueredChunks.put(new DimChunkPos(world.provider.getDimension(), getPos()), new ObjectIntPair<>(FactionStorage.copyUUID(mFactionUUID), WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD));
+				for (EntityPlayer attacker : getAttacking().getPlayers(Objects::nonNull)) WarForgeMod.NETWORK.sendTo(packet, (EntityPlayerMP) attacker);
+				for (EntityPlayer defender : getDefending().getPlayers(Objects::nonNull)) WarForgeMod.NETWORK.sendTo(packet, (EntityPlayerMP) defender);
+			}
+
+			try {
+				WarForgeMod.FACTIONS.getSieges().get(mSiegeTarget.ToChunkPos()).setAttackProgress(siegeStatus == 2 ? -5 : WarForgeMod.FACTIONS.getSieges().get(mSiegeTarget.ToChunkPos()).GetAttackSuccessThreshold()); // ends siege
+				WarForgeMod.FACTIONS.handleCompletedSiege(mSiegeTarget.ToChunkPos(), false); // performs check on completed sieges without invoking checks on unrelated sieges
+			} catch (Exception e) {
+				WarForgeMod.LOGGER.atError().log("Got exception when attempting to force end siege of: " + e + " with siegeTarget of: " + mSiegeTarget + " and pos of: " + getPos());
+				e.printStackTrace();
+			}
 		}
 
 		mSiegeTarget = null;
@@ -312,11 +317,15 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 	}
 
 	private void messageAllAttackers(String translateKey, Object... args) {
-		WarForgeMod.FACTIONS.GetFaction(mFactionUUID).MessageAll(new TextComponentTranslation(translateKey, args));
+		Faction attackerFaction = WarForgeMod.FACTIONS.GetFaction(mFactionUUID);
+		if (attackerFaction == null) return;
+		attackerFaction.MessageAll(new TextComponentTranslation(translateKey, args));
 	}
 
 	private void messageAllDefenders(String translateKey, Object... args) {
-		WarForgeMod.FACTIONS.GetFaction(WarForgeMod.FACTIONS.GetClaim(mSiegeTarget)).MessageAll(new TextComponentTranslation(translateKey, args));
+		Faction defenderFaction = WarForgeMod.FACTIONS.GetFaction(WarForgeMod.FACTIONS.GetClaim(mSiegeTarget));
+		if (defenderFaction == null) return;
+		defenderFaction.MessageAll(new TextComponentTranslation(translateKey, args));
 	}
 
 	private Faction getAttacking() {

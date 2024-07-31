@@ -262,8 +262,8 @@ public class Siege {
 			TileEntity siegeCamp = WarForgeMod.MC_SERVER.getWorld(siegeCampPos.mDim).getTileEntity(siegeCampPos.ToRegularPos());
 			if (siegeCamp != null) {
 				if (siegeCamp instanceof TileEntitySiegeCamp) {
-					if (successful) ((TileEntitySiegeCamp) siegeCamp).passSiege();
-					else ((TileEntitySiegeCamp) siegeCamp).failSiege();
+					if (successful) ((TileEntitySiegeCamp) siegeCamp).cleanupPassedSiege();
+					else ((TileEntitySiegeCamp) siegeCamp).cleanupFailedSiege();
 				}
 			}
 		}
@@ -321,6 +321,10 @@ public class Siege {
 
 		if (!attackValid && !defendValid) return; // no more logic needs to be done for invalid kill
 
+		// update progress appropriately; either valid attack, or def by this point, so state of one bool implies the state of the other
+		mAttackProgress += attackValid ? WarForgeConfig.SIEGE_SWING_PER_DEFENDER_DEATH : -WarForgeConfig.SIEGE_SWING_PER_ATTACKER_DEATH;
+		WarForgeMod.FACTIONS.SendSiegeInfoToNearby(mDefendingClaim.ToChunkPos());
+
 		// build notification
 		ITextComponent notification = new TextComponentTranslation("warforge.notification.siege_death",
 				killed.getName(), WarForgeConfig.SIEGE_SWING_PER_ATTACKER_DEATH,
@@ -329,10 +333,6 @@ public class Siege {
 		// send notification
 		attackers.MessageAll(notification);
 		defenders.MessageAll(notification);
-
-		// update progress appropriately; either valid attack, or def by this point, so state of one bool implies the state of the other
-		mAttackProgress += attackValid ? WarForgeConfig.SIEGE_SWING_PER_DEFENDER_DEATH : -WarForgeConfig.SIEGE_SWING_PER_ATTACKER_DEATH;
-        WarForgeMod.FACTIONS.SendSiegeInfoToNearby(mDefendingClaim.ToChunkPos());
     }
 
     public void ReadFromNBT(NBTTagCompound tags) {
