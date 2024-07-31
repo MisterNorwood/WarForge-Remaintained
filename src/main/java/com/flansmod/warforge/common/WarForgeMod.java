@@ -92,7 +92,7 @@ public class WarForgeMod implements ILateMixinLoader
 	
 	public static MinecraftServer MC_SERVER = null;
 	public static Random rand = new Random();
-	public static CombatLogHandler COMBAT_LOG = new CombatLogHandler();
+	//public static CombatLogHandler COMBAT_LOG = new CombatLogHandler();
 
 	
 	public static long numberOfSiegeDaysTicked = 0L;
@@ -270,7 +270,7 @@ public class WarForgeMod implements ILateMixinLoader
     		shouldUpdate = true;
     	}
 
-		COMBAT_LOG.doEnforcements(System.currentTimeMillis());
+		//COMBAT_LOG.doEnforcements(System.currentTimeMillis());
 
     	if(shouldUpdate)
     	{
@@ -803,9 +803,9 @@ public class WarForgeMod implements ILateMixinLoader
 	public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
 		EntityPlayer player = event.player;
 		DimBlockPos playerPos = new DimBlockPos(player);
-		if(FACTIONS.isPlayerDefending(player.getUniqueID())){
-			COMBAT_LOG.add(playerPos, player.getUniqueID(), System.currentTimeMillis());
-		}
+		//if(FACTIONS.isPlayerDefending(player.getUniqueID())){
+		//	COMBAT_LOG.add(playerPos, player.getUniqueID(), System.currentTimeMillis());
+		//}
 	}
     // Helpers
 
