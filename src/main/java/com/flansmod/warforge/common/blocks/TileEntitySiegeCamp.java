@@ -124,7 +124,7 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 			WarForgeMod.FACTIONS.handleCompletedSiege(mSiegeTarget.ToChunkPos(), false); // performs check on completed sieges without invoking checks on unrelated sieges
 			WarForgeMod.FACTIONS.EndSiege(GetPos());
 		} catch (Exception e) {
-			WarForgeMod.LOGGER.atError().log("Got exception when attempting to force end siege of: " + e + " with siegeTarget of: " + mSiegeTarget + " and pos of: " + getPos());
+            WarForgeMod.LOGGER.error("Got exception when attempting to force end siege of: {} with siegeTarget of: {} and pos of: {}", e, mSiegeTarget, getPos());
 		}
 
 		// on success, mark conquered chunk as conquered so that attackers may start siege again without enemy claiming over them.
