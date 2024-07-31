@@ -207,12 +207,15 @@ public class ProtectionsModule
 	{
     	if(event.getWorld().isRemote)
     		return;
-    	
+
     	if(OP_OVERRIDE && WarForgeMod.IsOp(event.getEntity()))
     		return;
-    	
-    	DimBlockPos pos = new DimBlockPos(event.getEntity().dimension, event.getPos());
-    	ProtectionConfig config = GetProtections(event.getEntity().getUniqueID(), pos);
+
+		Entity eventEntity = event.getEntity();
+		if (eventEntity == null) return;
+
+    	DimBlockPos pos = new DimBlockPos(eventEntity.dimension, event.getPos());
+    	ProtectionConfig config = GetProtections(eventEntity.getUniqueID(), pos);
 		
     	if(!config.PLACE_BLOCKS)
     	{
