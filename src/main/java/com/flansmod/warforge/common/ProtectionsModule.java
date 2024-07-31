@@ -212,7 +212,11 @@ public class ProtectionsModule
     		return;
 
 		Entity eventEntity = event.getEntity();
-		if (eventEntity == null) return;
+		if (eventEntity == null) {
+			WarForgeMod.LOGGER.atError().log("Detected null entity for event with detals: pos - " + event.getPos() + "; world - " + event.getWorld() + ";");
+			event.setCanceled(true);
+			return;
+		}
 
     	DimBlockPos pos = new DimBlockPos(eventEntity.dimension, event.getPos());
     	ProtectionConfig config = GetProtections(eventEntity.getUniqueID(), pos);
