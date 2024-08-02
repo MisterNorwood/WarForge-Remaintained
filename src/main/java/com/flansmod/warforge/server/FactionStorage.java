@@ -202,8 +202,16 @@ public class FactionStorage {
 
 		for (DimChunkPos chunkPosKey : conqueredChunks.keySet()) {
 			ObjectIntPair<UUID> chunkEntry = conqueredChunks.get(chunkPosKey);
-			if (chunkEntry.getRight() < msPassed) conqueredChunks.remove(chunkPosKey);
-			else chunkEntry.setRight(chunkEntry.getRight() - msPassed);
+
+			try {
+				if (chunkEntry.getRight() < msPassed) conqueredChunks.remove(chunkPosKey);
+				else chunkEntry.setRight(chunkEntry.getRight() - msPassed);
+			} catch (Exception e) {
+				WarForgeMod.LOGGER.atError().log("Error when updating conquered chunk at position " + chunkPosKey.toString() + " of type " + e + " with stacktrace: ");
+				e.printStackTrace();
+				break;
+			}
+
 		}
 
 		WarForgeMod.previousUpdateTimestamp = msUpdateTime; // current update is now previous, as update has been performed

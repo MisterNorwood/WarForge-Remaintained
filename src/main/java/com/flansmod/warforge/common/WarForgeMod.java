@@ -384,10 +384,7 @@ public class WarForgeMod implements ILateMixinLoader
     	}
     	
     	Item item = event.getItemStack().getItem();
-    	if(item != CONTENT.citadelBlockItem
-    	&& item != CONTENT.basicClaimBlockItem
-    	&& item != CONTENT.reinforcedClaimBlockItem
-    	&& item != CONTENT.siegeCampBlockItem)
+    	if(!isClaim(item))
     	{
     		// We don't care if its not one of ours
     		return;
@@ -411,9 +408,18 @@ public class WarForgeMod implements ILateMixinLoader
     	DimChunkPos pos = new DimBlockPos(event.getWorld().provider.getDimension(), placementPos).ToChunkPos();
 		if(!FACTIONS.GetClaim(pos).equals(Faction.NULL))
 		{
-			player.sendMessage(new TextComponentString("This chunk already has a claim"));
-			event.setCanceled(true);
-			return;
+			Faction claimingFaction = FACTIONS.GetFaction(FACTIONS.GetClaim(pos));
+			DimBlockPos claimPos = claimingFaction.GetSpecificPosForClaim(pos);
+
+			// check if block is not claim, and if it is marked as claim, but no claim block can be found, then remove phantom claim
+			if (!isClaim(event.getWorld().getBlockState(claimPos.ToRegularPos()).getBlock())) {
+				FACTIONS.getClaims().remove(claimingFaction.mUUID);
+				claimingFaction.OnClaimLost(claimPos);
+			} else {
+				player.sendMessage(new TextComponentString("This chunk already has a claim"));
+				event.setCanceled(true);
+				return;
+			}
     	}
 
 		ObjectIntPair<UUID> conqueredChunkInfo = FACTIONS.conqueredChunks.get(pos);
@@ -506,6 +512,20 @@ public class WarForgeMod implements ILateMixinLoader
     	}
     	
     }
+
+	public static boolean isClaim(Item item) {
+		return (item.equals(CONTENT.citadelBlockItem)
+				|| item.equals(CONTENT.basicClaimBlockItem)
+				|| item.equals(CONTENT.reinforcedClaimBlockItem)
+				|| item.equals(CONTENT.siegeCampBlockItem));
+	}
+
+	public static boolean isClaim(Block block) {
+		return (block.equals(CONTENT.citadelBlock)
+				|| block.equals(CONTENT.basicClaimBlock)
+				|| block.equals(CONTENT.reinforcedClaimBlock)
+				|| block.equals(CONTENT.siegeCampBlock));
+	}
 
 	public static String formatTime(int ms) {
 		int seconds = ms / 1000;
