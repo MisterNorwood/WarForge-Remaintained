@@ -126,12 +126,6 @@ public class Siege {
 
 
 	public void AdvanceDay() {
-		if (IsAutoSucceeded()) {
-			if (!WasSuccessful()) {
-				OnCompleted(true);
-			}
-			return;
-		}
 
 		Faction attackers = WarForgeMod.FACTIONS.GetFaction(mAttackingFaction);
 		Faction defenders = WarForgeMod.FACTIONS.GetFaction(mDefendingFaction);
