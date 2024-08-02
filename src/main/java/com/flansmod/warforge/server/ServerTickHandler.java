@@ -20,7 +20,8 @@ public class ServerTickHandler
 		WarForgeMod.TELEPORTS.Update();
 		WarForgeMod.proxy.TickServer();
 		WarForgeMod.FACTIONS.Update();
-
+		Siege siege = new Siege();
+		siege.Update();
 		// WarForgeMod.LOGGER.info("Current tick: " + WarForgeMod.ServerTick);
 	}
 }
