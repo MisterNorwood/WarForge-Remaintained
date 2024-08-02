@@ -11,7 +11,9 @@ import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.ServerTickEvent;
 
 public class ServerTickHandler 
-{	
+{
+
+	Long tickCounter = 0L;
 	@SubscribeEvent
 	public void OnTick(ServerTickEvent tick) {
 		WarForgeMod.INSTANCE.UpdateServer();
@@ -21,7 +23,9 @@ public class ServerTickHandler
 		WarForgeMod.proxy.TickServer();
 		WarForgeMod.FACTIONS.Update();
 		Siege siege = new Siege();
-		siege.Update();
-		// WarForgeMod.LOGGER.info("Current tick: " + WarForgeMod.ServerTick);
+		tickCounter += 1;
+		if(tickCounter % 100 == 0){
+			siege.Update();
+		}
 	}
 }
