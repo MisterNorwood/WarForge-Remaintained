@@ -14,6 +14,7 @@ import com.flansmod.warforge.common.blocks.IClaim;
 import com.flansmod.warforge.common.blocks.TileEntityCitadel;
 import com.flansmod.warforge.common.network.SiegeCampProgressInfo;
 import com.flansmod.warforge.server.Faction;
+import com.flansmod.warforge.server.Siege;
 import com.google.common.collect.Lists;
 
 import net.minecraft.block.Block;
@@ -53,6 +54,7 @@ import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.ClientTickEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.Phase;
+import scala.Int;
 
 public class ClientTickHandler 
 {
@@ -171,182 +173,158 @@ public class ClientTickHandler
 			}
 		}
 	}
-	
+
 	@SubscribeEvent
-	public void OnRenderHUD(RenderGameOverlayEvent event)
-	{
-		if(event.getType() == ElementType.BOSSHEALTH)
-		{
+	public void OnRenderHUD(RenderGameOverlayEvent event) {
+		if (event.getType() == ElementType.BOSSHEALTH) {
 			Minecraft mc = Minecraft.getMinecraft();
 			EntityPlayerSP player = Minecraft.getMinecraft().player;
-			if(player != null)
-			{
+
+			if (player != null) {
 				// Timer info
-				if(WarForgeConfig.SHOW_YIELD_TIMERS)
-				{
-					// Anchor point = top left of screen
-					int j = 0;
-					int k = 0;
-					
+				if (WarForgeConfig.SHOW_YIELD_TIMERS) {
+					// Timer info for siege and yield
 					long msRemaining = msOfNextSiegeDay - System.currentTimeMillis();
 					long s = msRemaining / 1000;
 					long m = s / 60;
 					long h = m / 60;
 					long d = h / 24;
-					
+
 					mc.fontRenderer.drawStringWithShadow("Siege Progress: "
-					+ (d > 0 ? (d) + " days, " : "")
-					+ String.format("%02d", (h % 24))  + ":"
-					+ String.format("%02d", (m % 60)) + ":"
-					+ String.format("%02d", (s % 60)),
-					j + 4,
-					k + 4,
-					0xffffff);
-					
+									+ (d > 0 ? (d) + " days, " : "")
+									+ String.format("%02d", (h % 24))  + ":"
+									+ String.format("%02d", (m % 60)) + ":"
+									+ String.format("%02d", (s % 60)),
+							4, 4, 0xffffff);
+
 					msRemaining = msOfNextYieldDay - System.currentTimeMillis();
 					s = msRemaining / 1000;
 					m = s / 60;
 					h = m / 60;
 					d = h / 24;
-					
+
 					mc.fontRenderer.drawStringWithShadow("Next yields: "
-					+ (d > 0 ? (d) + " days, " : "")
-					+ String.format("%02d", (h % 24))  + ":"
-					+ String.format("%02d", (m % 60)) + ":"
-					+ String.format("%02d", (s % 60)),
-					j + 4,
-					k + 14,
-					0xffffff);
+									+ (d > 0 ? (d) + " days, " : "")
+									+ String.format("%02d", (h % 24))  + ":"
+									+ String.format("%02d", (m % 60)) + ":"
+									+ String.format("%02d", (s % 60)),
+							4, 14, 0xffffff);
+
+
 				}
-				
+
+
+
+
 				// Siege camp info
 				SiegeCampProgressInfo infoToRender = null;
 				double bestDistanceSq = Double.MAX_VALUE;
-				
-				for(SiegeCampProgressInfo info : ClientProxy.sSiegeInfo.values())
-				{
+
+				for (SiegeCampProgressInfo info : ClientProxy.sSiegeInfo.values()) {
 					double distSq = info.mDefendingPos.distanceSq(player.posX, player.posY, player.posZ);
-					if(info.mDefendingPos.mDim == player.dimension 
-					&& distSq < WarForgeConfig.SIEGE_INFO_RADIUS * WarForgeConfig.SIEGE_INFO_RADIUS)
-					{
-						if(distSq < bestDistanceSq)
-						{
+					if (info.mDefendingPos.mDim == player.dimension
+							&& distSq < WarForgeConfig.SIEGE_INFO_RADIUS * WarForgeConfig.SIEGE_INFO_RADIUS) {
+						if (distSq < bestDistanceSq) {
 							bestDistanceSq = distSq;
 							infoToRender = info;
 						}
 					}
 				}
-				
-				
-				
+
 				// Render siege overlay
-				if(infoToRender != null)
-				{
+				if (infoToRender != null) {
+					// Prepare rendering settings
 					GlStateManager.enableAlpha();
 					GlStateManager.enableBlend();
-					
-	                float attackR = (float)(infoToRender.mAttackingColour >> 16 & 255) / 255.0F;
-	                float attackG = (float)(infoToRender.mAttackingColour >> 8 & 255) / 255.0F;
-	                float attackB = (float)(infoToRender.mAttackingColour & 255) / 255.0F;
-	                float defendR = (float)(infoToRender.mDefendingColour >> 16 & 255) / 255.0F;
-	                float defendG = (float)(infoToRender.mDefendingColour >> 8 & 255) / 255.0F;
-	                float defendB = (float)(infoToRender.mDefendingColour & 255) / 255.0F;
-					
-					// Render background, bars etc
+					float attackR = (float)(infoToRender.mAttackingColour >> 16 & 255) / 255.0F;
+					float attackG = (float)(infoToRender.mAttackingColour >> 8 & 255) / 255.0F;
+					float attackB = (float)(infoToRender.mAttackingColour & 255) / 255.0F;
+					float defendR = (float)(infoToRender.mDefendingColour >> 16 & 255) / 255.0F;
+					float defendG = (float)(infoToRender.mDefendingColour >> 8 & 255) / 255.0F;
+					float defendB = (float)(infoToRender.mDefendingColour & 255) / 255.0F;
+
+					// Render background, bars, etc.
 					int xSize = 256;
 					int ySize = 30;
-					
-					// Anchor point = top middle of screen
 					int j = event.getResolution().getScaledWidth() / 2 - xSize / 2;
 					int k = 0;
-					
-					float scroll = mc.getFrameTimer().getIndex() +  + event.getPartialTicks();
+
+					float scroll = mc.getFrameTimer().getIndex() + event.getPartialTicks();
 					scroll *= 0.25f;
 					scroll = scroll % 10;
 
 					mc.renderEngine.bindTexture(siegeprogress);
 					GlStateManager.color(1f, 1f, 1f, 1f);
 					drawTexturedModalRect(j, k, 0, 0, xSize, ySize);
-					
+
+					// Render progress bar
 					float siegeLength = infoToRender.mCompletionPoint + 5;
 					float barLengthPx = 224;
 					float notchDistance = barLengthPx / siegeLength;
-					
-					// Draw filled bar
+
 					int firstPx = 0;
 					int lastPx = 0;
 					boolean isIncreasing = infoToRender.mProgress > infoToRender.mPreviousProgress;
-					
-					if(infoToRender.mProgress > 0)
-					{
+
+					if (infoToRender.mProgress > 0) {
 						firstPx = (int)(notchDistance * 5);
 						lastPx = (int)(notchDistance * (infoToRender.mProgress + 5));
-					}
-					else
-					{
+					} else {
 						firstPx = (int)(notchDistance * (5 + infoToRender.mProgress));
 						lastPx = (int)(notchDistance * 5);
 					}
-						
-					if(isIncreasing)
-					{
+
+					if (isIncreasing) {
 						GlStateManager.color(attackR, attackG, attackB, 1.0F);
 						drawTexturedModalRect(j + 16 + firstPx, k + 17, 16 + (10 - scroll), 44, lastPx - firstPx, 8);
-					}
-					else 
-					{
+					} else {
 						GlStateManager.color(defendR, defendG, defendB, 1.0F);
 						drawTexturedModalRect(j + 16 + firstPx, k + 17, 16 + scroll, 54, lastPx - firstPx, 8);
 					}
-					
-					
-					
-					// Draw shield at -5 (successful defence)
+
+					// Draw icons
 					GlStateManager.color(defendR, defendG, defendB, 1.0F);
 					drawTexturedModalRect(j + 4, k + 16, 4, 31, 10, 11);
-					
-					// Draw sword at +CompletionPoint (successful attack)
+
 					GlStateManager.color(attackR, attackG, attackB, 1.0F);
 					drawTexturedModalRect(j + 241, k + 15, 241, 31, 12, 11);
-					
+
 					GlStateManager.color(1f, 1f, 1f, 1f);
-					// Draw notches at each integer interval
-					for(int i = -4; i < infoToRender.mCompletionPoint; i++)
-					{
+					for (int i = -4; i < infoToRender.mCompletionPoint; i++) {
 						int x = (int)((i + 5) * notchDistance + 16);
-						if(i == 0)
+						if (i == 0)
 							drawTexturedModalRect(j + x - 2, k + 17, 6, 43, 5, 8);
-						else 
+						else
 							drawTexturedModalRect(j + x - 2, k + 17, 1, 43, 4, 8);
 					}
-					
+
 					// Draw text
 					mc.fontRenderer.drawStringWithShadow(infoToRender.mDefendingName, j + 6, k + 6, infoToRender.mDefendingColour);
 					mc.fontRenderer.drawStringWithShadow("VS", j + xSize / 2 - mc.fontRenderer.getStringWidth("VS") / 2, k + 6, 0xffffff);
 					mc.fontRenderer.drawStringWithShadow(infoToRender.mAttackingName, j + xSize - 6 - mc.fontRenderer.getStringWidth(infoToRender.mAttackingName), k + 6, infoToRender.mAttackingColour);
-					
+
 					String toWin = (infoToRender.mCompletionPoint - infoToRender.mProgress) + " to win";
 					String toDefend = (infoToRender.mProgress + 5) + " to defend";
 					mc.fontRenderer.drawStringWithShadow(toWin, j + xSize - 8 - mc.fontRenderer.getStringWidth(toWin), k + 32, infoToRender.mAttackingColour);
 					mc.fontRenderer.drawStringWithShadow(toDefend, j + 8, k + 32, infoToRender.mAttackingColour);
+
+					Siege siege = new Siege();
+
+					mc.fontRenderer.drawStringWithShadow("Time until Siege success: " + siege.timeUntilAutoSucceed(), 4, 24, 0xffffff);
 				}
-				
-				if(mShowNewAreaTicksRemaining > 0.0f)
-				{
-					//mShowNewAreaTicksRemaining -= event.getPartialTicks();
-					
-					// Anchor point = top middle of screen
+
+				if (mShowNewAreaTicksRemaining > 0.0f) {
+					// Display new area message
 					int j = event.getResolution().getScaledWidth() / 2;
 					int k = 0;
-					
+
 					int stringWidth = mc.fontRenderer.getStringWidth(mAreaMessage);
-					
 					float fadeOut = 2.0f * mShowNewAreaTicksRemaining / WarForgeConfig.SHOW_NEW_AREA_TIMER;
-					if(fadeOut > 1.0f)
+					if (fadeOut > 1.0f)
 						fadeOut = 1.0f;
-					
+
 					int colour = mAreaMessageColour | ((int)(fadeOut * 255f) << 24);
-					
+
 					GlStateManager.enableAlpha();
 					GlStateManager.enableBlend();
 					GlStateManager.color(1f, 1f, 1f, fadeOut);
@@ -354,16 +332,16 @@ public class ClientTickHandler
 					drawTexturedModalRect(j - stringWidth / 2 - 50, k + 42, 0, 0, stringWidth + 100, 1);
 					drawTexturedModalRect(j - stringWidth / 2 - 25, k + 65, 0, 0, stringWidth + 50, 1);
 					GlStateManager.enableTexture2D();
-					
+
 					mc.fontRenderer.drawStringWithShadow(mAreaMessage, j - stringWidth / 2, k + 50, colour);
 					GlStateManager.disableBlend();
 					GlStateManager.disableAlpha();
 				}
 			}
-			
 		}
 	}
-	
+
+
 	private void drawTexturedModalRect(int x, int y, float u, float v, int w, int h)
 	{
 		float texScale = 1f / 256f;

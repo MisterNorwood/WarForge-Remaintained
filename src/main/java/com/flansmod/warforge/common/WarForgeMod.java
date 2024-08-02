@@ -47,10 +47,8 @@ import net.minecraftforge.fml.common.network.NetworkRegistry;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.util.*;
-import java.util.zip.GZIPInputStream;
 
 import org.apache.logging.log4j.Logger;
 
@@ -440,7 +438,7 @@ public class WarForgeMod implements ILateMixinLoader
 			event.setCanceled(true);
 			return;
 		}
-    	
+
     	// Cancel block placement for a couple of reasons
     	if(block == CONTENT.citadelBlock)
     	{
