@@ -18,7 +18,6 @@ import com.flansmod.warforge.server.Faction.PlayerData;
 import com.flansmod.warforge.server.Faction.Role;
 import com.mojang.authlib.GameProfile;
 
-import it.unimi.dsi.fastutil.Hash;
 import net.minecraft.command.ICommandSender;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
@@ -200,18 +199,16 @@ public class FactionStorage {
 	public void updateConqueredChunks(long msUpdateTime) {
 		int msPassed = (int) (msUpdateTime - WarForgeMod.previousUpdateTimestamp); // the difference is likely less than 596h (max time storage of int using ms)
 
-		for (DimChunkPos chunkPosKey : conqueredChunks.keySet()) {
-			ObjectIntPair<UUID> chunkEntry = conqueredChunks.get(chunkPosKey);
+		try {
+			for (DimChunkPos chunkPosKey : conqueredChunks.keySet()) {
+				ObjectIntPair<UUID> chunkEntry = conqueredChunks.get(chunkPosKey);
 
-			try {
 				if (chunkEntry.getRight() < msPassed) conqueredChunks.remove(chunkPosKey);
 				else chunkEntry.setRight(chunkEntry.getRight() - msPassed);
-			} catch (Exception e) {
-				WarForgeMod.LOGGER.atError().log("Error when updating conquered chunk at position " + chunkPosKey.toString() + " of type " + e + " with stacktrace: ");
-				e.printStackTrace();
-				break;
 			}
-
+		} catch (Exception e) {
+			WarForgeMod.LOGGER.atError().log("Error when updating conquered chunk of type " + e + ", with stacktrace:");
+			e.printStackTrace();
 		}
 
 		WarForgeMod.previousUpdateTimestamp = msUpdateTime; // current update is now previous, as update has been performed
@@ -336,7 +333,7 @@ public class FactionStorage {
 			}
 			defenders.OnClaimLost(blockPos); // drops block if SIEGE_CAPTURE is off, or drops nothing if it is on
 			mClaims.remove(blockPos.ToChunkPos());
-			attackers.MessageAll(new TextComponentTranslation("warforge.info.siege_won_attackers", defenders.mName, blockPos.ToFancyString()));
+			attackers.MessageAll(new TextComponentTranslation("warforge.info.siege_won_attackers", attackers.mName, blockPos.ToFancyString()));
 			defenders.MessageAll(new TextComponentTranslation("warforge.info.siege_lost_defenders", defenders.mName, blockPos.ToFancyString()));
 			attackers.mNotoriety += WarForgeConfig.NOTORIETY_PER_SIEGE_ATTACK_SUCCESS;
 			if(WarForgeConfig.SIEGE_CAPTURE) {
@@ -649,6 +646,7 @@ public class FactionStorage {
     {
 		Faction attacking = GetFactionOfPlayer(factionOfficer.getUniqueID());
 
+		// for some reason, server tick is in number of ticks and last siege timestamp is in ms, while siege cooldown is in mins (according to description), though through calculations looks like hours? it should be in ms
 		if (WarForgeMod.ServerTick - attacking.getLastSiegeTimestamp() < WarForgeConfig.SIEGE_COOLDOWN_FAIL) {
 			factionOfficer.sendMessage(new TextComponentString("Your faction is on cooldown on starting a new siege"));
 
@@ -704,6 +702,7 @@ public class FactionStorage {
 		siege.Start();
 
 		attacking.setLastSiegeTimestamp(WarForgeMod.ServerTick);
+		defending.setLastDefenseTimestamp(WarForgeMod.currTickTimestamp);
 
 		return true;
     }
@@ -791,6 +790,14 @@ public class FactionStorage {
 	public boolean IsClaimed(UUID excludingFaction, DimChunkPos pos) {
 		UUID factionID = GetClaim(pos);
 		return factionID != null && !factionID.equals(excludingFaction) && !factionID.equals(Faction.NULL);
+	}
+
+	public static boolean isValidFaction(Faction faction) {
+		return faction != null && isValidFaction(faction.mUUID);
+	}
+
+	public static boolean isValidFaction(UUID factionID) {
+		return factionID != null && !factionID.equals(Faction.NULL);
 	}
 
 	public boolean RequestRemoveClaim(EntityPlayerMP player, DimBlockPos pos) {
