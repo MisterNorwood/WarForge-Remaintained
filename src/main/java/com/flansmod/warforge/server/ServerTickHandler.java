@@ -14,6 +14,7 @@ public class ServerTickHandler
 {	
 	@SubscribeEvent
 	public void OnTick(ServerTickEvent tick) {
+		// for some reason, ticks may occur with 0ms between them. A tick timer is more useful for distinguishing whether an update has occurred
 		WarForgeMod.INSTANCE.UpdateServer();
 		WarForgeMod.INSTANCE.NETWORK.handleServerPackets();
 		WarForgeMod.PROTECTIONS.UpdateServer();

@@ -68,7 +68,9 @@ public class DimBlockPos extends BlockPos
     {
         return n == 0 ? this : new DimBlockPos(this.mDim, this.getX() + facing.getXOffset() * n, this.getY() + facing.getYOffset() * n, this.getZ() + facing.getZOffset() * n);
     }
-    
+
+	// HASHING INTO A MAP DEPENDENT ON BLOCKPOS (VANILLA METHODS) WILL RETURN NULL DUE TO THIS CUSTOM IMPL HAVING A DIFFERENT VALUE
+	// (dimBlockPos -> func(BlockPos) -> hashMap<BlockPos>.get(blockPos.hashCode() [dimBlockPos.hashCode != blockPos.hashCode] -> diff value -> null
 	@Override
 	public int hashCode()
     {

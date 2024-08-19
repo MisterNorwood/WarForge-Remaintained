@@ -3,11 +3,13 @@ package com.flansmod.warforge.common.blocks;
 import java.util.UUID;
 
 import com.flansmod.warforge.common.CommonProxy;
+import com.flansmod.warforge.common.DimBlockPos;
 import com.flansmod.warforge.common.DimChunkPos;
 import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.common.network.PacketFactionInfo;
 import com.flansmod.warforge.server.Faction;
 
+import com.flansmod.warforge.server.FactionStorage;
 import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
@@ -122,7 +124,15 @@ public class BlockCitadel extends Block implements ITileEntityProvider
 				}
 				else
 				{
-					player.sendMessage(new TextComponentString("This citadel is not home to a faction, and was not placed by you."));
+					DimBlockPos citadelPos = new DimBlockPos(world.provider.getDimension(), pos);
+					Faction chunkFaction = WarForgeMod.FACTIONS.GetFaction(WarForgeMod.FACTIONS.GetClaim(citadelPos.ToChunkPos()));
+					// if ghost citadel exists in chunk claimed by faction, delete it
+					if (FactionStorage.isValidFaction(chunkFaction)) {
+						world.destroyBlock(pos, false);
+						player.sendMessage(new TextComponentString("Overlapping citadel placement found; deleting current."));
+					} else {
+						player.sendMessage(new TextComponentString("This citadel is not home to a faction, and was not placed by you."));
+					}
 				}
 			}
 			// So anyone else will be from the target faction

@@ -133,6 +133,12 @@ public class ClientProxy extends CommonProxy
 	
 	public void UpdateSiegeInfo(SiegeCampProgressInfo info) 
 	{
+		// sent to client on server stop to avoid de-sync
+		if (info.mAttackingName.equals("c") && info.mDefendingName.equals("c")) {
+			sSiegeInfo.clear();
+			return;
+		}
+
 		if(sSiegeInfo.containsKey(info.mAttackingPos))
 		{
 			sSiegeInfo.remove(info.mAttackingPos);

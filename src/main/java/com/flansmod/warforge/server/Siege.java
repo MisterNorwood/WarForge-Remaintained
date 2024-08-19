@@ -15,6 +15,7 @@ import net.minecraft.nbt.NBTTagIntArray;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TextComponentString;
@@ -50,9 +51,6 @@ public class Siege {
      * - Elapsed days with no attacker logins
      */
     private int mAttackProgress = 0;
-
-
-	
 	
 	// This is defined by the chunk we are attacking and what type it is
 	public int mBaseDifficulty = 5;
@@ -66,7 +64,23 @@ public class Siege {
 	
 	public boolean IsCompleted()
 	{
-		return GetAttackProgress() >= GetAttackSuccessThreshold() || GetDefenceProgress() >= 5;
+		return !hasAbandonedSieges() && GetAttackProgress() >= GetAttackSuccessThreshold() || GetDefenceProgress() >= 5;
+	}
+
+	// ensures attackers are within warzone before siege completes
+	public boolean hasAbandonedSieges() {
+		Faction attacking = WarForgeMod.FACTIONS.GetFaction(mAttackingFaction);
+
+		for (DimBlockPos siegeCampPos : mAttackingSiegeCamps) {
+			if (siegeCampPos == null) continue;
+			// YOU WILL GET INCOMPREHENSIBLE ERRORS IF YOU DO NOT FOLLOW THE BELOW CONVERSION TO REGULAR POS
+			TileEntity siegeCamp = WarForgeMod.MC_SERVER.getWorld(siegeCampPos.mDim).getTileEntity(siegeCampPos.ToRegularPos());
+			if (siegeCamp instanceof TileEntitySiegeCamp) {
+				if (((TileEntitySiegeCamp) siegeCamp).getAttackerAbandonTickTimer() > 0) return true;
+			}
+		}
+
+		return false;
 	}
 	
 	public boolean WasSuccessful()
@@ -278,13 +292,17 @@ public class Siege {
     }
 
 	public static boolean isPlayerInRadius(DimChunkPos centerChunkPos, DimChunkPos playerChunkPos) {
+		return isPlayerInRadius(centerChunkPos, playerChunkPos, 1);
+	}
+
+	public static boolean isPlayerInRadius(DimChunkPos centerChunkPos, DimChunkPos playerChunkPos, int radius) {
 		if (playerChunkPos.mDim != centerChunkPos.mDim) return false;
 
 		// Check if the player's chunk coordinates are within a 3x3 chunk area
-		int minChunkX = centerChunkPos.x - 1;
-		int maxChunkX = centerChunkPos.x + 1;
-		int minChunkZ = centerChunkPos.z - 1;
-		int maxChunkZ = centerChunkPos.z + 1;
+		int minChunkX = centerChunkPos.x - radius;
+		int maxChunkX = centerChunkPos.x + radius;
+		int minChunkZ = centerChunkPos.z - radius;
+		int maxChunkZ = centerChunkPos.z + radius;
 
 		// Check if the player's chunk coordinates are within the 3x3 area
 		return (playerChunkPos.x >= minChunkX && playerChunkPos.x <= maxChunkX)

@@ -247,8 +247,7 @@ public class ProtectionsModule
     	{
     		if(!config.BLOCK_BREAK_EXCEPTIONS.contains(event.getState().getBlock()))
     		{
-	    		//WarForgeMod.LOGGER.info("Cancelled block break event");
-	    		event.setCanceled(true);
+				event.setCanceled(true);
     		}
     	}
 	}

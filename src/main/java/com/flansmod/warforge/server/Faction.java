@@ -31,7 +31,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.World;
-import org.lwjgl.Sys;
 
 public class Faction 
 {
@@ -88,16 +87,15 @@ public class Faction
 	
 	public UUID mUUID;
 
-	// Siege
-	private long lastSiegeTimestamp;
+	public int onlinePlayerCount = 0; // the number of current online players
 
-	public void setLastSiegeTimestamp(long tick) {
-		this.lastSiegeTimestamp = tick;
-	}
+	private long lastSiegeTimestamp = 0;
 
-	public long getLastSiegeTimestamp() {
-		return this.lastSiegeTimestamp;
-	}
+	public long getLastSiegeTimestamp() { return lastSiegeTimestamp; }
+	public void setLastSiegeTimestamp(long timestamp) { lastSiegeTimestamp = timestamp; }
+
+
+	public int getMemberCount() { return mMembers.size(); }
 
 	public String mName;
 	public DimBlockPos mCitadelPos;
@@ -142,6 +140,19 @@ public class Faction
 					mHasHadAnyLoginsToday = true;
 			}
 		}
+	}
+
+	// array list needed to be able to pre-allocate size, but not know if all players will pass check
+	public ArrayList<EntityPlayer> getOnlinePlayers(Predicate<EntityPlayer> playerCondition) {
+		ArrayList<EntityPlayer> players = new ArrayList<>(mMembers.keySet().size());
+		//mMembers.keySet() seems to have a null default
+		for(UUID playerID : mMembers.keySet())
+		{
+			EntityPlayer player = GetPlayer(playerID);
+			if(player != null && playerCondition.test(player)) players.add(player);
+		}
+
+		return players;
 	}
 	
 	public DimBlockPos GetFlagPosition(UUID playerID)
@@ -229,6 +240,9 @@ public class Faction
 		MessageAll(new TextComponentString(GetPlayerName(playerID) + " joined " + mName));
 		
 		PlaceFlag(WarForgeMod.MC_SERVER.getPlayerList().getPlayerByUUID(playerID), mCitadelPos);
+
+		// re-check number of online players
+		onlinePlayerCount = getOnlinePlayers(entityPlayer -> true).size();
 		
 		return true;
 	}
@@ -660,19 +674,7 @@ public class Faction
 		return player == null ? ("[" + playerID.toString() + "]") : player.getName();
 	}
 
-	// array list needed to be able to pre-allocate size, but not know if all players will pass check
-	public ArrayList<EntityPlayer> getPlayers(Predicate<EntityPlayer> playerCondition) {
-		ArrayList<EntityPlayer> players = new ArrayList<>(mMembers.keySet().size());
-		//mMembers.keySet() seems to have a null default
-		for(UUID playerID : mMembers.keySet())
-		{
-			EntityPlayer player = GetPlayer(playerID);
-			if(player != null && playerCondition.test(player)) players.add(player);
-		}
-
-		return players;
-	}
-	
+	// the map used in getPlayerByUUID removes players on logout
 	private static EntityPlayer GetPlayer(UUID playerID)
 	{
 		return WarForgeMod.MC_SERVER.getPlayerList().getPlayerByUUID(playerID);

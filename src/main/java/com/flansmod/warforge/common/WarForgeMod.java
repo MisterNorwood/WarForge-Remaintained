@@ -1,5 +1,7 @@
 package com.flansmod.warforge.common;
 
+import com.flansmod.warforge.common.network.PacketSiegeCampProgressUpdate;
+import com.flansmod.warforge.common.network.SiegeCampProgressInfo;
 import com.flansmod.warforge.server.*;
 import com.flansmod.warforge.api.ObjectIntPair;
 import com.flansmod.warforge.common.blocks.TileEntitySiegeCamp;
@@ -20,6 +22,7 @@ import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.*;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TextComponentString;
@@ -47,10 +50,8 @@ import net.minecraftforge.fml.common.network.NetworkRegistry;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.util.*;
-import java.util.zip.GZIPInputStream;
 
 import org.apache.logging.log4j.Logger;
 
@@ -102,6 +103,7 @@ public class WarForgeMod implements ILateMixinLoader
 
 	// Timers
 	public static long ServerTick = 0L;
+	public static long currTickTimestamp = 0L;
 
     @EventHandler
     public void preInit(FMLPreInitializationEvent event)
@@ -236,12 +238,13 @@ public class WarForgeMod implements ILateMixinLoader
     public void UpdateServer()
     {
     	boolean shouldUpdate = false;
-    	long msTime = System.currentTimeMillis();
+		previousUpdateTimestamp = currTickTimestamp;
+		currTickTimestamp = System.currentTimeMillis();
     	long dayLength = GetSiegeDayLengthMS();
 
-		FACTIONS.updateConqueredChunks(msTime);
+		FACTIONS.updateConqueredChunks(currTickTimestamp);
 
-    	long dayNumber = (msTime - timestampOfFirstDay) / dayLength;
+    	long dayNumber = (currTickTimestamp - timestampOfFirstDay) / dayLength;
 
 		++ServerTick;
 
@@ -257,7 +260,7 @@ public class WarForgeMod implements ILateMixinLoader
     	}
     	
     	dayLength = GetYieldDayLengthMS();
-    	dayNumber = (msTime - timestampOfFirstDay) / dayLength;
+    	dayNumber = (currTickTimestamp - timestampOfFirstDay) / dayLength;
     	
     	if(dayNumber > numberOfYieldDaysTicked)
     	{
@@ -282,7 +285,6 @@ public class WarForgeMod implements ILateMixinLoader
 	    	NETWORK.sendToAll(packet);
     	
     	}
-    	
     }
 
     @SubscribeEvent
@@ -351,9 +353,7 @@ public class WarForgeMod implements ILateMixinLoader
 	public void BlockRemoved(BlockEvent.BreakEvent event)
 	{
 		IBlockState state = event.getState();
-		if(state.getBlock() == CONTENT.citadelBlock
-		|| state.getBlock() == CONTENT.basicClaimBlock
-		|| state.getBlock() == CONTENT.reinforcedClaimBlock)
+		if(isClaim(state.getBlock(), CONTENT.siegeCampBlock))
 		{
 			event.setCanceled(true);
 			return;
@@ -365,6 +365,7 @@ public class WarForgeMod implements ILateMixinLoader
 				TileEntitySiegeCamp siegeBlock = (TileEntitySiegeCamp) event.getWorld().getTileEntity(event.getPos());
 				if (siegeBlock != null) siegeBlock.onDestroyed();
 			}
+
 			BlockPlacedOrRemoved(event, event.getState());
 		}
 	}
@@ -408,25 +409,31 @@ public class WarForgeMod implements ILateMixinLoader
     	DimChunkPos pos = new DimBlockPos(event.getWorld().provider.getDimension(), placementPos).ToChunkPos();
 		if(!FACTIONS.GetClaim(pos).equals(Faction.NULL))
 		{
+			// check if claim chunk has actual claim pos, and if not then remove it
 			Faction claimingFaction = FACTIONS.GetFaction(FACTIONS.GetClaim(pos));
 			DimBlockPos claimPos = claimingFaction.GetSpecificPosForClaim(pos);
-
-			// check if block is not claim, and if it is marked as claim, but no claim block can be found, then remove phantom claim
-			if (!isClaim(event.getWorld().getBlockState(claimPos.ToRegularPos()).getBlock())) {
-				FACTIONS.getClaims().remove(claimingFaction.mUUID);
-				claimingFaction.OnClaimLost(claimPos);
+			if (claimPos == null) {
+				FACTIONS.getClaims().remove(pos);
 			} else {
-				player.sendMessage(new TextComponentString("This chunk already has a claim"));
-				event.setCanceled(true);
-				return;
+				// check if block is not claim, and if it is marked as claim, but no claim block can be found, then remove phantom claim
+				if (!isClaim(event.getWorld().getBlockState(claimPos.ToRegularPos()).getBlock())) {
+					FACTIONS.getClaims().remove(claimingFaction.mUUID);
+					claimingFaction.OnClaimLost(claimPos);
+				} else {
+					player.sendMessage(new TextComponentString("This chunk already has a claim"));
+					event.setCanceled(true);
+					return;
+				}
 			}
     	}
 
 		ObjectIntPair<UUID> conqueredChunkInfo = FACTIONS.conqueredChunks.get(pos);
 		if (conqueredChunkInfo != null) {
 			// remove invalid entries if necessary, and if not then do actual comparison
-			if (conqueredChunkInfo.getLeft() == null || conqueredChunkInfo.getLeft().equals(Faction.NULL) || FACTIONS.GetFaction(conqueredChunkInfo.getLeft()) == null) FACTIONS.conqueredChunks.remove(pos);
-			else if (!conqueredChunkInfo.getLeft().equals(playerFaction.mUUID)) {
+			if (conqueredChunkInfo.getLeft() == null || conqueredChunkInfo.getLeft().equals(Faction.NULL) || FACTIONS.GetFaction(conqueredChunkInfo.getLeft()) == null) {
+				WarForgeMod.LOGGER.atError().log("Found invalid conquered chunk at " + pos + "; removing and permitting placement.");
+				FACTIONS.conqueredChunks.remove(pos);
+			} else if (!conqueredChunkInfo.getLeft().equals(playerFaction.mUUID)) {
 				player.sendMessage(new TextComponentTranslation("warforge.info.chunk_is_conquered",
 						WarForgeMod.FACTIONS.GetFaction(FACTIONS.conqueredChunks.get(pos).getLeft()).mName,
 						formatTime(FACTIONS.conqueredChunks.get(pos).getRight())));
@@ -514,23 +521,33 @@ public class WarForgeMod implements ILateMixinLoader
     }
 
 	public static boolean isClaim(Item item) {
-		return (item.equals(CONTENT.citadelBlockItem)
+		return item != null && (item.equals(CONTENT.citadelBlockItem)
 				|| item.equals(CONTENT.basicClaimBlockItem)
 				|| item.equals(CONTENT.reinforcedClaimBlockItem)
 				|| item.equals(CONTENT.siegeCampBlockItem));
 	}
 
-	public static boolean isClaim(Block block) {
-		return (block.equals(CONTENT.citadelBlock)
+	public static boolean isClaim(Block block, Block... notEquals) {
+		if (block == null) return false;
+
+		boolean matchesAnyInvalidBlocks = false;
+		for (Block invalidBlock : notEquals) {
+			if (block.equals(invalidBlock)) {
+				matchesAnyInvalidBlocks = true;
+				break;
+			}
+		}
+
+		return !matchesAnyInvalidBlocks && (block.equals(CONTENT.citadelBlock)
 				|| block.equals(CONTENT.basicClaimBlock)
 				|| block.equals(CONTENT.reinforcedClaimBlock)
 				|| block.equals(CONTENT.siegeCampBlock));
 	}
 
-	public static String formatTime(int ms) {
-		int seconds = ms / 1000;
-		int minutes = seconds / 60;
-		int hours = minutes / 60;
+	public static String formatTime(long ms) {
+		long seconds = ms / 1000;
+		long minutes = seconds / 60;
+		int hours = ((int) minutes) / 60;
 		int days = hours / 24;
 
 		// ensure entire time left is not represented in each format, but rather only leftover amounts for that unit
@@ -547,6 +564,16 @@ public class WarForgeMod implements ILateMixinLoader
 		timeBuilder.append(ms % 1000).append("ms");
 
 		return timeBuilder.toString();
+	}
+
+	@SubscribeEvent
+	public void PlayerLeftGame(PlayerEvent.PlayerLoggedOutEvent event) {
+		if (!event.player.world.isRemote) {
+			Faction playerFaction = FACTIONS.GetFactionOfPlayer(event.player.getUniqueID());
+			if (FactionStorage.isValidFaction(playerFaction)) {
+				playerFaction.onlinePlayerCount -= 1;
+			}
+		}
 	}
 
     @SubscribeEvent
@@ -566,6 +593,11 @@ public class WarForgeMod implements ILateMixinLoader
         		event.player.world.getSaveHandler().getPlayerNBTManager().writePlayerData(event.player);
         		LOGGER.info("Player moved from the void to 0,256,0");
            	}
+
+			Faction playerFaction = FACTIONS.GetFactionOfPlayer(event.player.getUniqueID());
+			if (FactionStorage.isValidFaction(playerFaction)) {
+				playerFaction.onlinePlayerCount += 1;
+			}
     		
 	    	PacketTimeUpdates packet = new PacketTimeUpdates();
 	    	
@@ -573,6 +605,16 @@ public class WarForgeMod implements ILateMixinLoader
 	    	packet.msTimeOfNextYieldDay = System.currentTimeMillis() + GetMSToNextYield();
 	    	
 	    	NETWORK.sendTo(packet, (EntityPlayerMP)event.player);
+
+			// sends packet to client which clears all previously remembered sieges; identical attacking and def names = clear packet
+			PacketSiegeCampProgressUpdate clearSiegesPacket = new PacketSiegeCampProgressUpdate();
+			clearSiegesPacket.mInfo = new SiegeCampProgressInfo();
+			clearSiegesPacket.mInfo.expiredTicks = 0;
+			clearSiegesPacket.mInfo.mAttackingName = "c"; // normally attacking and def names cannot be identical
+			clearSiegesPacket.mInfo.mDefendingName = "c";
+			clearSiegesPacket.mInfo.mAttackingPos = DimBlockPos.ZERO;
+			clearSiegesPacket.mInfo.mDefendingPos = DimBlockPos.ZERO;
+			NETWORK.sendTo(clearSiegesPacket, (EntityPlayerMP) event.player);
 	    	
 	    	FACTIONS.SendAllSiegeInfoToNearby();
     	}
@@ -741,7 +783,6 @@ public class WarForgeMod implements ILateMixinLoader
 	public void ServerAboutToStart(FMLServerAboutToStartEvent event)
 	{
 		MC_SERVER = event.getServer();
-		previousUpdateTimestamp = System.currentTimeMillis();
 		CommandHandler handler = ((CommandHandler)MC_SERVER.getCommandManager());
 		handler.registerCommand(new CommandFactions());
 		
@@ -772,6 +813,8 @@ public class WarForgeMod implements ILateMixinLoader
 			LOGGER.error("Failed to load data from warforgefactions.dat and backup; restart strongly recommended");
 			e.printStackTrace();
 		}
+
+		currTickTimestamp = System.currentTimeMillis(); // will cause some update time to be registered immediately
 	}
 	
 	private void Save(String event)
@@ -821,12 +864,15 @@ public class WarForgeMod implements ILateMixinLoader
 
 	@EventHandler
 	public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+		/*
 		EntityPlayer player = event.player;
 		DimBlockPos playerPos = new DimBlockPos(player);
-		//if(FACTIONS.isPlayerDefending(player.getUniqueID())){
-		//	COMBAT_LOG.add(playerPos, player.getUniqueID(), System.currentTimeMillis());
-		//}
+		if(FACTIONS.isPlayerDefending(player.getUniqueID())){
+			COMBAT_LOG.add(playerPos, player.getUniqueID(), System.currentTimeMillis());
+		}
+		*/
 	}
+
     // Helpers
 
     public static UUID GetUUID(ICommandSender sender)

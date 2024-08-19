@@ -200,6 +200,7 @@ public class FactionStorage {
 		int msPassed = (int) (msUpdateTime - WarForgeMod.previousUpdateTimestamp); // the difference is likely less than 596h (max time storage of int using ms)
 
 		try {
+			// concurrent modification exception can occur when conquered chunks is checked by other methods, such as pre block place
 			for (DimChunkPos chunkPosKey : conqueredChunks.keySet()) {
 				ObjectIntPair<UUID> chunkEntry = conqueredChunks.get(chunkPosKey);
 
@@ -210,8 +211,6 @@ public class FactionStorage {
 			WarForgeMod.LOGGER.atError().log("Error when updating conquered chunk of type " + e + ", with stacktrace:");
 			e.printStackTrace();
 		}
-
-		WarForgeMod.previousUpdateTimestamp = msUpdateTime; // current update is now previous, as update has been performed
 	}
     
     public void AdvanceSiegeDay()
@@ -331,6 +330,7 @@ public class FactionStorage {
 					if (siegeCampPos != null)
 						conqueredChunks.put(siegeCampPos.ToChunkPos(), new ObjectIntPair<>(copyUUID(attackers.mUUID), WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD));
 			}
+
 			defenders.OnClaimLost(blockPos); // drops block if SIEGE_CAPTURE is off, or drops nothing if it is on
 			mClaims.remove(blockPos.ToChunkPos());
 			attackers.MessageAll(new TextComponentTranslation("warforge.info.siege_won_attackers", attackers.mName, blockPos.ToFancyString()));
@@ -412,6 +412,7 @@ public class FactionStorage {
 
 		// All checks passed, create a faction
 		Faction faction = new Faction();
+		faction.onlinePlayerCount = 1;
 		faction.mUUID = proposedID;
 		faction.mName = factionName;
 		faction.mCitadelPos = new DimBlockPos(citadel);
@@ -702,7 +703,6 @@ public class FactionStorage {
 		siege.Start();
 
 		attacking.setLastSiegeTimestamp(WarForgeMod.ServerTick);
-		defending.setLastDefenseTimestamp(WarForgeMod.currTickTimestamp);
 
 		return true;
     }
@@ -833,7 +833,6 @@ public class FactionStorage {
 		faction.OnClaimLost(pos);
 		mClaims.remove(pos.ToChunkPos());
 		faction.MessageAll(new TextComponentString(player.getName() + " unclaimed " + pos.ToFancyString()));
-
 
 		return true;
 	}

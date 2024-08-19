@@ -73,11 +73,25 @@ public class BlockSiegeCamp extends Block implements ITileEntityProvider
     @Override
     public BlockRenderLayer getBlockLayer() { return BlockRenderLayer.CUTOUT; }
 	*/
+
+	// vanilla hasTileEntity check
+	@Override
+	public boolean hasTileEntity() {
+		return true;
+	}
+
+	// forge version which is state dependent (apparently for extending vanilla blocks)
+	@Override
+	public boolean hasTileEntity(IBlockState blockState) {
+		return true;
+	}
+
 	// called on block place
 	@Override
 	public TileEntity createNewTileEntity(World worldIn, int meta) {
 		return new TileEntitySiegeCamp();
 	}
+
 	// called before block place
 	@Override
 	public boolean canPlaceBlockAt(World world, BlockPos pos)
@@ -96,6 +110,7 @@ public class BlockSiegeCamp extends Block implements ITileEntityProvider
 
 		return true;
 	}
+
 	// called after block place
 	@Override
 	public void onBlockPlacedBy(World world, BlockPos pos, IBlockState state, EntityLivingBase placer, ItemStack stack)
@@ -180,6 +195,7 @@ public class BlockSiegeCamp extends Block implements ITileEntityProvider
 		return true;
 	}
 	 */
+
 	/**
 	 * Called on both Client and Server when World#addBlockEvent is called. On the Server, this may perform additional
 	 * changes to the world, like pistons replacing the block with an extended base. On the client, the update may
@@ -196,6 +212,7 @@ public class BlockSiegeCamp extends Block implements ITileEntityProvider
 		return false;
 	}
 	 */
+
 	// server side and allows client to have the possibility to accept events, alongside enabling server acceptance
 	@Deprecated
 	public boolean eventReceived(IBlockState state, World worldIn, BlockPos pos, int id, int param)
@@ -207,17 +224,19 @@ public class BlockSiegeCamp extends Block implements ITileEntityProvider
 	{
 		return false;
 	}
+
 	// called before te is updated and does not necessarily mean block is being removed by player
-	/*
 	@Override
 	public void breakBlock(World worldIn, BlockPos pos, IBlockState state) {
 		super.breakBlock(worldIn, pos, state);
+		/*
 		if (worldIn.isRemote) return;
 		TileEntity te = worldIn.getTileEntity(pos);
 		if(te != null) {
 			TileEntitySiegeCamp siegeCamp = (TileEntitySiegeCamp)te;
 			if (siegeCamp != null) siegeCamp.onDestroyed();
 		}
+
+		 */
 	}
-	 */
 }

@@ -236,9 +236,7 @@ public class ClientTickHandler
 						}
 					}
 				}
-				
-				
-				
+
 				// Render siege overlay
 				if(infoToRender != null)
 				{
