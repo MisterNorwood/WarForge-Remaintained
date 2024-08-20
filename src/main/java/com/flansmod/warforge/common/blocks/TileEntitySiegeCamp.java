@@ -32,26 +32,18 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 	private UUID mPlacer = Faction.NULL;
 	private DimBlockPos mSiegeTarget = null;
 	private Faction defenders = null;
-	private boolean doCheckPerTick;
+	private boolean doCheckPerTick = WarForgeConfig.ATTACKER_DESERTION_TIMER == 0 || WarForgeConfig.DEFENDER_DESERTION_TIMER == 0;
 	private int tickTimer = 0;
-	private SiegeStatus siegeStatus;
+	private SiegeStatus siegeStatus = SiegeStatus.IDLING;
 	private int attackerAbandonTickTimer = 0;
 	private int defenderAbandonTickTimer = 0;
 
 	private long defenderOfflineTimerMs = 0;
-	private long previousTimestamp = 0;
+	private long previousTimestamp = WarForgeMod.currTickTimestamp;
 	private int largestSeenDefenderCount;
 	private int lastSeenDefenderCount;
 
 	// tile entity constructor should be default
-
-	// run when this is first loaded (alternative to on first tick)
-	@Override
-	public void onLoad() {
-		doCheckPerTick = WarForgeConfig.ATTACKER_DESERTION_TIMER == 0 || WarForgeConfig.DEFENDER_DESERTION_TIMER == 0;
-		previousTimestamp = WarForgeMod.currTickTimestamp;
-		siegeStatus = SiegeStatus.IDLING;
-	}
 
 	public void OnPlacedBy(EntityLivingBase placer) {
 		mPlacer = placer.getUniqueID();
