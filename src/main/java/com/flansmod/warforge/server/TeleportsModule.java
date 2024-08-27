@@ -105,12 +105,7 @@ public class TeleportsModule
 
 			if(tp.ticksRemaining == 0)
 			{
-				if(tp.target.mDim != tp.player.dimension)
-					tp.player = (EntityPlayer)tp.player.changeDimension(tp.target.mDim);
-				
-				((EntityPlayerMP)tp.player).connection.setPlayerLocation(tp.target.getX() + 0.5d, tp.target.getY() + 1.5d, tp.target.getZ() + 0.5d, 0, 0);
-				tp.player.sendMessage(new TextComponentString("Teleport complete."));
-				mPendingTPs.remove(i);
+				TeleportUtil.teleportPlayer( (EntityPlayerMP)tp.player, tp.target.mDim, (BlockPos)tp.target);
 			}
 		}
 	}
