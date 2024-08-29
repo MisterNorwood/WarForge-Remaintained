@@ -399,8 +399,8 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 			return true;
 		} else {
 			if (currentTickTimer / 20 == WarForgeConfig.ATTACKER_DESERTION_TIMER >>> 4) {
-				if (isAttackingSide) messageAllAttackers("warforge.notification.siege_abandon", currentTickTimer / 20, abandonTimer);
-				else messageAllDefenders("warforge.notification.siege_abandon", currentTickTimer / 20, abandonTimer);
+				if (isAttackingSide) messageAllAttackers("warforge.notification.siege_abandon_" + (isAttackingSide ? "current" : "opposing"), abandonRadius, currentTickTimer / 20, abandonTimer);
+				else messageAllDefenders("warforge.notification.siege_abandon_" + (isAttackingSide ? "current" : "opposing"), abandonRadius, currentTickTimer / 20, abandonTimer);
 			}
 
 			switch (abandonTimer * 20 - currentTickTimer) {

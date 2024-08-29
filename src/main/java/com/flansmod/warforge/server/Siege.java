@@ -40,6 +40,7 @@ public class Siege {
      * - Defender's flags on the defended claim
      */
     private int mExtraDifficulty = 0;
+
     /**
      * The attack progress is accumulated over time based on active actions in the area of the siege
      * Sources for the attackers are:
@@ -76,7 +77,11 @@ public class Siege {
 			// YOU WILL GET INCOMPREHENSIBLE ERRORS IF YOU DO NOT FOLLOW THE BELOW CONVERSION TO REGULAR POS
 			TileEntity siegeCamp = WarForgeMod.MC_SERVER.getWorld(siegeCampPos.mDim).getTileEntity(siegeCampPos.ToRegularPos());
 			if (siegeCamp instanceof TileEntitySiegeCamp) {
-				if (((TileEntitySiegeCamp) siegeCamp).getAttackerAbandonTickTimer() > 0) return true;
+				int attackerAbandonTimer = ((TileEntitySiegeCamp) siegeCamp).getAttackerAbandonTickTimer();
+				if (attackerAbandonTimer > 0) {
+					attacking.MessageAll(new TextComponentString("Passing of siege delayed due to abandon timer greater than 0 [" + attackerAbandonTimer + " ticks]; ensure abandon timer is 0 to complete siege."));
+					return true;
+				}
 			}
 		}
 

@@ -323,7 +323,7 @@ public class ClientTickHandler
 					mc.fontRenderer.drawStringWithShadow("VS", j + xSize / 2 - mc.fontRenderer.getStringWidth("VS") / 2, k + 6, 0xffffff);
 					mc.fontRenderer.drawStringWithShadow(infoToRender.mAttackingName, j + xSize - 6 - mc.fontRenderer.getStringWidth(infoToRender.mAttackingName), k + 6, infoToRender.mAttackingColour);
 					
-					String toWin = (infoToRender.mCompletionPoint - infoToRender.mProgress) + " to win";
+					String toWin = (infoToRender.mProgress < infoToRender.mCompletionPoint) ? (infoToRender.mCompletionPoint - infoToRender.mProgress) + " to win" : "Station siege to win";
 					String toDefend = (infoToRender.mProgress + 5) + " to defend";
 					mc.fontRenderer.drawStringWithShadow(toWin, j + xSize - 8 - mc.fontRenderer.getStringWidth(toWin), k + 32, infoToRender.mAttackingColour);
 					mc.fontRenderer.drawStringWithShadow(toDefend, j + 8, k + 32, infoToRender.mAttackingColour);
