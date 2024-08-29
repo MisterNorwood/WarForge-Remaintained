@@ -331,7 +331,7 @@ public class FactionStorage {
 						conqueredChunks.put(siegeCampPos.ToChunkPos(), new ObjectIntPair<>(copyUUID(attackers.mUUID), WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD));
 			}
 
-			defenders.OnClaimLost(blockPos); // drops block if SIEGE_CAPTURE is off, or drops nothing if it is on
+			defenders.OnClaimLost(blockPos, true); // drops block if SIEGE_CAPTURE is off (claim is not overriden), or drops nothing if it is on (claim effectively removed and instantly replaced)
 			mClaims.remove(blockPos.ToChunkPos());
 			attackers.MessageAll(new TextComponentTranslation("warforge.info.siege_won_attackers", attackers.mName, blockPos.ToFancyString()));
 			defenders.MessageAll(new TextComponentTranslation("warforge.info.siege_lost_defenders", defenders.mName, blockPos.ToFancyString()));

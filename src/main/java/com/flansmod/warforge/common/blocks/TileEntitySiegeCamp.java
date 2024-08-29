@@ -96,7 +96,10 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 	public void OnServerRemovePlayerFlag(String playerName) {
 		super.OnServerRemovePlayerFlag(playerName);
 
-		if(mPlayerFlags.size() == 0) endSiegePrepped(); // if siege block runs out of player flags, siege fails
+        // can cause crash as placing a siege block, not selecting a target, and then placing your flag at another siege block will call this
+		if(mPlayerFlags.size() == 0 && siegeStatus == SiegeStatus.ACTIVE && mSiegeTarget != null) {
+            endSiegePrepped(); // if siege block runs out of player flags, siege fails
+        }
 	}
 
 	private enum SiegeStatus {

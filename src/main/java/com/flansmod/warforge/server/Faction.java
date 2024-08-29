@@ -332,15 +332,21 @@ public class Faction
 	{
 		mClaims.put(claim.GetPos(), 0);
 	}
-		
-	public void OnClaimLost(DimBlockPos claimBlockPos)
+
+	// for methods where claim block is actually being removed
+	public void OnClaimLost(DimBlockPos claimBlockPos) {
+		OnClaimLost(claimBlockPos, false);
+	}
+
+	// avoids duplication of claim block on siege capture, as the way capture is done is by losing the claim (this method) and then creating another in its place
+	public void OnClaimLost(DimBlockPos claimBlockPos, boolean captureAttempted)
 	{
 		// Destroy our claim block
 		World world = WarForgeMod.MC_SERVER.getWorld(claimBlockPos.mDim);
 		IBlockState claimBlock = world.getBlockState(claimBlockPos.ToRegularPos());
 		ItemStack drop = new ItemStack(Item.getItemFromBlock(claimBlock.getBlock()));
 		world.setBlockToAir(claimBlockPos);
-		if (!WarForgeConfig.SIEGE_CAPTURE) world.spawnEntity(new EntityItem(world, claimBlockPos.getX() + 0.5d, claimBlockPos.getY() + 0.5d, claimBlockPos.getZ() + 0.5d, drop));
+		if (!captureAttempted || !WarForgeConfig.SIEGE_CAPTURE) world.spawnEntity(new EntityItem(world, claimBlockPos.getX() + 0.5d, claimBlockPos.getY() + 0.5d, claimBlockPos.getZ() + 0.5d, drop));
 		
 		// Uh oh
 		if(claimBlockPos.equals(mCitadelPos))
