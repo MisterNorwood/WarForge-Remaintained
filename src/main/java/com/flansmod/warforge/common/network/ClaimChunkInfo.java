@@ -30,6 +30,7 @@ public class ClaimChunkInfo {
     public UUID outlineFactionId = Faction.nullUuid;
     public int outlineColour = 0xFFFFFF;
     public byte outlineStyle = OUTLINE_NONE;
+    public int conqueredRemainingMs = 0;
 
     public boolean hasFlag(byte flag) {
         return (flags & flag) != 0;

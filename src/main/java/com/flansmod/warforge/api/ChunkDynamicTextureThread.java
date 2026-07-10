@@ -8,11 +8,11 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.Vec3d;
 
 import java.awt.image.BufferedImage;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ChunkDynamicTextureThread extends Thread {
-    public static Queue<RegisterTextureAction> queue = new ConcurrentLinkedQueue<>();
+    public static final Map<String, RegisterTextureAction> PENDING = new ConcurrentHashMap<>();
     final int[] rawChunk;
     final int[] heightMapCopy;
     final int maxHeight;
@@ -116,18 +116,33 @@ public class ChunkDynamicTextureThread extends Thread {
         // Final image
         BufferedImage image = new BufferedImage(16 * scale, 16 * scale, BufferedImage.TYPE_INT_ARGB);
         image.setRGB(0, 0, 16 * scale, 16 * scale, finalBuffer, 0, 16 * scale);
-        queue.add(new RegisterTextureAction(image, name));
+        PENDING.put(name, new RegisterTextureAction(image, name));
     }
 
 
     public void applyHeightMap(int[] colorBuffer, int[] heightMap) {
+        int span = maxHeight - minHeight;
+        if (span <= 0) {
+            for (int i = 0; i < colorBuffer.length; i++) {
+                colorBuffer[i] = Color4i.fromRGB(colorBuffer[i]).withHSVBrightness(0.8f).toRGB();
+            }
+            return;
+        }
+
+        float logSpan = (float) Math.log(span + 1);
         for (int i = 0; i < colorBuffer.length; i++) {
-            float normalized = (float) Math.log(heightMap[i] - minHeight + 1) / (float) Math.log(maxHeight - minHeight + 1);
+            int delta = heightMap[i] - minHeight;
+            if (delta < 0) {
+                delta = 0;
+            } else if (delta > span) {
+                delta = span;
+            }
+            float normalized = (float) Math.log(delta + 1) / logSpan;
             float brightness = 0.6f + normalized * 0.4f;
 
-            Color4i color = Color4i.fromRGB(colorBuffer[i])
-                    .withHSVBrightness(brightness);
-            colorBuffer[i] = color.toRGB();
+            colorBuffer[i] = Color4i.fromRGB(colorBuffer[i])
+                    .withHSVBrightness(brightness)
+                    .toRGB();
         }
     }
 

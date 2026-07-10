@@ -213,6 +213,9 @@ public final class GuiClaimManager {
                             } else {
                                 tooltip.addLine("Faction: " + info.factionName);
                             }
+                            if (info.conqueredRemainingMs > 0) {
+                                tooltip.addLine("Conquered — reverts to wilderness in " + com.flansmod.warforge.common.util.TimeHelper.formatTime(info.conqueredRemainingMs));
+                            }
                             tooltip.addLine("Claim Type: " + formatClaimType(info.claimType));
                             tooltip.addLine("Chunk: [" + info.x + ", " + info.z + "]");
                             if (info.vein != null) {

@@ -1,6 +1,8 @@
 package com.flansmod.warforge.server;
 
 import com.flansmod.warforge.api.Time;
+import com.flansmod.warforge.api.vein.Quality;
+import com.flansmod.warforge.api.vein.Vein;
 import com.flansmod.warforge.common.Content;
 import com.flansmod.warforge.common.WarForgeConfig;
 import com.flansmod.warforge.common.WarForgeMod;
@@ -8,6 +10,7 @@ import com.flansmod.warforge.Tags;
 import com.flansmod.warforge.common.blocks.IClaim;
 import com.flansmod.warforge.common.blocks.TileEntityIslandCollector;
 import com.flansmod.warforge.common.blocks.TileEntityYieldCollector;
+import org.apache.commons.lang3.tuple.Pair;
 import com.flansmod.warforge.common.network.FactionDisplayInfo;
 import com.flansmod.warforge.common.network.PlayerDisplayInfo;
 import com.flansmod.warforge.common.util.DimBlockPos;
@@ -76,6 +79,7 @@ public class Faction {
     public short citadelLevel = 0;
     public long offlineRaidProtectionUntil = 0L;
     public boolean offlineRaidProtectionDisabled = false;
+    public long siegeGraceUntil = 0L;
     public int citadelMoveCooldown = 0;
     public boolean isCurrentlyDefending = false;
     //Only for new system
@@ -364,8 +368,10 @@ public class Faction {
     }
 
     public int getMaxForceLoadedChunks() {
-        int levelBonus = citadelLevel * WarForgeConfig.FORCE_LOADED_CHUNKS_PER_CITADEL_LEVEL;
-        return Math.max(0, WarForgeConfig.FORCE_LOADED_CHUNKS_BASE + levelBonus);
+        if (WarForgeConfig.ENABLE_CITADEL_UPGRADES) {
+            return Math.max(0, WarForgeMod.UPGRADE_HANDLER.getLoadedChunksForLevel(citadelLevel));
+        }
+        return Math.max(0, WarForgeConfig.FORCE_LOADED_CHUNKS_TOTAL);
     }
 
     public int getInsuranceSlotCount() {
@@ -434,6 +440,7 @@ public class Faction {
     public void onClaimPlaced(IClaim claim) {
         claims.put(claim.getClaimPos(), 0);
         claimTypes.put(claim.getClaimPos(), ClaimType.fromClaim(claim));
+        wealth += chunkWealth(claim.getClaimPos().toChunkPos());
     }
 
     // for methods where claim block is actually being removed
@@ -482,6 +489,7 @@ public class Faction {
                 );
             }
 
+            wealth -= chunkWealth(claimBlockPos.toChunkPos());
             claims.remove(claimBlockPos);
             claimTypes.remove(claimBlockPos);
             ArrayList<DimBlockPos> removedCollectors = new ArrayList<DimBlockPos>();
@@ -516,6 +524,7 @@ public class Faction {
         DimBlockPos blockPos = new DimBlockPos(pos.dim, pos.getXStart(), y, pos.getZStart());
         claims.put(blockPos, 0);
         claimTypes.put(blockPos, claimType);
+        wealth += chunkWealth(pos);
     }
 
     public ClaimType getClaimType(DimChunkPos pos) {
@@ -563,23 +572,19 @@ public class Faction {
         return null;
     }
 
-    public void evaluateVault() {
-        World world = WarForgeMod.MC_SERVER.getWorld(citadelPos.dim);
-        DimChunkPos chunkPos = citadelPos.toChunkPos();
+    public static int chunkWealth(DimChunkPos chunk) {
+        if (VEIN_HANDLER == null || !VEIN_HANDLER.hasFinishedInit || WarForgeMod.MC_SERVER == null) return 0;
+        World world = WarForgeMod.MC_SERVER.getWorld(chunk.dim);
+        if (world == null) world = WarForgeMod.MC_SERVER.getWorld(0);
+        if (world == null) return 0;
+        Pair<Vein, Quality> veinInfo = VEIN_HANDLER.getVein(chunk.dim, chunk.x, chunk.z, world.getSeed());
+        return veinInfo == null || veinInfo.getLeft() == null ? 0 : veinInfo.getLeft().wealth;
+    }
 
-        int count = 0;
-        for (int x = 0; x < 16; x++) {
-            for (int z = 0; z < 16; z++) {
-                for (int y = 0; y < 256; y++) {
-                    BlockPos blockPos = chunkPos.getBlock(x, y, z);
-                    IBlockState state = world.getBlockState(blockPos);
-                    if (WarForgeConfig.VAULT_BLOCKS.contains(state.getBlock()))
-                        count++;
-                }
-            }
-        }
-
-        wealth = count;
+    public void recalculateWealth() {
+        int total = 0;
+        for (DimBlockPos claimPos : claims.keySet()) total += chunkWealth(claimPos.toChunkPos());
+        wealth = total;
     }
 
     public void awardYields() {
@@ -689,7 +694,12 @@ public class Faction {
             }
             claimTypes.put(pos, claimType);
         }
-        if (!claims.containsKey(citadelPos)) {
+        if (FactionStorage.IsNeutralZone(uuid)) {
+            if (claimTypes.get(citadelPos) == ClaimType.CITADEL) {
+                claims.remove(citadelPos);
+                claimTypes.remove(citadelPos);
+            }
+        } else if (!claims.containsKey(citadelPos)) {
             WarForgeMod.LOGGER.error("Citadel was not claimed by the faction. Forcing claim");
             claims.put(citadelPos, 0);
             claimTypes.put(citadelPos, ClaimType.CITADEL);
@@ -730,6 +740,7 @@ public class Faction {
 
         offlineRaidProtectionUntil = tags.getLong("offlineRaidProtectionUntil");
         offlineRaidProtectionDisabled = tags.getBoolean("offlineRaidProtectionDisabled");
+        siegeGraceUntil = tags.getLong("siegeGraceUntil");
         citadelMoveCooldown = tags.getInteger("citadelMoveCooldown");
         citadelMoveTimeStamp = tags.getLong("citadelMoveTimestamp");
         lastSiegeTimestamp = tags.getLong("lastSiegeTimestamp");
@@ -835,6 +846,7 @@ public class Faction {
 
         tags.setLong("offlineRaidProtectionUntil", offlineRaidProtectionUntil);
         tags.setBoolean("offlineRaidProtectionDisabled", offlineRaidProtectionDisabled);
+        tags.setLong("siegeGraceUntil", siegeGraceUntil);
         tags.setInteger("citadelMoveCooldown", citadelMoveCooldown);
         tags.setLong("citadelMoveTimestamp", citadelMoveTimeStamp);
         tags.setLong("lastSiegeTimestamp", lastSiegeTimestamp);
@@ -922,6 +934,7 @@ public class Faction {
         REINFORCED("reinforced", "R", WarForgeConfig.CLAIM_STRENGTH_REINFORCED, WarForgeConfig.SUPPORT_STRENGTH_REINFORCED),
         CITADEL("citadel", "C", WarForgeConfig.CLAIM_STRENGTH_CITADEL, WarForgeConfig.SUPPORT_STRENGTH_CITADEL),
         ADMIN("admin", "A", 0, 0),
+        WARZONE("warzone", "W", 0, 0),
         SIEGE("siege", "S", 0, 0);
 
         public final String serializedName;
@@ -940,7 +953,6 @@ public class Faction {
             if (claim instanceof com.flansmod.warforge.common.blocks.TileEntityCitadel) return CITADEL;
             if (claim instanceof com.flansmod.warforge.common.blocks.TileEntityReinforcedClaim) return REINFORCED;
             if (claim instanceof com.flansmod.warforge.common.blocks.TileEntityBasicClaim) return BASIC;
-            if (claim instanceof com.flansmod.warforge.common.blocks.TileEntityAdminClaim) return ADMIN;
             if (claim instanceof com.flansmod.warforge.common.blocks.TileEntitySiegeCamp) return SIEGE;
             return NONE;
         }

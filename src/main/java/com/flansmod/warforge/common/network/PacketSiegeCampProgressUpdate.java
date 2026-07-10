@@ -32,7 +32,11 @@ public class PacketSiegeCampProgressUpdate extends PacketBase
 		data.writeInt(info.defendingColour);
 		writeUTF(data, info.defendingName);
 		data.writeInt(info.battleRadius);
-		
+		data.writeInt(info.siegedRadius);
+		writeUUID(data, info.defendingFactionId);
+		writeUUID(data, info.attackingFactionId);
+		data.writeInt(info.attackerAbandonSeconds);
+
 		data.writeInt(info.progress);
 		data.writeInt(info.mPreviousProgress);
 		data.writeInt(info.completionPoint);
@@ -66,7 +70,11 @@ public class PacketSiegeCampProgressUpdate extends PacketBase
 		info.defendingColour = data.readInt();
 		info.defendingName = readUTF(data);
 		info.battleRadius = data.readInt();
-		
+		info.siegedRadius = data.readInt();
+		info.defendingFactionId = readUUID(data);
+		info.attackingFactionId = readUUID(data);
+		info.attackerAbandonSeconds = data.readInt();
+
 		info.progress = data.readInt();
 		info.mPreviousProgress = data.readInt();
 		info.completionPoint = data.readInt();

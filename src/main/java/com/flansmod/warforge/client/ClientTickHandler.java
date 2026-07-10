@@ -46,6 +46,7 @@ import net.minecraft.world.World;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent.ElementType;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
+import net.minecraftforge.event.world.ChunkEvent;
 import net.minecraftforge.fml.client.registry.ClientRegistry;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent.ClientTickEvent;
@@ -65,6 +66,10 @@ import static com.flansmod.warforge.client.util.RenderUtil.*;
 public class ClientTickHandler {
     final static double alignment = 0.25d;
     final static double smaller_alignment = alignment - 0.125d;
+    private static final int MAX_BORDER_REBUILDS_PER_FRAME = 8;
+    private static final int BORDER_Y_SCAN_MARGIN = 4;
+    private static final int BORDER_SYNC_PREFETCH = 4;
+    private static final int BORDER_SAFETY_RESYNC_TICKS = 100;
     private static final ResourceLocation texture = new ResourceLocation(Tags.MODID, "world/borders.png");
     private static final ResourceLocation textureConquered = new ResourceLocation(Tags.MODID, "world/borders_restricted.png");
     private static final ResourceLocation fastTexture = new ResourceLocation(Tags.MODID, "world/borders_fast.png");
@@ -85,6 +90,8 @@ public class ClientTickHandler {
     private int areaMessageColour = 0xFF_FF_FF_FF;
     private String areaFlagId = "";
     private HashMap<DimChunkPos, BorderRenderData> renderData = new HashMap<>();
+    private DimChunkPos lastBorderSyncCenter = null;
+    private int lastBorderSyncRadius = 0;
 
 	// -1 indicates the chunk wasn't the targeting of previous probe(s)
 	private static ArrayList<String> cachedCompStrings = null;
@@ -114,6 +121,8 @@ public class ClientTickHandler {
             }
         }
         renderData.clear();
+        ClientBorderCache.clear();
+        lastBorderSyncCenter = null;
     }
 
     @SubscribeEvent
@@ -148,6 +157,21 @@ public class ClientTickHandler {
         ServerTerrainCache.clear();
         ClaimManagerGuiFactory.resetSiegeState();
         ClientFlagRegistry.clear();
+    }
+
+    @SubscribeEvent
+    public void onChunkLoad(ChunkEvent.Load event) {
+        World world = event.getWorld();
+        if (!world.isRemote) {
+            return;
+        }
+        net.minecraft.util.math.ChunkPos cp = event.getChunk().getPos();
+        DimChunkPos key = new DimChunkPos(world.provider.getDimension(), cp.x, cp.z);
+        BorderRenderData data = renderData.get(key);
+        if (data != null && data.renderList > 0) {
+            GlStateManager.glDeleteLists(data.renderList, 1);
+            data.renderList = 0;
+        }
     }
 
     @SubscribeEvent
@@ -202,15 +226,25 @@ public class ClientTickHandler {
 
             boolean guiOpen = Minecraft.getMinecraft().currentScreen != null;
             if (!guiOpen) {
-                if (!standing.equals(lastClaimSyncChunk) || player.ticksExisted % 40 == 0) {
-                    requestClaimChunkData(standing);
-                    lastClaimSyncChunk = standing;
+                int renderDist = WarForgeConfig.BORDER_RENDER_DISTANCE > 0
+                        ? WarForgeConfig.BORDER_RENDER_DISTANCE
+                        : Minecraft.getMinecraft().gameSettings.renderDistanceChunks;
+                int syncRadius = Math.min(renderDist + BORDER_SYNC_PREFETCH, WarForgeConfig.BORDER_SYNC_MAX_RADIUS);
+                boolean resync = lastBorderSyncCenter == null
+                        || lastBorderSyncCenter.dim != standing.dim
+                        || syncRadius != lastBorderSyncRadius
+                        || Math.max(Math.abs(standing.x - lastBorderSyncCenter.x), Math.abs(standing.z - lastBorderSyncCenter.z)) > BORDER_SYNC_PREFETCH
+                        || player.ticksExisted % BORDER_SAFETY_RESYNC_TICKS == 0;
+                if (resync) {
+                    requestClaimChunkData(standing, syncRadius, true);
+                    lastBorderSyncCenter = standing;
+                    lastBorderSyncRadius = syncRadius;
                 }
+                lastClaimSyncChunk = standing;
             } else if (player.ticksExisted % 40 == 0 && lastClaimSyncChunk.dim == player.dimension
                     && !ClaimManagerGuiFactory.isRemoteSiegeView()) {
-                // While a stage-2 siege picker is open on a remote target, don't clobber its
-                // target-centered claim window with a player-centered refresh.
                 requestClaimChunkData(lastClaimSyncChunk);
+                lastBorderSyncCenter = null;
             }
 
             if (claimManagerKey.isPressed()) {
@@ -232,8 +266,8 @@ public class ClientTickHandler {
 
                 // Only perform claim checks if the player has moved to a new chunk
                 if (!standing.equals(playerChunkPos)) {
-                    ClaimChunkInfo preClaim = ClientClaimChunkCache.get(playerChunkPos);
-                    ClaimChunkInfo postClaim = ClientClaimChunkCache.get(standing);
+                    ClaimChunkInfo preClaim = ClientBorderCache.get(playerChunkPos);
+                    ClaimChunkInfo postClaim = ClientBorderCache.get(standing);
                     boolean hadPreClaim = preClaim != null && !preClaim.factionId.equals(Faction.nullUuid);
                     boolean hasPostClaim = postClaim != null && !postClaim.factionId.equals(Faction.nullUuid);
 
@@ -274,9 +308,14 @@ public class ClientTickHandler {
     }
 
     private void requestClaimChunkData(DimChunkPos center) {
+        requestClaimChunkData(center, WarForgeConfig.CLAIM_MANAGER_RADIUS, false);
+    }
+
+    private void requestClaimChunkData(DimChunkPos center, int radius, boolean outlineOnly) {
         PacketRequestClaimChunks packet = new PacketRequestClaimChunks();
         packet.center = center;
-        packet.radius = WarForgeConfig.CLAIM_MANAGER_RADIUS;
+        packet.radius = radius;
+        packet.outlineOnly = outlineOnly;
         WarForgeMod.NETWORK.sendToServer(packet);
     }
 
@@ -595,6 +634,17 @@ public class ClientTickHandler {
         renderSiegeText(mc, infoToRender, xText, yText);
         if(WarForgeConfig.SIEGE_ENABLE_NEW_TIMER)
             renderSiegeTimer(mc, infoToRender, xText, yText+5);
+        renderSiegeAbandonTimer(mc, mc.fontRenderer, infoToRender, xText, yText);
+    }
+
+    private void renderSiegeAbandonTimer(Minecraft mc, net.minecraft.client.gui.FontRenderer fontRenderer, SiegeCampProgressInfo info, int xText, int yText) {
+        if (info.attackerAbandonSeconds <= 0) return;
+        if (ClientClaimChunkCache.playerFactionId.equals(Faction.nullUuid)) return;
+        if (!ClientClaimChunkCache.playerFactionId.equals(info.attackingFactionId)) return;
+        String text = "Siege abandoned in: " + formatPaddedTimer(info.attackerAbandonSeconds * 1000L);
+        int textWidth = fontRenderer.getStringWidth(text);
+        int color = info.attackerAbandonSeconds <= 10 ? 0xFF5555 : 0xC79A3A;
+        fontRenderer.drawStringWithShadow(text, xText + (128 - textWidth / 2), yText + 44, color);
     }
 
     private void renderSiegeTimer(Minecraft mc, SiegeCampProgressInfo infoToRender, int xText, int yText){
@@ -708,7 +758,7 @@ public class ClientTickHandler {
         HashMap<DimChunkPos, BorderRenderData> tempData = new HashMap<DimChunkPos, BorderRenderData>();
 
         // Find all synced claim chunks in our current dimension.
-        for (HashMap.Entry<DimChunkPos, ClaimChunkInfo> kvp : new HashMap<>(ClientClaimChunkCache.getChunks()).entrySet()) {
+        for (HashMap.Entry<DimChunkPos, ClaimChunkInfo> kvp : new HashMap<>(ClientBorderCache.getChunks()).entrySet()) {
             DimChunkPos chunkPos = kvp.getKey();
             if (chunkPos.dim != world.provider.getDimension()) {
                 continue;
@@ -724,6 +774,10 @@ public class ClientTickHandler {
                 existing.factionId = info.outlineFactionId;
                 existing.colour = info.outlineColour;
                 existing.outlineStyle = info.outlineStyle;
+                if (existing.renderList > 0) {
+                    GlStateManager.glDeleteLists(existing.renderList, 1);
+                    existing.renderList = 0;
+                }
                 tempData.put(chunkPos, existing);
             } else {
                 BorderRenderData data = new BorderRenderData();
@@ -765,6 +819,28 @@ public class ClientTickHandler {
             }
             data.renderList = GLAllocation.generateDisplayLists(1);
             GlStateManager.glNewList(data.renderList, 4864);
+
+            int minY = 0;
+            int maxY = world.getActualHeight();
+            int scanMin = minY;
+            int scanMax = maxY;
+            int originX = pos.getXStart();
+            int originZ = pos.getZStart();
+            int surfMin = Integer.MAX_VALUE;
+            int surfMax = Integer.MIN_VALUE;
+            for (int i = 0; i < 16; i++) {
+                int hN = world.getHeight(originX + i, originZ);
+                int hS = world.getHeight(originX + i, originZ + 15);
+                int hW = world.getHeight(originX, originZ + i);
+                int hE = world.getHeight(originX + 15, originZ + i);
+                surfMin = Math.min(surfMin, Math.min(Math.min(hN, hS), Math.min(hW, hE)));
+                surfMax = Math.max(surfMax, Math.max(Math.max(hN, hS), Math.max(hW, hE)));
+            }
+            if (surfMin != Integer.MAX_VALUE) {
+                scanMin = Math.max(minY, surfMin - BORDER_Y_SCAN_MARGIN);
+                scanMax = Math.min(maxY, surfMax + BORDER_Y_SCAN_MARGIN);
+            }
+            BlockPos.MutableBlockPos mp = new BlockPos.MutableBlockPos();
 
             boolean renderNorth = true, renderEast = true, renderWest = true, renderSouth = true, renderNorthWest = true, renderNorthEast = true, renderSouthWest = true, renderSouthEast = true;
             if (renderData.containsKey(pos.north()))
@@ -873,24 +949,23 @@ public class ClientTickHandler {
             }
             if (renderNorth || renderSouth) {
                 for (int x = 0; x < 16; x++) {
-                    for (int y = 0; y < 256; y++) {
+                    for (int y = scanMin; y < scanMax; y++) {
                         if (x < 15) {
                             if (renderNorth) {
-                                boolean air0 = world.isAirBlock(new BlockPos(pos.getXStart() + x, y, pos.getZStart()));
-                                boolean air1 = world.isAirBlock(new BlockPos(pos.getXStart() + x + 1, y, pos.getZStart()));
+                                boolean air0 = world.isAirBlock(mp.setPos(pos.getXStart() + x, y, pos.getZStart()));
+                                boolean air1 = world.isAirBlock(mp.setPos(pos.getXStart() + x + 1, y, pos.getZStart()));
                                 renderZEdge(world, tess, x, y, pos.getZStart(), smaller_alignment + 0.001d, air0, air1, 0);
                             }
                             if (renderSouth) {
-                                boolean air0 = world.isAirBlock(new BlockPos(pos.getXStart() + x, y, pos.getZEnd()));
-                                boolean air1 = world.isAirBlock(new BlockPos(pos.getXStart() + x + 1, y, pos.getZEnd()));
+                                boolean air0 = world.isAirBlock(mp.setPos(pos.getXStart() + x, y, pos.getZEnd()));
+                                boolean air1 = world.isAirBlock(mp.setPos(pos.getXStart() + x + 1, y, pos.getZEnd()));
                                 renderZEdge(world, tess, x, y, pos.getZEnd(), 16d - smaller_alignment + 0.001d, air0, air1, 0);
                             }
                         }
-                        if (y < 255) {
+                        if (y < scanMax - 1) {
                             if (renderNorth) {
-                                boolean air0 = world.isAirBlock(new BlockPos(pos.getXStart() + x, y, pos.getZStart()));
-                                boolean air1 = world.isAirBlock(new BlockPos(pos.getXStart() + x, y + 1, pos.getZStart()));
-                                //renderZVerticalEdge(world, x, y, pos.getZStart(), smaller_alignment, air0, air1, 0);
+                                boolean air0 = world.isAirBlock(mp.setPos(pos.getXStart() + x, y, pos.getZStart()));
+                                boolean air1 = world.isAirBlock(mp.setPos(pos.getXStart() + x, y + 1, pos.getZStart()));
                                 if (x == 15 && renderEast) {
                                     renderZVerticalCorner(world, tess, x - smaller_alignment, y, smaller_alignment, air0, air1, 0, -smaller_alignment);
                                 } else if (x == 0 && renderWest) {
@@ -900,8 +975,8 @@ public class ClientTickHandler {
                                 }
                             }
                             if (renderSouth) {
-                                boolean air0 = world.isAirBlock(new BlockPos(pos.getXStart() + x, y, pos.getZEnd()));
-                                boolean air1 = world.isAirBlock(new BlockPos(pos.getXStart() + x, y + 1, pos.getZEnd()));
+                                boolean air0 = world.isAirBlock(mp.setPos(pos.getXStart() + x, y, pos.getZEnd()));
+                                boolean air1 = world.isAirBlock(mp.setPos(pos.getXStart() + x, y + 1, pos.getZEnd()));
                                 if (x == 15 && renderEast) {
                                     renderZVerticalCorner(world, tess, x - smaller_alignment, y, 16 - smaller_alignment, air0, air1, 0, -smaller_alignment);
                                 } else if (x == 0 && renderWest) {
@@ -917,23 +992,23 @@ public class ClientTickHandler {
 
             if (renderEast || renderWest) {
                 for (int z = 0; z < 16; z++) {
-                    for (int y = 0; y < 256; y++) {
+                    for (int y = scanMin; y < scanMax; y++) {
                         if (z < 15) {
                             if (renderWest) {
-                                boolean air0 = world.isAirBlock(new BlockPos(pos.getXStart(), y, pos.getZStart() + z));
-                                boolean air1 = world.isAirBlock(new BlockPos(pos.getXStart(), y, pos.getZStart() + z + 1));
+                                boolean air0 = world.isAirBlock(mp.setPos(pos.getXStart(), y, pos.getZStart() + z));
+                                boolean air1 = world.isAirBlock(mp.setPos(pos.getXStart(), y, pos.getZStart() + z + 1));
                                 renderXEdge(world, tess, pos.getXStart(), y, z, smaller_alignment + 0.001d, air0, air1, 0);
                             }
                             if (renderEast) {
-                                boolean air0 = world.isAirBlock(new BlockPos(pos.getXEnd(), y, pos.getZStart() + z));
-                                boolean air1 = world.isAirBlock(new BlockPos(pos.getXEnd(), y, pos.getZStart() + z + 1));
+                                boolean air0 = world.isAirBlock(mp.setPos(pos.getXEnd(), y, pos.getZStart() + z));
+                                boolean air1 = world.isAirBlock(mp.setPos(pos.getXEnd(), y, pos.getZStart() + z + 1));
                                 renderXEdge(world, tess, pos.getXEnd(), y, z, 16d - smaller_alignment + 0.001d, air0, air1, 0);
                             }
                         }
-                        if (y < 255) {
+                        if (y < scanMax - 1) {
                             if (renderWest) {
-                                boolean air0 = world.isAirBlock(new BlockPos(pos.getXStart(), y, pos.getZStart() + z));
-                                boolean air1 = world.isAirBlock(new BlockPos(pos.getXStart(), y + 1, pos.getZStart() + z));
+                                boolean air0 = world.isAirBlock(mp.setPos(pos.getXStart(), y, pos.getZStart() + z));
+                                boolean air1 = world.isAirBlock(mp.setPos(pos.getXStart(), y + 1, pos.getZStart() + z));
                                 if (z == 15 && renderSouth) {
                                     renderXVerticalCorner(world, tess, smaller_alignment, y, z - smaller_alignment, air0, air1, 0, -smaller_alignment);
                                 } else if (z == 0 && renderNorth) {
@@ -943,8 +1018,8 @@ public class ClientTickHandler {
                                 }
                             }
                             if (renderEast) {
-                                boolean air0 = world.isAirBlock(new BlockPos(pos.getXEnd(), y, pos.getZStart() + z));
-                                boolean air1 = world.isAirBlock(new BlockPos(pos.getXEnd(), y + 1, pos.getZStart() + z));
+                                boolean air0 = world.isAirBlock(mp.setPos(pos.getXEnd(), y, pos.getZStart() + z));
+                                boolean air1 = world.isAirBlock(mp.setPos(pos.getXEnd(), y + 1, pos.getZStart() + z));
                                 if (z == 15 && renderSouth) {
                                     renderXVerticalCorner(world, tess, 16d - smaller_alignment, y, z - smaller_alignment, air0, air1, 0, -smaller_alignment);
                                 } else if (z == 0 && renderNorth) {
@@ -962,9 +1037,9 @@ public class ClientTickHandler {
 
             if (renderNorthEast) {
                 if (!renderNorth && !renderEast) {
-                    for (int y = 0; y < 256; y++) {
-                        boolean air0 = world.isAirBlock(new BlockPos(pos.getXEnd(), y, pos.getZStart()));
-                        boolean air1 = world.isAirBlock(new BlockPos(pos.getXEnd(), y + 1, pos.getZStart()));
+                    for (int y = scanMin; y < scanMax; y++) {
+                        boolean air0 = world.isAirBlock(mp.setPos(pos.getXEnd(), y, pos.getZStart()));
+                        boolean air1 = world.isAirBlock(mp.setPos(pos.getXEnd(), y + 1, pos.getZStart()));
                         renderZVerticalCorner(world, tess, 15, y, smaller_alignment, air0, air1, 0, smaller_alignment - 1.0);
                         renderXVerticalCorner(world, tess, 16 - smaller_alignment, y, smaller_alignment - 1, air0, air1, 0, smaller_alignment - 1.0);
                     }
@@ -972,9 +1047,9 @@ public class ClientTickHandler {
             }
             if (renderNorthWest) {
                 if (!renderNorth && !renderWest) {
-                    for (int y = 0; y < 256; y++) {
-                        boolean air0 = world.isAirBlock(new BlockPos(pos.getXStart(), y, pos.getZStart()));
-                        boolean air1 = world.isAirBlock(new BlockPos(pos.getXStart(), y + 1, pos.getZStart()));
+                    for (int y = scanMin; y < scanMax; y++) {
+                        boolean air0 = world.isAirBlock(mp.setPos(pos.getXStart(), y, pos.getZStart()));
+                        boolean air1 = world.isAirBlock(mp.setPos(pos.getXStart(), y + 1, pos.getZStart()));
                         renderZVerticalCorner(world, tess, -1 + smaller_alignment, y, smaller_alignment, air0, air1, 0, smaller_alignment - 1.0);
                         renderXVerticalCorner(world, tess, smaller_alignment, y, smaller_alignment - 1, air0, air1, 0, smaller_alignment - 1.0);
                     }
@@ -982,9 +1057,9 @@ public class ClientTickHandler {
             }
             if (renderSouthWest) {
                 if (!renderSouth && !renderWest) {
-                    for (int y = 0; y < 256; y++) {
-                        boolean air0 = world.isAirBlock(new BlockPos(pos.getXStart(), y, pos.getZEnd()));
-                        boolean air1 = world.isAirBlock(new BlockPos(pos.getXStart(), y + 1, pos.getZEnd()));
+                    for (int y = scanMin; y < scanMax; y++) {
+                        boolean air0 = world.isAirBlock(mp.setPos(pos.getXStart(), y, pos.getZEnd()));
+                        boolean air1 = world.isAirBlock(mp.setPos(pos.getXStart(), y + 1, pos.getZEnd()));
                         renderZVerticalCorner(world, tess, -1 + smaller_alignment, y, 16 - smaller_alignment, air0, air1, 0, smaller_alignment - 1.0);
                         renderXVerticalCorner(world, tess, smaller_alignment, y, 15, air0, air1, 0, smaller_alignment - 1.0);
                     }
@@ -992,9 +1067,9 @@ public class ClientTickHandler {
             }
             if (renderSouthEast) {
                 if (!renderSouth && !renderEast) {
-                    for (int y = 0; y < 256; y++) {
-                        boolean air0 = world.isAirBlock(new BlockPos(pos.getXEnd(), y, pos.getZEnd()));
-                        boolean air1 = world.isAirBlock(new BlockPos(pos.getXEnd(), y + 1, pos.getZEnd()));
+                    for (int y = scanMin; y < scanMax; y++) {
+                        boolean air0 = world.isAirBlock(mp.setPos(pos.getXEnd(), y, pos.getZEnd()));
+                        boolean air1 = world.isAirBlock(mp.setPos(pos.getXEnd(), y + 1, pos.getZEnd()));
                         renderZVerticalCorner(world, tess, 15, y, 16 - smaller_alignment, air0, air1, 0, smaller_alignment - 1.0);
                         renderXVerticalCorner(world, tess, 16 - smaller_alignment, y, 15, air0, air1, 0, smaller_alignment - 1.0);
                     }
@@ -1073,10 +1148,21 @@ public class ClientTickHandler {
 			return;
 		}
 
+        int borderDistChunks = WarForgeConfig.BORDER_RENDER_DISTANCE > 0
+                ? WarForgeConfig.BORDER_RENDER_DISTANCE
+                : Minecraft.getMinecraft().gameSettings.renderDistanceChunks;
+        double maxBorderDistSq = (borderDistChunks * 16.0) * (borderDistChunks * 16.0);
+
         ResourceLocation boundTexture = null;
         for (HashMap.Entry<DimChunkPos, BorderRenderData> kvp : renderData.entrySet()) {
             DimChunkPos pos = kvp.getKey();
             BorderRenderData data = kvp.getValue();
+
+            double dxCam = (pos.x * 16 + 8) - x;
+            double dzCam = (pos.z * 16 + 8) - z;
+            if (dxCam * dxCam + dzCam * dzCam > maxBorderDistSq) {
+                continue;
+            }
 
             if (data.renderList >= 0) {
                 GlStateManager.pushMatrix();
@@ -1167,7 +1253,7 @@ public class ClientTickHandler {
         boolean canPlace = true;
         List<DimChunkPos> siegeablePositions = new ArrayList<>();
 
-        for (HashMap.Entry<DimChunkPos, ClaimChunkInfo> kvp : new HashMap<>(ClientClaimChunkCache.getChunks()).entrySet()) {
+        for (HashMap.Entry<DimChunkPos, ClaimChunkInfo> kvp : new HashMap<>(ClientBorderCache.getChunks()).entrySet()) {
             DimChunkPos chunkPos = kvp.getKey();
             ClaimChunkInfo info = kvp.getValue();
             if (info == null || info.factionId.equals(Faction.nullUuid)) {

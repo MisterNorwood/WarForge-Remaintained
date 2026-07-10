@@ -5,6 +5,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
 public class PacketTimeUpdates extends PacketBase
 {
@@ -32,7 +34,8 @@ public class PacketTimeUpdates extends PacketBase
 	}
 
 	@Override
-	public void handleClientSide(EntityPlayer clientPlayer) 
+	@SideOnly(Side.CLIENT)
+	public void handleClientSide(EntityPlayer clientPlayer)
 	{
 		ClientTickHandler.nextSiegeDayMs = msTimeOfNextSiegeDay;
 		ClientTickHandler.nextYieldDayMs = msTimeOfNextYieldDay;

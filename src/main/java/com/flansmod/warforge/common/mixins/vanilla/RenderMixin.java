@@ -38,9 +38,12 @@ public abstract class RenderMixin<T extends Entity> {
             boolean flag1 = this.renderManager.options.thirdPersonView == 2;
             float f2 = entityIn.height + 0.5F - (flag ? 0.25F : 0.0F);
             EntityRenderer.drawNameplate(this.getFontRendererFromRenderManager(), str, (float) x, (float) y + f2, (float) z, 0, f, f1, flag1, flag);
-            PlayerNametagCache.NamePlateData faction = WarForgeMod.NAMETAG_CACHE.requestIfAbsent(str.replaceAll("§.", "")); //SOOO minecraft puts this symbol in player nicknames...? the fuck?
-            if (faction != null) {
-                FullColorNameplate.drawNameplate(this.getFontRendererFromRenderManager(), faction.name, (float) x, (float) y + f2, (float) z, -10, f, f1, flag1, flag, faction.color, faction.darkerColor);
+            if (entityIn instanceof net.minecraft.entity.player.EntityPlayer
+                    && entityIn != net.minecraft.client.Minecraft.getMinecraft().player) {
+                PlayerNametagCache.NamePlateData faction = WarForgeMod.NAMETAG_CACHE.requestIfAbsent(str.replaceAll("§.", "")); //SOOO minecraft puts this symbol in player nicknames...? the fuck?
+                if (faction != null) {
+                    FullColorNameplate.drawNameplate(this.getFontRendererFromRenderManager(), faction.name, (float) x, (float) y + f2, (float) z, -10, f, f1, flag1, flag, faction.color, faction.darkerColor);
+                }
             }
         }
     }

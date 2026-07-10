@@ -97,4 +97,32 @@ public class TimeHelper {
 
         return getYieldDayLengthMs() - todayElapsedMS;
     }
+
+    public static long parseDurationMs(String input) {
+        if (input == null || input.isEmpty()) {
+            return -1;
+        }
+        String value = input.trim().toLowerCase();
+        long unitMs = 1000L;
+        char last = value.charAt(value.length() - 1);
+        if (!Character.isDigit(last)) {
+            switch (last) {
+                case 's': unitMs = 1000L; break;
+                case 'm': unitMs = 60L * 1000L; break;
+                case 'h': unitMs = 60L * 60L * 1000L; break;
+                case 'd': unitMs = 24L * 60L * 60L * 1000L; break;
+                default: return -1;
+            }
+            value = value.substring(0, value.length() - 1);
+        }
+        try {
+            long amount = Long.parseLong(value.trim());
+            if (amount < 0) {
+                return -1;
+            }
+            return amount * unitMs;
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
 }

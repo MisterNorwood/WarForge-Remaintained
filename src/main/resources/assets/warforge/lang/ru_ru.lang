@@ -2,7 +2,6 @@ tile.citadelblock.name=Блок цитадели
 tile.basicclaimblock.name=Простой блок владения
 tile.reinforcedclaimblock.name=Укрепленный блок владения
 tile.siegecampblock.name=Блок осадного лагеря
-tile.adminclaimblock.name=Админский блок владения
 tile.topleaderboard.name=Блок таблицы лидеров (Топ)
 tile.wealthleaderboard.name=Блок таблицы лидеров (Богатство)
 tile.legacyleaderboard.name=Блок таблицы лидеров (Наследие)

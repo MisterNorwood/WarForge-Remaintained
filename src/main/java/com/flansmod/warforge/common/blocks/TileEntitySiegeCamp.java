@@ -43,6 +43,7 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 	private SiegeStatus siegeStatus = SiegeStatus.IDLING;
 	private int attackerAbandonTickTimer = 0;
 	private int defenderAbandonTickTimer = 0;
+	private int lastSyncedAbandonTimer = -1;
 
 	private long defenderOfflineTimerMs = 0;
 	private long previousTimestamp = WarForgeMod.currTickTimestamp;
@@ -235,13 +236,13 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 				if (decrementedAbandonedTimer > 0) {
 					attackerAbandonTickTimer -= doCheckPerTick ? 1 : 20; // decrement timer if attacker is found
 				} else {
-					// if going to overshoot/ hit zero and not already 0
-					if (attackerAbandonTickTimer != 0) {
-						getAttacking().messageAll(new TextComponentString("Your faction's [" + getAttacking().name + "] siege abandon timer is now 0."));
-						attackerAbandonTickTimer = 0;
-					}
+					attackerAbandonTickTimer = 0;
 				}
+			}
 
+			if (tickTimer % 20 == 0 && attackerAbandonTickTimer != lastSyncedAbandonTimer && siegeTarget != null) {
+				lastSyncedAbandonTimer = attackerAbandonTickTimer;
+				WarForgeMod.FACTIONS.sendSiegeInfoToNearby(siegeTarget.toChunkPos());
 			}
 
 			// --- DEFENDER HANDLING ---
@@ -277,9 +278,7 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 					if (decrementedAbandonedTimer > 0) {
 						defenderAbandonTickTimer -= doCheckPerTick ? 1 : 20; // decrement timer if attacker is found
 					} else {
-						// if going to overshoot/ hit zero and not already 0
 						if (defenderAbandonTickTimer != 0) {
-							defenders.messageAll(new TextComponentString("Your faction's [" + defenders.name + "] siege abandon timer is now 0."));
 							defenderAbandonTickTimer = 0;
 						}
 					}
@@ -321,7 +320,6 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 		long newTimer = defenderOfflineTimerMs + (defenderOfflineTimerMs < 0 ? msPassed : -msPassed);
 		if (defenderOfflineTimerMs < 0 && newTimer >= 0 || defenderOfflineTimerMs > 0 && newTimer <= 0) {
 			defenderOfflineTimerMs = 0;
-			defenders.messageAll(new TextComponentString("Your faction's [" + defenders.name + "] offline timer is now 0."));
 			return;
 		}
 
@@ -334,44 +332,25 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 
 	// returns whether update has been cancelled
 	private boolean handleDesertion(boolean isAttackingSide) {
-		// end siege if idle timer reaches desertion timer
 		int abandonTimer = isAttackingSide ? WarForgeConfig.ATTACKER_DESERTION_TIMER : WarForgeConfig.DEFENDER_DESERTION_TIMER;
-		int abandonRadius = isAttackingSide ? SIEGE_ATTACKER_RADIUS : WarForgeConfig.SIEGE_DEFENDER_RADIUS;
 		int currentTickTimer = isAttackingSide ? attackerAbandonTickTimer : defenderAbandonTickTimer;
 
 		if (currentTickTimer >= abandonTimer * 20) {
-			messageAllAttackers("warforge.info.siege_idle_exceeded_" + (isAttackingSide ? "current" : "opposing"));
-			messageAllDefenders("warforge.info.siege_idle_exceeded_" + (isAttackingSide ? "opposing" : "current"));
+			notifyAbandoned(isAttackingSide);
 
-			// should cancel update; return boolean indicating continuation of update
 			if (isAttackingSide) failSiege();
 			else passSiege();
 			return true;
 		} else {
-			// assuming a tick rate of 20tps, see if the current abandon timer is a 4th of the time to abandon
-			if (currentTickTimer / 20 == abandonTimer >>> 2) {
-				if (isAttackingSide) messageAllAttackers("warforge.notification.siege_abandon_" + (isAttackingSide ? "current" : "opposing"), abandonRadius, currentTickTimer / 20, abandonTimer);
-				else messageAllDefenders("warforge.notification.siege_abandon_" + (isAttackingSide ? "current" : "opposing"), abandonRadius, currentTickTimer / 20, abandonTimer);
-			}
-
-			switch (abandonTimer * 20 - currentTickTimer) {
-				case 1200:
-					messageAllAttackers("warforge.info.siege_abandon_approaching_" + (isAttackingSide ? "current" : "opposing"), 60, abandonRadius);
-					messageAllDefenders("warforge.info.siege_abandon_approaching_" + (isAttackingSide ? "opposing" : "current"), 60, abandonRadius);
-					break;
-				case 200:
-					messageAllAttackers("warforge.info.siege_abandon_approaching_" + (isAttackingSide ? "current" : "opposing"), 10, abandonRadius);
-					messageAllDefenders("warforge.info.siege_abandon_approaching_" + (isAttackingSide ? "opposing" : "current"), 10, abandonRadius);
-					break;
-				default:
-					break;
-			}
-
-			if (isAttackingSide) attackerAbandonTickTimer += doCheckPerTick ? 1 : 20; // increment timer
+			if (isAttackingSide) attackerAbandonTickTimer += doCheckPerTick ? 1 : 20;
 			else defenderAbandonTickTimer += doCheckPerTick ? 1 : 20;
 		}
 
 		return false;
+	}
+
+	private void notifyAbandoned(boolean attackersDeserted) {
+		Siege.notifyAbandoned(getAttacking(), defenders, attackersDeserted);
 	}
 
 	private boolean isAttackerInWarzone(EntityPlayer player) {
@@ -387,12 +366,6 @@ public class TileEntitySiegeCamp extends TileEntityClaim implements ITickable
 		DimChunkPos playerChunk = new DimChunkPos(player.dimension, player.getPosition());
 		DimChunkPos blockChunk = new DimChunkPos(world.provider.getDimension(), getClaimPos());
 		return !player.isDead && Siege.isPlayerInRadius(blockChunk, playerChunk, radius);
-	}
-
-	private void messageAllAttackers(String translateKey, Object... args) {
-		Faction attackerFaction = WarForgeMod.FACTIONS.getFaction(factionUUID);
-		if (attackerFaction == null) return;
-		attackerFaction.messageAll(new TextComponentTranslation(translateKey, args));
 	}
 
 	private void messageAllDefenders(String translateKey, Object... args) {

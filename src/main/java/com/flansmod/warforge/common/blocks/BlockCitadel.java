@@ -169,6 +169,7 @@ public class BlockCitadel extends MultiBlockColumn implements ITileEntityProvide
 
             // If the player has no faction and is the placer, they can open the UI
             if (playerFaction == null && player.getUniqueID().equals(citadel.placer)) {
+                WarForgeMod.syncClaimToPlayer(player, pos);
                 TileEntityGuiFactory.INSTANCE.open(player, pos);
             }
             // Any other factionless players, and players who aren't in this faction get an info panel
@@ -190,6 +191,7 @@ public class BlockCitadel extends MultiBlockColumn implements ITileEntityProvide
             }
             // So anyone else will be from the target faction
             else {
+                WarForgeMod.syncClaimToPlayer(player, pos);
                 TileEntityGuiFactory.INSTANCE.open(player, pos);
             }
         }

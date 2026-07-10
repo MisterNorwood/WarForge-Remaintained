@@ -63,6 +63,18 @@ public class FactionStorage {
         OTHER
     }
 
+    public enum SiegeZone { NONE, WAR, SIEGED }
+
+    public static final class SiegeZoneResult {
+        public static final SiegeZoneResult NONE = new SiegeZoneResult(SiegeZone.NONE, null);
+        public final SiegeZone zone;
+        public final UUID defendingFaction;
+        private SiegeZoneResult(SiegeZone zone, UUID defendingFaction) {
+            this.zone = zone;
+            this.defendingFaction = defendingFaction;
+        }
+    }
+
     // SafeZone and WarZone
     public static UUID SAFE_ZONE_ID = Faction.createUUID("safezone");
     public static UUID WAR_ZONE_ID = Faction.createUUID("conquered zone");
@@ -257,6 +269,9 @@ public class FactionStorage {
     private String getSiegeBlockReason(Faction attacker, Faction defender) {
         if (attacker == null || defender == null) {
             return null;
+        }
+        if (IsNeutralZone(defender.uuid)) {
+            return "You cannot siege a protected zone.";
         }
         if (attacker.isAllyOf(defender.uuid)) {
             return "You are allied with " + defender.name + " and cannot siege them. Break the alliance first.";
@@ -790,11 +805,19 @@ public class FactionStorage {
         }
 
         ObjectIntPair<UUID> conqueredChunkInfo = conqueredChunks.get(chunkPos);
-        if (conqueredChunkInfo != null && !Objects.equals(conqueredChunkInfo.getObj(), faction.uuid)) {
+        if (conqueredChunkInfo != null) {
             if (notify) {
-                Faction owner = getFaction(conqueredChunkInfo.getObj());
-                String ownerName = owner == null ? "Unknown" : owner.name;
-                player.sendMessage(new TextComponentTranslation("warforge.info.chunk_is_conquered", ownerName, TimeHelper.formatTime(conqueredChunkInfo.getInteger())));
+                player.sendMessage(new TextComponentString("This chunk is conquered wilderness; it becomes claimable in "
+                        + TimeHelper.formatTime(conqueredChunkInfo.getInteger())));
+            }
+            return false;
+        }
+
+        Faction tooClose = findNearbyOpposingFaction(faction, chunkPos);
+        if (tooClose != null) {
+            if (notify) {
+                player.sendMessage(new TextComponentString("You cannot claim within " + WarForgeConfig.MIN_DISTANCE_BETWEEN_FACTIONS
+                        + " chunk(s) of opposing faction " + tooClose.name));
             }
             return false;
         }
@@ -848,6 +871,84 @@ public class FactionStorage {
         return bestRelation;
     }
 
+    public void recalculateAllWealth() {
+        for (Faction faction : mFactions.values()) faction.recalculateWealth();
+    }
+
+    public SiegeZoneResult getSiegeZone(DimChunkPos chunkPos) {
+        UUID warDefender = null;
+        for (Siege siege : sieges.values()) {
+            if (siege.isChunkInSiegedZone(chunkPos))
+                return new SiegeZoneResult(SiegeZone.SIEGED, siege.defendingFaction);
+            if (warDefender == null && siege.isChunkInBattleZone(chunkPos))
+                warDefender = siege.defendingFaction;
+        }
+        return warDefender == null ? SiegeZoneResult.NONE : new SiegeZoneResult(SiegeZone.WAR, warDefender);
+    }
+
+    public boolean isInOwnSiegeWarzone(UUID factionId, DimChunkPos pos) {
+        if (factionId == null || factionId.equals(Faction.nullUuid)) return false;
+        for (Siege siege : sieges.values()) {
+            boolean attacker = factionId.equals(siege.attackingFaction);
+            boolean defender = factionId.equals(siege.defendingFaction);
+            if (!attacker && !defender) continue;
+            int radius = attacker ? WarForgeConfig.SIEGE_ATTACKER_RADIUS : WarForgeConfig.SIEGE_DEFENDER_RADIUS;
+            for (DimBlockPos camp : siege.attackingCamps) {
+                if (camp != null && Siege.isPlayerInRadius(camp.toChunkPos(), pos, radius)) return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isSiegeGraceProtected(Faction faction) {
+        if (!WarForgeConfig.ENABLE_SIEGE_GRACE_PERIOD || faction == null) return false;
+        return System.currentTimeMillis() < faction.siegeGraceUntil;
+    }
+
+    public Faction findNearbyOpposingFaction(Faction faction, DimChunkPos chunkPos) {
+        int distance = WarForgeConfig.MIN_DISTANCE_BETWEEN_FACTIONS;
+        if (distance <= 0) {
+            return null;
+        }
+        UUID selfId = faction == null ? Faction.nullUuid : faction.uuid;
+        for (int dx = -distance; dx <= distance; dx++) {
+            for (int dz = -distance; dz <= distance; dz++) {
+                if (dx == 0 && dz == 0) {
+                    continue;
+                }
+                UUID owner = getClaim(new DimChunkPos(chunkPos.dim, chunkPos.x + dx, chunkPos.z + dz));
+                if (owner.equals(Faction.nullUuid) || owner.equals(selfId) || IsNeutralZone(owner)) {
+                    continue;
+                }
+                if (faction != null && faction.isAllyOf(owner)) {
+                    continue;
+                }
+                Faction opposing = getFaction(owner);
+                if (opposing != null) {
+                    return opposing;
+                }
+            }
+        }
+        return null;
+    }
+
+    public boolean isConqueredWilderness(DimChunkPos chunk) {
+        return conqueredChunks.containsKey(chunk) && getClaim(chunk).equals(Faction.nullUuid);
+    }
+
+    public int conqueredRemainingMs(DimChunkPos chunk) {
+        ObjectIntPair<UUID> entry = conqueredChunks.get(chunk);
+        return entry == null ? 0 : entry.getInteger();
+    }
+
+    public void setConquered(DimChunkPos chunk, UUID factionId, int periodMs) {
+        conqueredChunks.put(chunk, new ObjectIntPair<>(copyUUID(factionId == null ? Faction.nullUuid : factionId), periodMs));
+    }
+
+    public boolean clearConquered(DimChunkPos chunk) {
+        return conqueredChunks.remove(chunk) != null;
+    }
+
     public void update() {
         for (HashMap.Entry<UUID, Faction> entry : mFactions.entrySet()) {
             entry.getValue().update();
@@ -891,7 +992,8 @@ public class FactionStorage {
             siege.updateSiegeTimer();
             // Camp-less declared sieges have no camp TE to enforce attacker presence; do it here.
             if (siege.tickCamplessPresence()) {
-                siege.setAttackProgress(-5); // attacker abandoned -> defenders hold
+                Siege.notifyAbandoned(getFaction(siege.attackingFaction), getFaction(siege.defendingFaction), true);
+                siege.setAttackProgress(-5);
             }
             if (siege.isCompleted())
                 finishedSiegeQueue.add(kvp.getKey());
@@ -912,19 +1014,20 @@ public class FactionStorage {
     }
 
     public void playerDied(EntityPlayerMP playerWhoDied, DamageSource source) {
-        if (source.getTrueSource() instanceof EntityPlayerMP killer) {
+        EntityPlayerMP killer = source.getTrueSource() instanceof EntityPlayerMP ? (EntityPlayerMP) source.getTrueSource() : null;
+
+        if (!sieges.isEmpty()) {
+            for (HashMap.Entry<DimChunkPos, Siege> kvp : sieges.entrySet()) {
+                kvp.getValue().onParticipantDeath(killer, playerWhoDied);
+                if (kvp.getValue().isCompleted())
+                    finishedSiegeQueue.add(kvp.getKey());
+            }
+            processCompleteSieges();
+        }
+
+        if (killer != null) {
             Faction killedFac = getFactionOfPlayer(playerWhoDied.getUniqueID());
             Faction killerFac = getFactionOfPlayer(killer.getUniqueID());
-
-            if (killedFac != null && killerFac != null) {
-                for (HashMap.Entry<DimChunkPos, Siege> kvp : sieges.entrySet()) {
-                    kvp.getValue().onPVPKill(killer, playerWhoDied);
-                    if (kvp.getValue().isCompleted())
-                        finishedSiegeQueue.add(kvp.getKey());
-                }
-
-                processCompleteSieges();
-            }
 
             if (killerFac != null) {
                 int numTimesKilled = 0;
@@ -938,11 +1041,11 @@ public class FactionStorage {
 
                 if (numTimesKilled <= WarForgeConfig.NOTORIETY_KILL_CAP_PER_PLAYER) {
                     if (killerFac != killedFac) {
-                        source.getTrueSource().sendMessage(new TextComponentString("Killing " + playerWhoDied.getName() + " earned your faction " + WarForgeConfig.NOTORIETY_PER_PLAYER_KILL + " notoriety"));
+                        killer.sendMessage(new TextComponentString("Killing " + playerWhoDied.getName() + " earned your faction " + WarForgeConfig.NOTORIETY_PER_PLAYER_KILL + " notoriety"));
                         killerFac.notoriety += WarForgeConfig.NOTORIETY_PER_PLAYER_KILL;
                     }
                 } else {
-                    source.getTrueSource().sendMessage(new TextComponentString("Your faction has already killed " + playerWhoDied.getName() + " " + numTimesKilled + " times. You will not become more notorious."));
+                    killer.sendMessage(new TextComponentString("Your faction has already killed " + playerWhoDied.getName() + " " + numTimesKilled + " times. You will not become more notorious."));
                 }
             }
         }
@@ -1230,7 +1333,10 @@ public class FactionStorage {
         faction.colour = colour;
         faction.notoriety = 0;
         faction.legacy = 0;
-        faction.wealth = 0;
+        faction.recalculateWealth();
+        if (WarForgeConfig.ENABLE_SIEGE_GRACE_PERIOD && WarForgeConfig.SIEGE_GRACE_PERIOD_HOURS > 0) {
+            faction.siegeGraceUntil = System.currentTimeMillis() + TimeUnit.HOURS.toMillis(WarForgeConfig.SIEGE_GRACE_PERIOD_HOURS);
+        }
 
         mFactions.put(proposedID, faction);
         citadel.onServerCreateFaction(faction);
@@ -1384,6 +1490,9 @@ public class FactionStorage {
                     claim.updateFactionFlag(flagId);
                 }
             }
+        }
+        if (faction.citadelPos != null) {
+            WarForgeMod.syncClaimToPlayer(player, faction.citadelPos.toRegularPos());
         }
         for (EntityPlayerMP online : MC_SERVER.getPlayerList().getPlayers()) {
             sendClaimChunks(online, new DimChunkPos(online.dimension, online.getPosition()), WarForgeConfig.CLAIM_MANAGER_RADIUS);
@@ -1869,6 +1978,11 @@ public class FactionStorage {
             return;
         }
 
+        if (isSiegeGraceProtected(defending)) {
+            factionOfficer.sendMessage(new TextComponentString("That faction is too new to be sieged. Grace expires in " + TimeHelper.formatTime(defending.siegeGraceUntil - System.currentTimeMillis())));
+            return;
+        }
+
         if (isOfflineRaidProtected(defending)) {
             factionOfficer.sendMessage(new TextComponentString("That faction is offline and protected until " + TimeHelper.formatTime(defending.offlineRaidProtectionUntil - System.currentTimeMillis())));
             return;
@@ -1903,6 +2017,7 @@ public class FactionStorage {
     // declared sieges it is the representative block of the chosen start-from chunk.
     private Siege createSiege(Faction attacking, Faction defending, DimBlockPos defendingPos,
                               DimChunkPos defendingChunk, DimBlockPos anchorPos, boolean campless) {
+        attacking.siegeGraceUntil = 0L;
         long maxTime = WarForgeConfig.SIEGE_MOMENTUM_TIME.get(attacking.getSiegeMomentum()) * 1000L;
         Siege siege = new Siege(attacking.uuid, defending.uuid, defendingPos, maxTime);
         siege.setBattleRadius(WarForgeConfig.SIEGE_BATTLE_RADIUS);
@@ -1971,6 +2086,11 @@ public class FactionStorage {
             officer.sendMessage(new TextComponentString(allianceBlock));
             return;
         }
+        if (isSiegeGraceProtected(defending)) {
+            officer.sendMessage(new TextComponentString("That faction is too new to be sieged. Grace expires in " + TimeHelper.formatTime(defending.siegeGraceUntil - System.currentTimeMillis())));
+            return;
+        }
+
         if (isOfflineRaidProtected(defending)) {
             officer.sendMessage(new TextComponentString("That faction is offline and protected until " + TimeHelper.formatTime(defending.offlineRaidProtectionUntil - System.currentTimeMillis())));
             return;
@@ -2035,10 +2155,10 @@ public class FactionStorage {
         }
     }
 
-    public void requestOpClaim(EntityPlayer op, DimChunkPos pos, UUID factionID) {
-        Faction zone = getFaction(factionID);
-        if (zone == null) {
-            op.sendMessage(new TextComponentString("Could not find that faction"));
+    public void requestZoneClaim(EntityPlayer op, DimChunkPos pos, UUID zoneID) {
+        Faction zone = getFaction(zoneID);
+        if (zone == null || !IsNeutralZone(zoneID)) {
+            op.sendMessage(new TextComponentString("Unknown zone"));
             return;
         }
 
@@ -2048,20 +2168,30 @@ public class FactionStorage {
             return;
         }
 
-        // Place a bedrock tile entity at 0,0,0 chunk coords
-        // This might look a bit dodge in End. It's only for admin claims though
-        DimBlockPos tePos = new DimBlockPos(pos.dim, pos.getXStart(), 0, pos.getZStart());
-        op.world.setBlockState(tePos.toRegularPos(), Content.adminClaimBlock.getDefaultState());
-        TileEntity te = op.world.getTileEntity(tePos.toRegularPos());
-        if (te == null || !(te instanceof IClaim)) {
-            op.sendMessage(new TextComponentString("Placing admin claim block failed"));
+        Faction.ClaimType claimType = zoneID.equals(SAFE_ZONE_ID) ? Faction.ClaimType.ADMIN : Faction.ClaimType.WARZONE;
+        mClaims.put(pos, zone.uuid);
+        zone.claimNoTileEntity(pos, op.getPosition().getY(), claimType);
+
+        op.sendMessage(new TextComponentString("Claimed [" + pos.x + ", " + pos.z + "] for " + zone.name));
+    }
+
+    public void requestZoneUnclaim(EntityPlayer op, DimChunkPos pos) {
+        UUID existingClaim = getClaim(pos);
+        if (!IsNeutralZone(existingClaim)) {
+            op.sendMessage(new TextComponentString("There is no zone claim here"));
             return;
         }
 
-        onNonCitadelClaimPlaced((IClaim) te, zone);
+        Faction zone = getFaction(existingClaim);
+        DimBlockPos claimPos = zone == null ? null : zone.getSpecificPosForClaim(pos);
+        if (claimPos != null) {
+            zone.claims.remove(claimPos);
+            zone.claimTypes.remove(claimPos);
+        }
+        mClaims.remove(pos);
 
-        op.sendMessage(new TextComponentString("Claimed " + pos + " for faction " + zone.name));
-
+        op.sendMessage(new TextComponentString("Removed the " + (zone == null ? "zone" : zone.name)
+                + " claim at [" + pos.x + ", " + pos.z + "]"));
     }
 
     public void sendSiegeInfoToNearby(DimChunkPos siegePos) {
@@ -2269,7 +2399,12 @@ public class FactionStorage {
     }
 
     public PacketClaimChunksData createClaimChunksData(EntityPlayerMP player, DimChunkPos center, int radius) {
-        int clampedRadius = Math.clamp(radius, 1, WarForgeConfig.CLAIM_MANAGER_RADIUS);
+        return createClaimChunksData(player, center, radius, false);
+    }
+
+    public PacketClaimChunksData createClaimChunksData(EntityPlayerMP player, DimChunkPos center, int radius, boolean outlineOnly) {
+        int maxRadius = outlineOnly ? WarForgeConfig.BORDER_SYNC_MAX_RADIUS : WarForgeConfig.CLAIM_MANAGER_RADIUS;
+        int clampedRadius = Math.max(1, Math.min(radius, maxRadius));
         if (center.dim != player.dimension) {
             center = new DimChunkPos(player.dimension, player.getPosition());
         }
@@ -2321,6 +2456,9 @@ public class FactionStorage {
                         info.outlineColour = conqueredFaction.colour;
                         info.outlineStyle = ClaimChunkInfo.OUTLINE_CONQUERED;
                     }
+                    if (ownerFaction == null) {
+                        info.conqueredRemainingMs = conqueredInfo.getInteger();
+                    }
                 }
                 if (!info.hasVisibleOutline() && ownerFaction != null) {
                     info.outlineFactionId = ownerFaction.uuid;
@@ -2328,13 +2466,15 @@ public class FactionStorage {
                     info.outlineStyle = ClaimChunkInfo.OUTLINE_CLAIM;
                 }
 
-                var veinInfo = VEIN_HANDLER.getVein(chunk.dim, chunk.x, chunk.z, MC_SERVER.worlds[0].getSeed());
-                if (veinInfo != null) {
-                    info.vein = veinInfo.getLeft();
-                    info.oreQuality = veinInfo.getRight();
+                if (!outlineOnly) {
+                    var veinInfo = VEIN_HANDLER.getVein(chunk.dim, chunk.x, chunk.z, MC_SERVER.worlds[0].getSeed());
+                    if (veinInfo != null) {
+                        info.vein = veinInfo.getLeft();
+                        info.oreQuality = veinInfo.getRight();
+                    }
                 }
 
-                if (faction != null && ownerFaction != null && ownerFaction.uuid.equals(faction.uuid)) {
+                if (!outlineOnly && faction != null && ownerFaction != null && ownerFaction.uuid.equals(faction.uuid)) {
                     info.flags |= ClaimChunkInfo.FLAG_OWNED_BY_PLAYER;
                     if (faction.forcedChunks.contains(chunk)) {
                         info.flags |= ClaimChunkInfo.FLAG_FORCE_LOADED;
@@ -2347,7 +2487,7 @@ public class FactionStorage {
                     }
                 }
 
-                if (canManage) {
+                if (!outlineOnly && canManage) {
                     if (ownerFaction == null) {
                         if (canClaimChunkNoTile(player, faction, chunk, false)) {
                             info.flags |= ClaimChunkInfo.FLAG_CAN_CLAIM;
@@ -2361,15 +2501,22 @@ public class FactionStorage {
                     }
                 }
 
-                packet.chunks.add(info);
+                if (!outlineOnly || info.hasVisibleOutline()) {
+                    packet.chunks.add(info);
+                }
             }
         }
 
+        packet.outlineOnly = outlineOnly;
         return packet;
     }
 
     public void sendClaimChunks(EntityPlayerMP player, DimChunkPos center, int radius) {
-        PacketClaimChunksData packet = createClaimChunksData(player, center, radius);
+        sendClaimChunks(player, center, radius, false);
+    }
+
+    public void sendClaimChunks(EntityPlayerMP player, DimChunkPos center, int radius, boolean outlineOnly) {
+        PacketClaimChunksData packet = createClaimChunksData(player, center, radius, outlineOnly);
         WarForgeMod.NETWORK.sendTo(packet, player);
     }
 
@@ -2624,6 +2771,10 @@ public class FactionStorage {
             }
         }
 
+        if (faction.citadelPos != null) {
+            WarForgeMod.syncClaimToPlayer(player, faction.citadelPos.toRegularPos());
+        }
+
         ArrayList<EntityPlayer> onlinePlayers = faction.getOnlinePlayers(
                 entityPlayer -> entityPlayer != null && entityPlayer.isEntityAlive());
 
@@ -2778,6 +2929,10 @@ public class FactionStorage {
         NBTTagList list = tags.getTagList("factions", 10); // Compound Tag
         for (NBTBase baseTag : list) {
             NBTTagCompound factionTags = ((NBTTagCompound) baseTag);
+            if (!factionTags.hasKey("idMost", 4) || !factionTags.hasKey("idLeast", 4)) {
+                WarForgeMod.LOGGER.warn("Skipping faction entry with missing/invalid id while loading warforgefactions.dat");
+                continue;
+            }
             UUID uuid = factionTags.getUniqueId("id");
             Faction faction;
 

@@ -6,6 +6,7 @@ import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.Tags;
 import com.flansmod.warforge.common.blocks.IClaim;
 import com.flansmod.warforge.common.blocks.TileEntitySiegeCamp;
+import com.flansmod.warforge.common.network.PacketClientNotification;
 import com.flansmod.warforge.common.network.PacketSiegeCampProgressUpdate;
 import com.flansmod.warforge.common.network.SiegeCampProgressInfo;
 import com.flansmod.warforge.common.util.DimBlockPos;
@@ -35,6 +36,7 @@ public class Siege {
     public long siegeEndTimeStamp = 999L;
     public boolean finished = false; //Used for controlling whenever siege has been concluded, Does not require saving
     private int battleRadius = WarForgeConfig.SIEGE_BATTLE_RADIUS;
+    private int siegedRadius = WarForgeConfig.SIEGE_SIEGED_RADIUS;
 
     public int mBaseDifficulty = 5;
 
@@ -119,6 +121,24 @@ public class Siege {
         return clearSiegesPacket;
     }
 
+    public static void notifyAbandoned(Faction attacking, Faction defending, boolean attackersDeserted) {
+        String attackerName = attacking != null ? attacking.name : "The attackers";
+        String defenderName = defending != null ? defending.name : "The defenders";
+        if (attackersDeserted) {
+            WarForgeMod.FACTIONS.sendNotificationToFaction(attacking, "warforge.siege_abandoned", "Siege Abandoned",
+                    "Your faction left the siege warzone for too long.", PacketClientNotification.COLOR_DANGER, 8000);
+            WarForgeMod.FACTIONS.sendNotificationToFaction(defending, "warforge.siege_abandoned", "Siege Repelled",
+                    attackerName + " abandoned their siege.", PacketClientNotification.COLOR_SUCCESS, 8000);
+            WarForgeMod.INSTANCE.messageAll(new TextComponentString(attackerName + "'s siege on " + defenderName + " was abandoned."), true);
+        } else {
+            WarForgeMod.FACTIONS.sendNotificationToFaction(defending, "warforge.siege_abandoned", "Defence Abandoned",
+                    "Your faction left the warzone for too long.", PacketClientNotification.COLOR_DANGER, 8000);
+            WarForgeMod.FACTIONS.sendNotificationToFaction(attacking, "warforge.siege_abandoned", "Siege Won",
+                    defenderName + " abandoned their defence.", PacketClientNotification.COLOR_SUCCESS, 8000);
+            WarForgeMod.INSTANCE.messageAll(new TextComponentString(defenderName + " abandoned the defence against " + attackerName + "."), true);
+        }
+    }
+
     // Attack progress starts at 0 and can be moved to -5 or mAttackSuccessThreshold
     public int GetAttackProgress() {
         return mAttackProgress;
@@ -130,6 +150,14 @@ public class Siege {
 
     public void setBattleRadius(int battleRadius) {
         this.battleRadius = Math.max(0, battleRadius);
+    }
+
+    public int getSiegedRadius() {
+        return siegedRadius;
+    }
+
+    public void setSiegedRadius(int siegedRadius) {
+        this.siegedRadius = Math.max(0, siegedRadius);
     }
 
     public void setAttackProgress(int progress) {
@@ -149,15 +177,6 @@ public class Siege {
         boolean endByDef = GetDefenceProgress() >= 5;
 
         TileEntitySiegeCamp abandonedCamp = hasAbandonedSieges();
-
-        // if a siege could complete, but an abandoned camp is stopping it from happening, notify the attackers
-        if (!endByDef && endByAttack && abandonedCamp != null && (WarForgeMod.currTickTimestamp % 60000 > 30000)) {
-            Faction attacking = WarForgeMod.FACTIONS.getFaction(attackingFaction);
-            attacking.messageAll(new TextComponentString(
-                    "Passing of siege delayed due to abandon timer greater than 0 [" +
-                            abandonedCamp.getAttackerAbandonTickTimer() + " ticks @ " + abandonedCamp.getPos() +
-                            "]; ensure abandon timer is 0 to complete siege."));
-        }
 
         return endByDef || (abandonedCamp == null && endByAttack);
     }
@@ -217,6 +236,10 @@ public class Siege {
         info.defendingName = defenders.name;
         info.defendingColour = defenders.colour;
         info.battleRadius = battleRadius;
+        info.siegedRadius = siegedRadius;
+        info.defendingFactionId = defendingFaction;
+        info.attackingFactionId = attackingFaction;
+        info.attackerAbandonSeconds = computeAttackerAbandonSeconds();
         info.progress = GetAttackProgress();
         info.completionPoint = GetAttackSuccessThreshold();
         info.timeProgress = timeRemainingMillis;
@@ -224,6 +247,26 @@ public class Siege {
         info.finished = finished;
 
         return info;
+    }
+
+    private int computeAttackerAbandonSeconds() {
+        if (campless) {
+            if (!WarForgeConfig.SIEGE_DECLARE_REQUIRE_PRESENCE || attackerAbsenceTicks <= 0) return 0;
+            return Math.max(0, WarForgeConfig.ATTACKER_DESERTION_TIMER - attackerAbsenceTicks / 20);
+        }
+        if (WarForgeMod.MC_SERVER == null) return 0;
+        int maxTimerTicks = 0;
+        for (DimBlockPos campPos : attackingCamps) {
+            if (campPos == null) continue;
+            World world = WarForgeMod.MC_SERVER.getWorld(campPos.dim);
+            if (world == null) continue;
+            TileEntity te = world.getTileEntity(campPos.toRegularPos());
+            if (te instanceof TileEntitySiegeCamp) {
+                maxTimerTicks = Math.max(maxTimerTicks, ((TileEntitySiegeCamp) te).getAttackerAbandonTickTimer());
+            }
+        }
+        if (maxTimerTicks <= 0) return 0;
+        return Math.max(0, WarForgeConfig.ATTACKER_DESERTION_TIMER - maxTimerTicks / 20);
     }
 
     public boolean start() {
@@ -285,10 +328,17 @@ public class Siege {
         boolean present = !attackers.getOnlinePlayers(p -> p != null && !p.isDead
                 && isPlayerInRadius(anchor, new DimChunkPos(p.dimension, p.getPosition()), WarForgeConfig.SIEGE_ATTACKER_RADIUS)).isEmpty();
         if (present) {
-            attackerAbsenceTicks = 0;
+            if (attackerAbsenceTicks != 0) {
+                attackerAbsenceTicks = 0;
+                WarForgeMod.FACTIONS.sendSiegeInfoToNearby(defendingClaim.toChunkPos());
+            }
             return false;
         }
-        return ++attackerAbsenceTicks >= limitTicks;
+        boolean abandoned = ++attackerAbsenceTicks >= limitTicks;
+        if (attackerAbsenceTicks % 20 == 0) {
+            WarForgeMod.FACTIONS.sendSiegeInfoToNearby(defendingClaim.toChunkPos());
+        }
+        return abandoned;
     }
 
     public void AdvanceDay() {
@@ -333,8 +383,7 @@ public class Siege {
             return;
         }
 
-        // Add a point for each defender flag in place
-        mExtraDifficulty = defenders.members.entrySet().size() * WarForgeConfig.SIEGE_DIFF_PER_MEMBER;
+        mExtraDifficulty = defenders.members.size() * WarForgeConfig.SIEGE_DIFF_PER_MEMBER;
         if (mExtraDifficulty > 5) {
             mExtraDifficulty = 5;
         }  // cap at 5
@@ -395,12 +444,18 @@ public class Siege {
         }
     }
 
-    private boolean isPlayerInWarzone(DimBlockPos siegeCampPos, EntityPlayerMP player) {
-        // convert siege camp pos to chunk pos and player to chunk pos for clarity
-        DimChunkPos siegeCampChunkPos = siegeCampPos.toChunkPos();
-        DimChunkPos playerChunkPos = new DimChunkPos(player.dimension, player.getPosition());
+    private boolean isChunkInKillZone(DimChunkPos chunkPos) {
+        int killRadius = Math.max(battleRadius, siegedRadius);
+        for (DimBlockPos siegeCamp : attackingCamps) {
+            if (siegeCamp != null && isPlayerInRadius(siegeCamp.toChunkPos(), chunkPos, killRadius)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
-        return isPlayerInRadius(siegeCampChunkPos, playerChunkPos, battleRadius);
+    private boolean isPlayerInKillZone(EntityPlayerMP player) {
+        return isChunkInKillZone(new DimChunkPos(player.dimension, player.getPosition()));
     }
 
     public boolean isChunkInBattleZone(DimChunkPos chunkPos) {
@@ -412,10 +467,18 @@ public class Siege {
         return false;
     }
 
-    public void onPVPKill(EntityPlayerMP killer, EntityPlayerMP killed) {
+    public boolean isChunkInSiegedZone(DimChunkPos chunkPos) {
+        for (DimBlockPos siegeCamp : attackingCamps) {
+            if (siegeCamp != null && isPlayerInRadius(siegeCamp.toChunkPos(), chunkPos, siegedRadius)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void onParticipantDeath(EntityPlayerMP killer, EntityPlayerMP killed) {
         Faction attackers = WarForgeMod.FACTIONS.getFaction(attackingFaction);
         Faction defenders = WarForgeMod.FACTIONS.getFaction(defendingFaction);
-        Faction killerFaction = WarForgeMod.FACTIONS.getFactionOfPlayer(killer.getUniqueID());
         Faction killedFaction = WarForgeMod.FACTIONS.getFactionOfPlayer(killed.getUniqueID());
 
         if (attackers == null || defenders == null || WarForgeMod.MC_SERVER == null) {
@@ -426,32 +489,31 @@ public class Siege {
         boolean attackValid = false;
         boolean defendValid = false;
 
-        // there may be multiple siege camps per siege, so ensure kill occurred in radius of any
-        for (DimBlockPos siegeCamp : attackingCamps) {
-            if (isPlayerInWarzone(siegeCamp, killer)) {
-                // First case, an attacker killed a defender
+        if (WarForgeConfig.SIEGE_COUNT_ALL_ZONE_DEATHS) {
+            if (isPlayerInKillZone(killed)) {
+                if (killedFaction == defenders) attackValid = true;
+                else if (killedFaction == attackers) defendValid = true;
+            }
+        } else {
+            Faction killerFaction = killer == null ? null : WarForgeMod.FACTIONS.getFactionOfPlayer(killer.getUniqueID());
+            if (killer != null && isPlayerInKillZone(killer)) {
                 if (killerFaction == attackers && killedFaction == defenders) {
                     attackValid = true;
-                    // Other case, a defender killed an attacker
                 } else if (killerFaction == defenders && killedFaction == attackers) {
                     defendValid = true;
                 }
-
             }
         }
 
-        if (!attackValid && !defendValid) return; // no more logic needs to be done for invalid kill
+        if (!attackValid && !defendValid) return;
 
-        // update progress appropriately; either valid attack, or def by this point, so state of one bool implies the state of the other
         mAttackProgress += attackValid ? WarForgeConfig.SIEGE_SWING_PER_DEFENDER_DEATH : -WarForgeConfig.SIEGE_SWING_PER_ATTACKER_DEATH;
         WarForgeMod.FACTIONS.sendSiegeInfoToNearby(defendingClaim.toChunkPos());
 
-        // build notification
         ITextComponent notification = new TextComponentTranslation("warforge.notification.siege_death",
                 killed.getName(), WarForgeConfig.SIEGE_SWING_PER_ATTACKER_DEATH,
                 GetAttackProgress(), GetAttackSuccessThreshold(), GetDefenceProgress());
 
-        // send notification
         attackers.messageAll(notification);
         defenders.messageAll(notification);
     }
@@ -475,6 +537,7 @@ public class Siege {
 
         defendingClaim = DimBlockPos.readFromNBT(tags, "defendLocation");
         battleRadius = tags.hasKey("battleRadius") ? Math.max(0, tags.getInteger("battleRadius")) : WarForgeConfig.SIEGE_BATTLE_RADIUS;
+        siegedRadius = tags.hasKey("siegedRadius") ? Math.max(0, tags.getInteger("siegedRadius")) : WarForgeConfig.SIEGE_SIEGED_RADIUS;
         mAttackProgress = tags.getInteger("progress");
         mBaseDifficulty = tags.getInteger("baseDifficulty");
         mExtraDifficulty = tags.getInteger("extraDifficulty");
@@ -501,6 +564,7 @@ public class Siege {
         tags.setTag("attackLocations", claimsList);
         tags.setTag("defendLocation", defendingClaim.writeToNBT());
         tags.setInteger("battleRadius", battleRadius);
+        tags.setInteger("siegedRadius", siegedRadius);
         tags.setInteger("progress", mAttackProgress);
         tags.setInteger("baseDifficulty", mBaseDifficulty);
         tags.setInteger("extraDifficulty", mExtraDifficulty);

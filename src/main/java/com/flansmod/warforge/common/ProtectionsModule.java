@@ -9,6 +9,7 @@ import net.minecraft.block.Block;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.MoverType;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemFood;
 import net.minecraft.util.DamageSource;
@@ -42,7 +43,7 @@ public class ProtectionsModule {
     // It is generally expected that you are asking about a loaded chunk, not that that should matter
     @Nonnull
     public static ProtectionConfig GetProtections(UUID playerID, DimChunkPos pos) {
-        FactionStorage.SiegeZoneRelation siegeRelation = WarForgeMod.FACTIONS.getSiegeZoneRelation(playerID, pos);
+        FactionStorage.SiegeZoneResult siegeZone = WarForgeMod.FACTIONS.getSiegeZone(pos);
 
         UUID factionID = WarForgeMod.FACTIONS.getClaim(pos);
         if (factionID.equals(FactionStorage.SAFE_ZONE_ID))
@@ -52,22 +53,22 @@ public class ProtectionsModule {
             return WarForgeConfig.WAR_ZONE;
 
         Faction faction = WarForgeMod.FACTIONS.getFaction(factionID);
-        if (faction != null) {
-            boolean playerIsInFaction = playerID != null && !playerID.equals(Faction.nullUuid) && faction.isPlayerInFaction(playerID);
-            Faction.ClaimType claimType = faction.getClaimType(pos);
+        boolean playerIsInFaction = faction != null && playerID != null && !playerID.equals(Faction.nullUuid) && faction.isPlayerInFaction(playerID);
 
-            // A faction's own siege-camp claim should still behave like a friendly claim for its members.
-            if (playerIsInFaction && claimType == Faction.ClaimType.SIEGE)
-                return WarForgeConfig.CLAIM_FRIEND;
+        if (playerIsInFaction && faction.getClaimType(pos) == Faction.ClaimType.SIEGE)
+            return WarForgeConfig.CLAIM_FRIEND;
+
+        if (siegeZone.zone != FactionStorage.SiegeZone.NONE) {
+            boolean defender = playerID != null && !playerID.equals(Faction.nullUuid)
+                    && siegeZone.defendingFaction != null
+                    && WarForgeMod.FACTIONS.IsPlayerInFaction(playerID, siegeZone.defendingFaction);
+            if (siegeZone.zone == FactionStorage.SiegeZone.SIEGED)
+                return defender ? WarForgeConfig.SIEGED_FRIEND : WarForgeConfig.SIEGED_FOE;
+            return defender ? WarForgeConfig.WAR_FRIEND : WarForgeConfig.WAR_FOE;
         }
 
-        if (siegeRelation == FactionStorage.SiegeZoneRelation.ATTACKER) {
-            return WarForgeConfig.SIEGECAMP_SIEGER;
-        }
-
         if (faction != null) {
-            boolean playerIsInFaction = playerID != null && !playerID.equals(Faction.nullUuid) && faction.isPlayerInFaction(playerID);
-            if (playerIsInFaction && siegeRelation == FactionStorage.SiegeZoneRelation.DEFENDER)
+            if (playerIsInFaction && faction.isCurrentlyDefending)
                 return WarForgeConfig.CLAIM_DEFENDED;
 
             if (faction.citadelPos.toChunkPos().equals(pos))
@@ -244,17 +245,15 @@ public class ProtectionsModule {
         DimBlockPos pos = new DimBlockPos(eventEntity.dimension, event.getPos());
         ProtectionConfig config = GetProtections(eventEntity.getUniqueID(), pos);
 
+        if (placeDenied(config, event.getBlockSnapshot().getCurrentBlock().getBlock()))
+            event.setCanceled(true);
+    }
+
+    public static boolean placeDenied(ProtectionConfig config, Block block) {
         if (!config.PLACE_BLOCKS) {
-            if (!config.BLOCK_PLACE_WHITELIST.contains(event.getBlockSnapshot().getCurrentBlock().getBlock())) {
-                //WarForgeMod.LOGGER.info("Cancelled block placement event");
-                event.setCanceled(true);
-            }
-        } else {
-            if (config.BLOCK_PLACE_BLACKLIST.contains(event.getBlockSnapshot().getCurrentBlock().getBlock())) {
-                //WarForgeMod.LOGGER.info("Cancelled block placement event");
-                event.setCanceled(true);
-            }
+            return !config.BLOCK_PLACE_WHITELIST.contains(block);
         }
+        return config.BLOCK_PLACE_BLACKLIST.contains(block);
     }
 
     @SubscribeEvent
@@ -267,17 +266,52 @@ public class ProtectionsModule {
 
         DimBlockPos pos = new DimBlockPos(event.getPlayer().dimension, event.getPos());
         ProtectionConfig config = GetProtections(event.getPlayer().getUniqueID(), pos);
+        Block block = event.getState().getBlock();
 
+        if (!breakDenied(config, block))
+            return;
+
+        boolean slowable = config.mineTime.resolve(block) != null
+                && !event.getPlayer().capabilities.isCreativeMode
+                && event.getState().getBlockHardness(event.getWorld(), event.getPos()) > 0;
+        if (slowable)
+            return;
+
+        event.setCanceled(true);
+    }
+
+    public static boolean breakDenied(ProtectionConfig config, Block block) {
         if (!config.BREAK_BLOCKS || !config.BLOCK_REMOVAL) {
-            if (!config.BLOCK_BREAK_WHITELIST.contains(event.getState().getBlock())) {
-                event.setCanceled(true);
-            }
-        } else {
-            if (config.BLOCK_BREAK_BLACKLIST.contains(event.getState().getBlock())) {
-                event.setCanceled(true);
-            }
+            return !config.BLOCK_BREAK_WHITELIST.contains(block);
         }
+        return config.BLOCK_BREAK_BLACKLIST.contains(block);
+    }
 
+    @SubscribeEvent
+    public void OnBreakSpeed(net.minecraftforge.event.entity.player.PlayerEvent.BreakSpeed event) {
+        EntityPlayer player = event.getEntityPlayer();
+        if (player.world.isRemote)
+            return;
+
+        if (OP_OVERRIDE && WarForgeMod.isOp(player))
+            return;
+
+        net.minecraft.util.math.BlockPos blockPos = event.getPos();
+        if (blockPos == null)
+            return;
+
+        DimBlockPos pos = new DimBlockPos(player.dimension, blockPos);
+        ProtectionConfig config = GetProtections(player.getUniqueID(), pos);
+        Block block = event.getState().getBlock();
+
+        if (!breakDenied(config, block))
+            return;
+
+        MineTime.Rule rule = config.mineTime.resolve(block);
+        if (rule == null)
+            return;
+
+        event.setNewSpeed(MineTime.applySpeed(rule, event.getNewSpeed(), event.getState(), player.world, blockPos, player));
     }
 
     @SubscribeEvent
@@ -362,6 +396,30 @@ public class ProtectionsModule {
 
     @SubscribeEvent
     public void LivingUpdate(EnteringChunk event) {
+        if (event.getEntity() instanceof EntityPlayerMP) {
+            EntityPlayerMP player = (EntityPlayerMP) event.getEntity();
+            int dim = player.dimension;
+            DimChunkPos from = new DimChunkPos(dim, event.getOldChunkX(), event.getOldChunkZ());
+            DimChunkPos to = new DimChunkPos(dim, event.getNewChunkX(), event.getNewChunkZ());
+
+            if (WarForgeMod.FACTIONS.isConqueredWilderness(to) && !WarForgeMod.FACTIONS.isConqueredWilderness(from)) {
+                WarForgeMod.FACTIONS.sendNotificationToPlayer(player, "warforge.entered_conquered", "Conquered Territory",
+                        "Reverts to wilderness in " + com.flansmod.warforge.common.util.TimeHelper.formatTime(WarForgeMod.FACTIONS.conqueredRemainingMs(to)),
+                        0xC79A3A, 6000);
+            }
+
+            Faction faction = WarForgeMod.FACTIONS.getFactionOfPlayer(player.getUniqueID());
+            if (faction != null) {
+                if (WarForgeMod.FACTIONS.isInOwnSiegeWarzone(faction.uuid, from)
+                        && !WarForgeMod.FACTIONS.isInOwnSiegeWarzone(faction.uuid, to)) {
+                    WarForgeMod.FACTIONS.sendNotificationToPlayer(player, "warforge.leaving_warzone",
+                            "Leaving Siege Warzone", "Your absence will start the siege abandon timer.",
+                            0xC79A3A, 6000);
+                }
+            }
+            return;
+        }
+
         if (!inLoop) {
             if (!(event.getEntity() instanceof EntityPlayer)) {
                 ProtectionConfig config = GetProtections(Faction.nullUuid, new DimBlockPos(event.getEntity().dimension, event.getEntity().getPosition()));

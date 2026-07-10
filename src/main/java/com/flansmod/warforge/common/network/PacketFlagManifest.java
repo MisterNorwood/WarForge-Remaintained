@@ -5,6 +5,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +36,7 @@ public class PacketFlagManifest extends PacketBase {
     }
 
     @Override
+    @SideOnly(Side.CLIENT)
     public void handleClientSide(EntityPlayer clientPlayer) {
         ClientFlagRegistry.setAvailableFlags(flagIds);
     }

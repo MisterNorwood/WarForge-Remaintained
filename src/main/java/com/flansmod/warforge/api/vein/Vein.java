@@ -35,6 +35,7 @@ public class Vein {
     // Packet Data:
     public final ByteBuf SERIALIZED_ENTRY;
     private final short id;
+    public final int wealth;
 
     public Vein(final ByteBuf veinEntryBuf) {
         this(VeinConfigHandler.VeinEntry.deserialize(veinEntryBuf), false);
@@ -52,6 +53,7 @@ public class Vein {
         this.translationKey = veinEntry.translationKey;
         qualMults = veinEntry.qualMults;
         id = veinEntry.id;
+        wealth = veinEntry.wealth;
         dimWeights = new Int2ObjectOpenHashMap<>(veinEntry.dimWeights.size());
         dimWeights.defaultReturnValue(new short[]{0, 0});
 

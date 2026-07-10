@@ -11,6 +11,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.chunk.Chunk;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -66,11 +67,14 @@ public class ChunkMapTextureDaemon {
     }
 
     public static void flushTextureQueue() {
-        ChunkDynamicTextureThread.RegisterTextureAction action;
-        int processed = 0;
-        while ((action = ChunkDynamicTextureThread.queue.poll()) != null && processed < 64) {
-            action.register();
-            processed++;
+        if (ChunkDynamicTextureThread.PENDING.isEmpty()) {
+            return;
+        }
+        for (String name : new ArrayList<>(ChunkDynamicTextureThread.PENDING.keySet())) {
+            ChunkDynamicTextureThread.RegisterTextureAction action = ChunkDynamicTextureThread.PENDING.remove(name);
+            if (action != null) {
+                action.register();
+            }
         }
     }
 
@@ -86,6 +90,7 @@ public class ChunkMapTextureDaemon {
         }
         Minecraft mc = Minecraft.getMinecraft();
         for (String name : active) {
+            ChunkDynamicTextureThread.PENDING.remove(name);
             mc.getTextureManager().deleteTexture(new ResourceLocation(com.flansmod.warforge.Tags.MODID, name));
         }
     }
@@ -104,6 +109,7 @@ public class ChunkMapTextureDaemon {
         Minecraft mc = Minecraft.getMinecraft();
         for (String old : current) {
             if (!desired.contains(old)) {
+                ChunkDynamicTextureThread.PENDING.remove(old);
                 mc.getTextureManager().deleteTexture(new ResourceLocation(com.flansmod.warforge.Tags.MODID, old));
             }
         }
@@ -157,6 +163,12 @@ public class ChunkMapTextureDaemon {
         if (minY == Integer.MAX_VALUE) {
             minY = 0;
             maxY = 1;
+        }
+
+        if (MapBlockColorSampler.DEBUG_LOGGING) {
+            com.flansmod.warforge.common.WarForgeMod.LOGGER.info(
+                    "[MapRelief] dim={} grading elevation span minY={} maxY={} (span={})",
+                    dim, minY, maxY, maxY - minY);
         }
 
         for (int x = centerX - radius; x <= centerX + radius; x++) {

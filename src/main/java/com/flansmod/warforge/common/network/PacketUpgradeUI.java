@@ -9,6 +9,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
 import java.util.UUID;
 
@@ -48,6 +50,7 @@ public class PacketUpgradeUI extends PacketBase {
     }
 
     @Override
+    @SideOnly(Side.CLIENT)
     public void handleClientSide(EntityPlayer clientPlayer) {
         ClientGUI.open(GUIUpgradePanel.createGui(
                 mFactionID,

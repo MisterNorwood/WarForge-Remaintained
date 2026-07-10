@@ -11,6 +11,8 @@ import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.JsonToNBT;
 import net.minecraft.nbt.NBTException;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -34,6 +36,7 @@ public class PacketSyncConfig extends PacketBase {
     }
 
     @Override
+    @SideOnly(Side.CLIENT)
     public void handleClientSide(EntityPlayer clientPlayer) {
         NBTTagCompound compound;
         try {
@@ -98,6 +101,29 @@ public class PacketSyncConfig extends PacketBase {
         }
         WarForgeConfig.JOURNEYMAP_CLAIM_MODE = compound.getInteger("jmClaimMode");
         WarForgeConfig.JOURNEYMAP_VEIN_MODE = compound.getInteger("jmVeinMode");
+
+        if (compound.hasKey("protectionZones")) {
+            NBTTagCompound zones = compound.getCompoundTag("protectionZones");
+            if (zones.hasKey("unclaimed"))        WarForgeConfig.UNCLAIMED.readProtectionSync(zones.getCompoundTag("unclaimed"));
+            if (zones.hasKey("safe"))             WarForgeConfig.SAFE_ZONE.readProtectionSync(zones.getCompoundTag("safe"));
+            if (zones.hasKey("war"))              WarForgeConfig.WAR_ZONE.readProtectionSync(zones.getCompoundTag("war"));
+            if (zones.hasKey("citadelFriend"))    WarForgeConfig.CITADEL_FRIEND.readProtectionSync(zones.getCompoundTag("citadelFriend"));
+            if (zones.hasKey("citadelFoe"))       WarForgeConfig.CITADEL_FOE.readProtectionSync(zones.getCompoundTag("citadelFoe"));
+            if (zones.hasKey("claimFriend"))      WarForgeConfig.CLAIM_FRIEND.readProtectionSync(zones.getCompoundTag("claimFriend"));
+            if (zones.hasKey("claimAlly"))        WarForgeConfig.CLAIM_ALLY.readProtectionSync(zones.getCompoundTag("claimAlly"));
+            if (zones.hasKey("claimFoe"))         WarForgeConfig.CLAIM_FOE.readProtectionSync(zones.getCompoundTag("claimFoe"));
+            if (zones.hasKey("sieger"))           WarForgeConfig.SIEGECAMP_SIEGER.readProtectionSync(zones.getCompoundTag("sieger"));
+            if (zones.hasKey("siegeOther"))       WarForgeConfig.SIEGECAMP_OTHER.readProtectionSync(zones.getCompoundTag("siegeOther"));
+            if (zones.hasKey("claimDefended"))    WarForgeConfig.CLAIM_DEFENDED.readProtectionSync(zones.getCompoundTag("claimDefended"));
+            if (zones.hasKey("siegedFriend"))     WarForgeConfig.SIEGED_FRIEND.readProtectionSync(zones.getCompoundTag("siegedFriend"));
+            if (zones.hasKey("siegedFoe"))        WarForgeConfig.SIEGED_FOE.readProtectionSync(zones.getCompoundTag("siegedFoe"));
+            if (zones.hasKey("warFriend"))        WarForgeConfig.WAR_FRIEND.readProtectionSync(zones.getCompoundTag("warFriend"));
+            if (zones.hasKey("warFoe"))           WarForgeConfig.WAR_FOE.readProtectionSync(zones.getCompoundTag("warFoe"));
+        }
+        if (compound.hasKey("siegeSiegedRadius")) {
+            WarForgeConfig.SIEGE_SIEGED_RADIUS = compound.getInteger("siegeSiegedRadius");
+        }
+
         // Each connection starts from a clean slate; the server re-sends whatever this client is allowed to see.
         com.flansmod.warforge.client.JourneyMapClaimCache.applyClear();
         com.flansmod.warforge.client.JourneyMapVeinCache.applyClear();

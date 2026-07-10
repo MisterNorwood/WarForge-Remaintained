@@ -5,6 +5,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
 public class PacketFlagChunk extends PacketBase {
     public String flagId = "";
@@ -42,6 +44,7 @@ public class PacketFlagChunk extends PacketBase {
     }
 
     @Override
+    @SideOnly(Side.CLIENT)
     public void handleClientSide(EntityPlayer clientPlayer) {
         ClientFlagRegistry.receiveCustomFlagChunk(flagId, width, height, partIndex, totalParts, data);
     }

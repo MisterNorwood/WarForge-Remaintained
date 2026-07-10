@@ -1,5 +1,6 @@
 package com.flansmod.warforge.api.modularui;
 
+import com.flansmod.warforge.common.WarForgeMod;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockGrass;
 import net.minecraft.block.BlockLeaves;
@@ -21,10 +22,12 @@ import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidRegistry;
 import net.minecraftforge.fluids.IFluidBlock;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -51,7 +54,15 @@ public final class MapBlockColorSampler {
 
     /** Untinted sprite-average color per block state, in 0xRRGGBB, or {@link #NO_COLOR} if none. */
     private static final ConcurrentHashMap<IBlockState, Integer> BASE_COLOR_CACHE = new ConcurrentHashMap<IBlockState, Integer>();
-    private static final int NO_COLOR = -1;
+    /** Cached sprite-set averages keyed by their sorted icon names. */
+    private static final ConcurrentHashMap<String, Integer> ICON_COLOR_CACHE = new ConcurrentHashMap<String, Integer>();
+    private static final int NO_COLOR = Integer.MIN_VALUE;
+
+    /** JourneyMap's default grey for fluids whose still texture cannot be resolved. */
+    private static final int DEFAULT_FLUID_COLOR = 0x00BCBCBC;
+
+    public static volatile boolean DEBUG_LOGGING = false;
+    private static final Set<String> LOGGED_BLOCKS = ConcurrentHashMap.newKeySet();
 
     private MapBlockColorSampler() {
     }
@@ -61,24 +72,35 @@ public final class MapBlockColorSampler {
      */
     public static int sampleColor(World world, IBlockState state, BlockPos pos) {
         try {
-            int base = getBaseColor(state);
-            if (base != NO_COLOR) {
-                Block block = state.getBlock();
-                if (isFoliage(block)) {
-                    return multiply(adjustBrightness(base, 0.8f), getTint(world, state, pos));
-                }
-                if (block instanceof IFluidBlock) {
-                    Fluid fluid = ((IFluidBlock) block).getFluid();
-                    if (fluid != null) {
-                        return multiply(base, fluid.getColor());
-                    }
-                }
-                return multiply(base, getTint(world, state, pos));
+            int base = deriveBaseColor(state);
+            return applyTint(world, state, pos, base);
+        } catch (Throwable t) {
+            if (DEBUG_LOGGING) {
+                WarForgeMod.LOGGER.warn("[MapColor] sampleColor threw for {} at {} -> vanilla map color",
+                        blockId(state), pos, t);
             }
-        } catch (Throwable ignored) {
-            // Fall through to the vanilla map color below.
+            return fallbackMapColor(world, state, pos);
         }
-        return fallbackMapColor(world, state, pos);
+    }
+
+    private static int deriveBaseColor(IBlockState state) {
+        int sprite = getBaseColor(state);
+        if (sprite != NO_COLOR) {
+            return sprite;
+        }
+        Block block = state.getBlock();
+        if (block instanceof IFluidBlock || state.getMaterial() == Material.WATER || state.getMaterial() == Material.LAVA) {
+            return DEFAULT_FLUID_COLOR;
+        }
+        return materialColor(state);
+    }
+
+    private static int materialColor(IBlockState state) {
+        try {
+            return state.getMapColor(null, null).colorValue;
+        } catch (Throwable ignored) {
+            return 0x000000;
+        }
     }
 
     private static int getBaseColor(IBlockState state) {
@@ -94,13 +116,9 @@ public final class MapBlockColorSampler {
     private static int computeSpriteAverage(IBlockState state) {
         Minecraft mc = Minecraft.getMinecraft();
 
-        // Liquids have no usable baked-model quads: their model resolves to the magenta/black
-        // missing texture, which is what turned water purple. Sample the fluid's still texture
-        // directly instead - covers modded Forge fluids (by registry) and vanilla water/lava
-        // (by material), exactly like JourneyMap does for IFluidBlock.
         TextureAtlasSprite fluidSprite = fluidStillSprite(mc, state);
         if (fluidSprite != null) {
-            return averageSprites(Collections.singletonList(fluidSprite));
+            return averageColor(Collections.singletonList(fluidSprite));
         }
 
         if (state.getRenderType() == EnumBlockRenderType.INVISIBLE) {
@@ -115,9 +133,6 @@ public final class MapBlockColorSampler {
             return NO_COLOR;
         }
 
-        // Sample the UP face only - this is a top-down map. Averaging every face mixes in the
-        // dark side/bottom textures, which darkened and muddied the tone. Fall back to the general
-        // (cull-less) quads for cross models like plants, then to the particle texture.
         Set<TextureAtlasSprite> sprites = new LinkedHashSet<TextureAtlasSprite>();
         try {
             collectSprites(model.getQuads(state, EnumFacing.UP, 0L), sprites);
@@ -125,7 +140,6 @@ public final class MapBlockColorSampler {
                 collectSprites(model.getQuads(state, null, 0L), sprites);
             }
         } catch (Throwable ignored) {
-            // Some modded models throw on off-thread queries; fall back to the particle texture.
         }
         if (sprites.isEmpty()) {
             TextureAtlasSprite particle = model.getParticleTexture();
@@ -133,7 +147,7 @@ public final class MapBlockColorSampler {
                 sprites.add(particle);
             }
         }
-        return averageSprites(sprites);
+        return averageColor(sprites);
     }
 
     /** Resolves the still texture for any liquid: modded Forge fluids, plus vanilla water/lava. */
@@ -174,7 +188,16 @@ public final class MapBlockColorSampler {
     }
 
     /** Mean RGB over every alpha &gt; 0 texel of the given sprites, or {@link #NO_COLOR}. */
-    private static int averageSprites(Collection<TextureAtlasSprite> sprites) {
+    private static int averageColor(Collection<TextureAtlasSprite> sprites) {
+        if (sprites == null || sprites.isEmpty()) {
+            return NO_COLOR;
+        }
+        String key = iconKey(sprites);
+        Integer cached = ICON_COLOR_CACHE.get(key);
+        if (cached != null) {
+            return cached;
+        }
+
         long r = 0L;
         long g = 0L;
         long b = 0L;
@@ -192,7 +215,6 @@ public final class MapBlockColorSampler {
             if (frames == null || frames.length == 0 || frames[0] == null) {
                 continue;
             }
-            // MC stores frame data as ARGB (0xAARRGGBB), matching BufferedImage#getRGB.
             for (int pixel : frames[0]) {
                 int alpha = (pixel >>> 24) & 0xFF;
                 if (alpha > 0) {
@@ -203,10 +225,18 @@ public final class MapBlockColorSampler {
                 }
             }
         }
-        if (count == 0L) {
-            return NO_COLOR;
+        int result = count == 0L ? NO_COLOR : ((int) (r / count) << 16) | ((int) (g / count) << 8) | (int) (b / count);
+        ICON_COLOR_CACHE.put(key, result);
+        return result;
+    }
+
+    private static String iconKey(Collection<TextureAtlasSprite> sprites) {
+        List<String> names = new ArrayList<String>(sprites.size());
+        for (TextureAtlasSprite sprite : sprites) {
+            names.add(sprite.getIconName());
         }
-        return ((int) (r / count) << 16) | ((int) (g / count) << 8) | (int) (b / count);
+        Collections.sort(names);
+        return String.join(",", names);
     }
 
     /** Filters out null and the magenta/black missing-texture sprite. */
@@ -214,6 +244,22 @@ public final class MapBlockColorSampler {
         return sprite != null
                 && sprite.getIconName() != null
                 && !"missingno".equals(sprite.getIconName());
+    }
+
+    private static int applyTint(World world, IBlockState state, BlockPos pos, int base) {
+        Block block = state.getBlock();
+        if (isFoliage(block)) {
+            return multiply(adjustBrightness(base, 0.8f), getTint(world, state, pos));
+        }
+        if (block instanceof IFluidBlock || state.getMaterial() == Material.WATER || state.getMaterial() == Material.LAVA) {
+            if (!(state.getMaterial() == Material.WATER)) {
+                Fluid fluid = (block instanceof IFluidBlock) ? ((IFluidBlock) block).getFluid() : null;
+                if (fluid != null) {
+                    return multiply(base, fluid.getColor() & 0x00FFFFFF);
+                }
+            }
+        }
+        return multiply(base, getTint(world, state, pos));
     }
 
     /** Biome tint multiplier (0xRRGGBB), mirroring JourneyMap's getColorMultiplier. */
@@ -246,11 +292,20 @@ public final class MapBlockColorSampler {
     }
 
     private static boolean isFoliage(Block block) {
-        return block instanceof BlockLeaves || block instanceof BlockVine;
+        if (block instanceof BlockLeaves || block instanceof BlockVine) {
+            return true;
+        }
+        ResourceLocation id = Block.REGISTRY.getNameForObject(block);
+        return id != null && id.getPath().toLowerCase(Locale.ROOT).contains("leaves");
     }
 
     private static boolean isWater(IBlockState state) {
         return state.getMaterial() == Material.WATER;
+    }
+
+    private static String blockId(IBlockState state) {
+        ResourceLocation id = Block.REGISTRY.getNameForObject(state.getBlock());
+        return id != null ? id.toString() : state.getBlock().toString();
     }
 
     /** Per-channel color multiply in normalized space (out = c1 * c2 / 255), ignoring alpha. */

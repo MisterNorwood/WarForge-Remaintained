@@ -3,6 +3,7 @@ package com.flansmod.warforge.common.network;
 import com.flansmod.warforge.api.modularui.ChunkMapTextureDaemon;
 import com.flansmod.warforge.api.modularui.ChunkMapUtil;
 import com.flansmod.warforge.api.vein.Quality;
+import com.flansmod.warforge.client.ClientBorderCache;
 import com.flansmod.warforge.client.ClientClaimChunkCache;
 import com.flansmod.warforge.client.ClientProxy;
 import com.flansmod.warforge.client.ClientTickHandler;
@@ -11,6 +12,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +24,7 @@ public class PacketClaimChunksData extends PacketBase {
     public int centerX;
     public int centerZ;
     public int radius;
+    public boolean outlineOnly = false;
     public UUID playerFactionId = Faction.nullUuid;
     public int forceLoadedCount;
     public int forceLoadedMax;
@@ -34,6 +38,7 @@ public class PacketClaimChunksData extends PacketBase {
         data.writeInt(centerX);
         data.writeInt(centerZ);
         data.writeByte(radius);
+        data.writeBoolean(outlineOnly);
         writeUUID(data, playerFactionId);
         data.writeShort(forceLoadedCount);
         data.writeShort(forceLoadedMax);
@@ -55,6 +60,7 @@ public class PacketClaimChunksData extends PacketBase {
             writeUUID(data, chunk.outlineFactionId);
             data.writeInt(chunk.outlineColour);
             data.writeByte(chunk.outlineStyle);
+            data.writeInt(chunk.conqueredRemainingMs);
         }
     }
 
@@ -64,6 +70,7 @@ public class PacketClaimChunksData extends PacketBase {
         centerX = data.readInt();
         centerZ = data.readInt();
         radius = data.readByte();
+        outlineOnly = data.readBoolean();
         playerFactionId = readUUID(data);
         forceLoadedCount = data.readShort();
         forceLoadedMax = data.readShort();
@@ -89,6 +96,7 @@ public class PacketClaimChunksData extends PacketBase {
             info.outlineFactionId = readUUID(data);
             info.outlineColour = data.readInt();
             info.outlineStyle = data.readByte();
+            info.conqueredRemainingMs = data.readInt();
             chunks.add(info);
         }
     }
@@ -99,7 +107,13 @@ public class PacketClaimChunksData extends PacketBase {
     }
 
     @Override
+    @SideOnly(Side.CLIENT)
     public void handleClientSide(EntityPlayer clientPlayer) {
+        if (outlineOnly) {
+            ClientBorderCache.replaceAll(dim, chunks);
+            ClientTickHandler.CLAIMS_DIRTY = true;
+            return;
+        }
         ClientClaimChunkCache.replaceAll(dim, centerX, centerZ, radius, playerFactionId, forceLoadedCount, forceLoadedMax, claimCount, claimMax, chunks);
         java.util.HashMap<Long, Integer> tintByChunk = new java.util.HashMap<Long, Integer>();
         for (ClaimChunkInfo info : chunks) {

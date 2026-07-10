@@ -92,7 +92,6 @@ public class WarForgeMod implements ILateMixinLoader {
     public static final FactionChunkLoadingManager CHUNK_LOADING_MANAGER = new FactionChunkLoadingManager();
     public static final ServerFlagRegistry FLAG_REGISTRY = new ServerFlagRegistry();
 	  public static VeinUtils VEIN_HANDLER = null;
-	  public static final ModelEventHandler MODEL_EVENT_HANDLER = new ModelEventHandler();
 
 	// Discord integration
     private static final String DISCORD_MODID = "discordintegration";
@@ -161,6 +160,24 @@ public class WarForgeMod implements ILateMixinLoader {
                 || block.equals(Content.dummyTranslusent));
     }
 
+    public static void syncClaimToPlayer(EntityPlayer player, BlockPos pos) {
+        if (!(player instanceof EntityPlayerMP)) {
+            return;
+        }
+        EntityPlayerMP serverPlayer = (EntityPlayerMP) player;
+        net.minecraft.tileentity.TileEntity te = MC_SERVER.getWorld(serverPlayer.dimension).getTileEntity(pos);
+        if (te instanceof TileEntityClaim) {
+            net.minecraft.network.Packet<?> pkt = ((TileEntityClaim) te).getUpdatePacket();
+            if (pkt != null) {
+                serverPlayer.connection.sendPacket(pkt);
+            }
+        }
+    }
+
+    public static void notifyPlayer(EntityPlayerMP player, String token, String title, String subtitle, int color, int durationMs) {
+        FACTIONS.sendNotificationToPlayer(player, token, title, subtitle, color, durationMs);
+    }
+
     private static File getFactionsFile() {
         if (MC_SERVER.isDedicatedServer()) {
             return new File(MC_SERVER.getFolderName() + "/warforgefactions.dat");
@@ -212,11 +229,12 @@ public class WarForgeMod implements ILateMixinLoader {
         MinecraftForge.EVENT_BUS.register(new ServerTickHandler());
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(PROTECTIONS);
-        MinecraftForge.EVENT_BUS.register(MODEL_EVENT_HANDLER);
         proxy.preInit(event);
+        if (FMLCommonHandler.instance().getSide() == Side.CLIENT) {
+            MinecraftForge.EVENT_BUS.register(new ModelEventHandler());
+        }
         EffectRegistry.init();
         com.flansmod.warforge.api.WarForgeCapabilities.register();
-        CHUNK_LOADING_MANAGER.initialize();
     }
 
     @EventHandler
@@ -275,8 +293,14 @@ public class WarForgeMod implements ILateMixinLoader {
         WarForgeConfig.CITADEL_FOE.findBlocks();
         WarForgeConfig.CLAIM_FRIEND.findBlocks();
         WarForgeConfig.CLAIM_FOE.findBlocks();
+        WarForgeConfig.CLAIM_ALLY.findBlocks();
+        WarForgeConfig.CLAIM_DEFENDED.findBlocks();
         WarForgeConfig.SIEGECAMP_SIEGER.findBlocks();
         WarForgeConfig.SIEGECAMP_OTHER.findBlocks();
+        WarForgeConfig.SIEGED_FRIEND.findBlocks();
+        WarForgeConfig.SIEGED_FOE.findBlocks();
+        WarForgeConfig.WAR_FRIEND.findBlocks();
+        WarForgeConfig.WAR_FOE.findBlocks();
     }
 
     public long getTimeToNextSiegeAdvanceMs() {
@@ -365,29 +389,6 @@ public class WarForgeMod implements ILateMixinLoader {
         }
     }
 
-    private void blockPlacedOrRemoved(BlockEvent event, IBlockState state) {
-        // Check for vault value
-        if (WarForgeConfig.VAULT_BLOCKS.contains(state.getBlock())) {
-            DimChunkPos chunkPos = new DimBlockPos(event.getWorld().provider.getDimension(), event.getPos()).toChunkPos();
-            UUID factionID = FACTIONS.getClaim(chunkPos);
-            if (!factionID.equals(Faction.nullUuid)) {
-                Faction faction = FACTIONS.getFaction(factionID);
-                if (faction != null) {
-                    if (faction.citadelPos.toChunkPos().equals(chunkPos)) {
-                        faction.evaluateVault();
-                    }
-                }
-            }
-        }
-    }
-
-    @SubscribeEvent
-    public void blockPlaced(BlockEvent.EntityPlaceEvent event) {
-        if (!event.getWorld().isRemote) {
-            blockPlacedOrRemoved(event, event.getPlacedBlock());
-        }
-    }
-
     @SubscribeEvent
     public void blockRemoved(BlockEvent.BreakEvent event) {
         IBlockState state = event.getState();
@@ -445,18 +446,10 @@ public class WarForgeMod implements ILateMixinLoader {
 
         ObjectIntPair<UUID> conqueredChunkInfo = FACTIONS.conqueredChunks.get(pos);
         if (conqueredChunkInfo != null) {
-            UUID playerFactionId = playerFaction == null ? Faction.nullUuid : playerFaction.uuid;
-            // remove invalid entries if necessary, and if not then do actual comparison
-            if (conqueredChunkInfo.getObj() == null || conqueredChunkInfo.getObj().equals(Faction.nullUuid) || FACTIONS.getFaction(conqueredChunkInfo.getObj()) == null) {
-                WarForgeMod.LOGGER.atError().log("Found invalid conquered chunk at " + pos + "; removing and permitting placement.");
-                FACTIONS.conqueredChunks.remove(pos);
-            } else if (!conqueredChunkInfo.getObj().equals(playerFactionId)) {
-                player.sendMessage(new TextComponentTranslation("warforge.info.chunk_is_conquered",
-                        WarForgeMod.FACTIONS.getFaction(FACTIONS.conqueredChunks.get(pos).getObj()).name,
-                        TimeHelper.formatTime(FACTIONS.conqueredChunks.get(pos).getInteger())));
-                event.setCanceled(true);
-                return;
-            }
+            player.sendMessage(new TextComponentString("This chunk is conquered wilderness; it becomes claimable in "
+                    + TimeHelper.formatTime(conqueredChunkInfo.getInteger())));
+            event.setCanceled(true);
+            return;
         }
 
         if (!containsInt(WarForgeConfig.CLAIM_DIM_WHITELIST, pos.dim)) {
@@ -471,6 +464,13 @@ public class WarForgeMod implements ILateMixinLoader {
             {
                 player.sendMessage(new TextComponentString("You are already in a faction"));
                 event.setCanceled(true);
+            } else {
+                Faction tooClose = FACTIONS.findNearbyOpposingFaction(null, pos);
+                if (tooClose != null) {
+                    player.sendMessage(new TextComponentString("You cannot found a faction within " + WarForgeConfig.MIN_DISTANCE_BETWEEN_FACTIONS
+                            + " chunk(s) of faction " + tooClose.name));
+                    event.setCanceled(true);
+                }
             }
         } else if (block == Content.basicClaimBlock
                 || block == Content.reinforcedClaimBlock) {
@@ -496,6 +496,13 @@ public class WarForgeMod implements ILateMixinLoader {
 
             if (!WarForgeConfig.ENABLE_ISOLATED_CLAIMS && BlockBasicClaim.hasAdjacent(pos, playerFaction) == null) {
                 player.sendMessage(new TextComponentString("Isolated claims are disabled; you cannot put a claim here with no adjacent claims"));
+                event.setCanceled(true);
+            }
+
+            Faction tooClose = FACTIONS.findNearbyOpposingFaction(playerFaction, pos);
+            if (tooClose != null) {
+                player.sendMessage(new TextComponentString("You cannot claim within " + WarForgeConfig.MIN_DISTANCE_BETWEEN_FACTIONS
+                        + " chunk(s) of opposing faction " + tooClose.name));
                 event.setCanceled(true);
             }
         } else { // Must be siege block
@@ -607,9 +614,10 @@ public class WarForgeMod implements ILateMixinLoader {
                     final HashMap<StackComparable, Integer> requirements = UPGRADE_HANDLER.getLEVELS()[i];
                     final int limit = UPGRADE_HANDLER.getLIMITS()[i];
                     final int insuranceSlots = UPGRADE_HANDLER.getINSURANCE_SLOTS()[i];
+                    final int loadedChunks = UPGRADE_HANDLER.getLoadedChunksForLevel(i);
 
                     SyncQueueHandler.enqueue((EntityPlayerMP) event.player, () ->
-                            NETWORK.sendTo(new PacketCitadelUpgradeRequirement(level, requirements, limit, insuranceSlots), (EntityPlayerMP) event.player)
+                            NETWORK.sendTo(new PacketCitadelUpgradeRequirement(level, requirements, limit, insuranceSlots, loadedChunks), (EntityPlayerMP) event.player)
                     );
                 }
             }
@@ -701,7 +709,6 @@ public class WarForgeMod implements ILateMixinLoader {
 
             NBTTagCompound tags = CompressedStreamTools.readCompressed(new FileInputStream(dataFile));
             readFromNBT(tags);
-            CHUNK_LOADING_MANAGER.refreshAllFactions(FACTIONS.getAllFactions());
             LOGGER.info("Successfully loaded " + dataFile.getName());
         } catch (Exception e) {
             LOGGER.error("Failed to load data from warforgefactions.dat and backup; restart strongly recommended");
@@ -756,6 +763,13 @@ public class WarForgeMod implements ILateMixinLoader {
                 save("World Save - DIM " + dimensionID);
             }
         }
+    }
+
+    @EventHandler
+    public void serverStarted(FMLServerStartedEvent event) {
+        CHUNK_LOADING_MANAGER.initialize();
+        CHUNK_LOADING_MANAGER.refreshAllFactions(FACTIONS.getAllFactions());
+        FACTIONS.recalculateAllWealth();
     }
 
     @EventHandler

@@ -23,9 +23,6 @@ public class Content
     static public Block islandCollectorBlock;
     static public Item islandCollectorItem;
 	
-	static public Block adminClaimBlock;
-	static public Item adminClaimBlockItem;
-	
 	static public Block topLeaderboardBlock, notorietyLeaderboardBlock, wealthLeaderboardBlock, legacyLeaderboardBlock;
 	static public Item topLeaderboardItem, notorietyLeaderboardItem, wealthLeaderboardItem, legacyLeaderboardItem;
 	
@@ -61,12 +58,6 @@ public class Content
 
 
  
-        // Admin claim block
-        adminClaimBlock = new BlockAdminClaim().setRegistryName("adminclaimblock").setTranslationKey("adminclaimblock");
-        adminClaimBlockItem = new ItemBlock(adminClaimBlock).setRegistryName("adminclaimblock").setTranslationKey("adminclaimblock");
-        GameRegistry.registerTileEntity(TileEntityAdminClaim.class, new ResourceLocation(Tags.MODID, "adminclaim"));
- 
-
         topLeaderboardBlock = new BlockLeaderboard(Material.ROCK, FactionStat.TOTAL).setRegistryName("topleaderboard").setTranslationKey("topleaderboard");
         wealthLeaderboardBlock = new BlockLeaderboard(Material.ROCK, FactionStat.WEALTH).setRegistryName("wealthleaderboard").setTranslationKey("wealthleaderboard");
         notorietyLeaderboardBlock = new BlockLeaderboard(Material.ROCK, FactionStat.NOTORIETY).setRegistryName("notorietyleaderboard").setTranslationKey("notorietyleaderboard");
@@ -86,7 +77,7 @@ public class Content
 	public void registerItems(RegistryEvent.Register<Item> event)
 	{
 		final Item[] items = {
-				citadelBlockItem, basicClaimBlockItem, reinforcedClaimBlockItem, siegeCampBlockItem, adminClaimBlockItem,
+				citadelBlockItem, basicClaimBlockItem, reinforcedClaimBlockItem, siegeCampBlockItem,
                 islandCollectorItem,
 				topLeaderboardItem, wealthLeaderboardItem, notorietyLeaderboardItem,
 				legacyLeaderboardItem,
@@ -102,7 +93,7 @@ public class Content
 	public void registerBlocks(RegistryEvent.Register<Block> event)
 	{
 		final Block[] blocks = {
-			citadelBlock, basicClaimBlock, reinforcedClaimBlock, siegeCampBlock, adminClaimBlock, islandCollectorBlock,
+			citadelBlock, basicClaimBlock, reinforcedClaimBlock, siegeCampBlock, islandCollectorBlock,
 			topLeaderboardBlock, wealthLeaderboardBlock, notorietyLeaderboardBlock,
 			legacyLeaderboardBlock, statue, dummyTranslusent
 		};

@@ -203,7 +203,7 @@ public final class GuiFactionMemberManager {
             case OFFICER -> 0x55E3FF;
             default -> 0xFFFFFF;
         };
-        row.child(new IDrawable.DrawableWidget(new PlayerFaceDrawable(member.playerId)).size(18, 18));
+        row.child(new IDrawable.DrawableWidget(new PlayerFaceDrawable(member.playerId)).size(20, 20));
         row.child(new ScrollingTextWidget(IKey.str(member.username))
                 .margin(5, 0)
                 .width(96)
@@ -242,7 +242,7 @@ public final class GuiFactionMemberManager {
         row.margin(0, 0, 0, 2);
         row.background(ModularGuiStyle.insetBackdrop(0xFF232A30));
 
-        row.child(new IDrawable.DrawableWidget(new PlayerFaceDrawable(invite.playerId)).size(18, 18));
+        row.child(new IDrawable.DrawableWidget(new PlayerFaceDrawable(invite.playerId)).size(20, 20));
         row.child(new ScrollingTextWidget(IKey.str(invite.username))
                 .margin(5, 0)
                 .width(178)
@@ -263,7 +263,7 @@ public final class GuiFactionMemberManager {
         row.background(ModularGuiStyle.insetBackdrop(0xFF232A30));
 
         if (!invite.inviterId.equals(Faction.nullUuid)) {
-            row.child(new IDrawable.DrawableWidget(new PlayerFaceDrawable(invite.inviterId)).size(18, 18));
+            row.child(new IDrawable.DrawableWidget(new PlayerFaceDrawable(invite.inviterId)).size(20, 20));
         } else {
             row.child(IKey.str("?").asWidget().width(18).color(ModularGuiStyle.TEXT_MUTED));
         }

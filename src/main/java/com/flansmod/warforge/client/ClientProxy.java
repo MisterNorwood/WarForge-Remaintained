@@ -65,6 +65,8 @@ public class ClientProxy extends CommonProxy
 		MinecraftForge.EVENT_BUS.register(new ClientTickHandler());
 		MinecraftForge.EVENT_BUS.register(new AnimatedEffectHandler());
 		MinecraftForge.EVENT_BUS.register(new ClaimFlagRenderer());
+		MinecraftForge.EVENT_BUS.register(new ClientPlacementPredictor());
+		MinecraftForge.EVENT_BUS.register(new ClientMineTimePredictor());
 		ClientRegistry.registerKeyBinding(factionChatKey);
 	}
 
@@ -126,7 +128,6 @@ public class ClientProxy extends CommonProxy
 		RegisterModel(Content.basicClaimBlockItem);
 		RegisterModel(Content.reinforcedClaimBlockItem);
 		RegisterModel(Content.siegeCampBlockItem);
-		RegisterModel(Content.adminClaimBlockItem);
         RegisterModel(Content.islandCollectorItem);
 
 		RegisterModel(Content.topLeaderboardItem);

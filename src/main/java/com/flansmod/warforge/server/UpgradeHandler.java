@@ -27,11 +27,13 @@ public class UpgradeHandler {
               - level: 0
                 claim_limit: 5
                 insurance_slots: 0
+                loaded_chunks: 4
                 requirements: []
 
               - level: 1
                 claim_limit: 10
                 insurance_slots: 9
+                loaded_chunks: 8
                 requirements:
                   - type: ore
                     id: ingotIron
@@ -43,6 +45,7 @@ public class UpgradeHandler {
               - level: 2
                 claim_limit: 15
                 insurance_slots: 18
+                loaded_chunks: 16
                 requirements:
                   - type: item
                     id: modid:custom_item:3
@@ -52,11 +55,13 @@ public class UpgradeHandler {
     protected HashMap<StackComparable, Integer>[] LEVELS;
     protected int[] LIMITS;
     protected int[] INSURANCE_SLOTS;
+    protected int[] LOADED_CHUNKS;
 
     public UpgradeHandler() {
         LEVELS = new HashMap[0];
         LIMITS = new int[0];
         INSURANCE_SLOTS = new int[0];
+        LOADED_CHUNKS = new int[0];
     }
 
     public int[] getLIMITS() {
@@ -71,16 +76,29 @@ public class UpgradeHandler {
         return INSURANCE_SLOTS;
     }
 
-    public void setLevelAndLimits(int level, HashMap<StackComparable, Integer> requirements, int limit, int insuranceSlots) {
+    public int[] getLOADED_CHUNKS() {
+        return LOADED_CHUNKS;
+    }
+
+    public void setLevelAndLimits(int level, HashMap<StackComparable, Integer> requirements, int limit, int insuranceSlots, int loadedChunks) {
         if (level >= LEVELS.length) {
             int newSize = Math.max(level + 1, Math.max(LEVELS.length * 2, 1));
             LEVELS = Arrays.copyOf(LEVELS, newSize);
             LIMITS = Arrays.copyOf(LIMITS, newSize);
             INSURANCE_SLOTS = Arrays.copyOf(INSURANCE_SLOTS, newSize);
+            LOADED_CHUNKS = Arrays.copyOf(LOADED_CHUNKS, newSize);
         }
         LEVELS[level] = requirements;
         LIMITS[level] = limit;
         INSURANCE_SLOTS[level] = insuranceSlots;
+        LOADED_CHUNKS[level] = loadedChunks;
+    }
+
+    public int getLoadedChunksForLevel(int level) {
+        if (level < 0 || level >= LOADED_CHUNKS.length) {
+            return 0;
+        }
+        return LOADED_CHUNKS[level];
     }
 
     public static void migrateLegacyConfigIfNeeded(Path legacyCfg, Path yamlPath) throws IOException {
@@ -89,7 +107,7 @@ public class UpgradeHandler {
         }
 
         LegacyConfigData migrated = parseLegacyConfig(legacyCfg);
-        writeYamlConfig(yamlPath, migrated.levels, migrated.claims, migrated.insuranceSlots);
+        writeYamlConfig(yamlPath, migrated.levels, migrated.claims, migrated.insuranceSlots, migrated.loadedChunks);
         Files.move(legacyCfg, legacyCfg.resolveSibling(legacyCfg.getFileName() + ".migrated"), StandardCopyOption.REPLACE_EXISTING);
     }
 
@@ -118,6 +136,7 @@ public class UpgradeHandler {
         List<Map<StackComparable, Integer>> levels = new ArrayList<>();
         List<Integer> claims = new ArrayList<>();
         List<Integer> insuranceSlots = new ArrayList<>();
+        List<Integer> loadedChunks = new ArrayList<>();
 
         for (Object rawLevel : rawLevelList) {
             if (!(rawLevel instanceof Map<?, ?> levelMap)) {
@@ -127,6 +146,7 @@ public class UpgradeHandler {
             int level = readRequiredInt(levelMap, "level");
             int claimLimit = readRequiredInt(levelMap, "claim_limit");
             int insurance = readOptionalInt(levelMap, "insurance_slots", 0);
+            int loadedChunkVal = readOptionalInt(levelMap, "loaded_chunks", 0);
             if (claimLimit != -1 && claimLimit <= 0) {
                 throw new IllegalArgumentException("Claim limit must be > 0 or -1");
             }
@@ -138,6 +158,7 @@ public class UpgradeHandler {
                 levels.add(new HashMap<>());
                 claims.add(-1);
                 insuranceSlots.add(0);
+                loadedChunks.add(0);
             }
 
             HashMap<StackComparable, Integer> requirements = new HashMap<>();
@@ -178,10 +199,11 @@ public class UpgradeHandler {
             levels.set(level, requirements);
             claims.set(level, claimLimit);
             insuranceSlots.set(level, insurance);
+            loadedChunks.set(level, loadedChunkVal);
         }
 
         validateMonotonicClaims(claims);
-        applyParsedData(levels, claims, insuranceSlots);
+        applyParsedData(levels, claims, insuranceSlots, loadedChunks);
     }
 
     public HashMap<StackComparable, Integer> getRequirementsFor(int level) {
@@ -205,15 +227,17 @@ public class UpgradeHandler {
         return INSURANCE_SLOTS[level];
     }
 
-    private static void applyParsedData(List<Map<StackComparable, Integer>> levels, List<Integer> claims, List<Integer> insuranceSlots) {
+    private static void applyParsedData(List<Map<StackComparable, Integer>> levels, List<Integer> claims, List<Integer> insuranceSlots, List<Integer> loadedChunks) {
         int size = levels.size();
         WarForgeMod.UPGRADE_HANDLER.LEVELS = new HashMap[size];
         WarForgeMod.UPGRADE_HANDLER.LIMITS = new int[size];
         WarForgeMod.UPGRADE_HANDLER.INSURANCE_SLOTS = new int[size];
+        WarForgeMod.UPGRADE_HANDLER.LOADED_CHUNKS = new int[size];
         for (int i = 0; i < size; i++) {
             WarForgeMod.UPGRADE_HANDLER.LEVELS[i] = new HashMap<>(levels.get(i));
             WarForgeMod.UPGRADE_HANDLER.LIMITS[i] = claims.get(i);
             WarForgeMod.UPGRADE_HANDLER.INSURANCE_SLOTS[i] = insuranceSlots.get(i);
+            WarForgeMod.UPGRADE_HANDLER.LOADED_CHUNKS[i] = loadedChunks.get(i);
         }
     }
 
@@ -238,13 +262,14 @@ public class UpgradeHandler {
         return value == null ? fallback : Integer.parseInt(String.valueOf(value));
     }
 
-    private static void writeYamlConfig(Path path, List<Map<StackComparable, Integer>> levels, List<Integer> claims, List<Integer> insuranceSlots) throws IOException {
+    private static void writeYamlConfig(Path path, List<Map<StackComparable, Integer>> levels, List<Integer> claims, List<Integer> insuranceSlots, List<Integer> loadedChunks) throws IOException {
         List<Map<String, Object>> yamlLevels = new ArrayList<>();
         for (int i = 0; i < levels.size(); i++) {
             Map<String, Object> levelMap = new LinkedHashMap<>();
             levelMap.put("level", i);
             levelMap.put("claim_limit", claims.get(i));
             levelMap.put("insurance_slots", insuranceSlots.get(i));
+            levelMap.put("loaded_chunks", loadedChunks.get(i));
 
             List<Map<String, Object>> requirements = new ArrayList<>();
             for (Map.Entry<StackComparable, Integer> entry : levels.get(i).entrySet()) {
@@ -279,10 +304,12 @@ public class UpgradeHandler {
         List<Map<StackComparable, Integer>> levels = new ArrayList<>();
         List<Integer> claims = new ArrayList<>();
         List<Integer> insuranceSlots = new ArrayList<>();
+        List<Integer> loadedChunks = new ArrayList<>();
 
         levels.add(new HashMap<>());
         claims.add(-1);
         insuranceSlots.add(0);
+        loadedChunks.add(0);
 
         Map<StackComparable, Integer> current = null;
         int currentLevel = 0;
@@ -295,7 +322,7 @@ public class UpgradeHandler {
 
             if (line.startsWith("level:")) {
                 String levelSpec = line.substring(6).trim();
-                java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d+)\\[(\\d+|-1)](?:\\[(\\d+)])?").matcher(levelSpec);
+                java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d+)\\[(\\d+|-1)](?:\\[(\\d+)])?(?:\\[(\\d+)])?").matcher(levelSpec);
                 if (!matcher.matches()) {
                     throw new IllegalArgumentException("Invalid level format: " + line);
                 }
@@ -303,15 +330,18 @@ public class UpgradeHandler {
                 currentLevel = Integer.parseInt(matcher.group(1));
                 int claimLimit = Integer.parseInt(matcher.group(2));
                 int insurance = matcher.group(3) == null ? 0 : Integer.parseInt(matcher.group(3));
+                int loaded = matcher.group(4) == null ? 0 : Integer.parseInt(matcher.group(4));
 
                 while (levels.size() <= currentLevel) {
                     levels.add(new HashMap<>());
                     claims.add(-1);
                     insuranceSlots.add(0);
+                    loadedChunks.add(0);
                 }
 
                 claims.set(currentLevel, claimLimit);
                 insuranceSlots.set(currentLevel, insurance);
+                loadedChunks.set(currentLevel, loaded);
                 current = levels.get(currentLevel);
                 continue;
             }
@@ -355,18 +385,20 @@ public class UpgradeHandler {
         }
 
         validateMonotonicClaims(claims);
-        return new LegacyConfigData(levels, claims, insuranceSlots);
+        return new LegacyConfigData(levels, claims, insuranceSlots, loadedChunks);
     }
 
     private static final class LegacyConfigData {
         private final List<Map<StackComparable, Integer>> levels;
         private final List<Integer> claims;
         private final List<Integer> insuranceSlots;
+        private final List<Integer> loadedChunks;
 
-        private LegacyConfigData(List<Map<StackComparable, Integer>> levels, List<Integer> claims, List<Integer> insuranceSlots) {
+        private LegacyConfigData(List<Map<StackComparable, Integer>> levels, List<Integer> claims, List<Integer> insuranceSlots, List<Integer> loadedChunks) {
             this.levels = levels;
             this.claims = claims;
             this.insuranceSlots = insuranceSlots;
+            this.loadedChunks = loadedChunks;
         }
     }
 }

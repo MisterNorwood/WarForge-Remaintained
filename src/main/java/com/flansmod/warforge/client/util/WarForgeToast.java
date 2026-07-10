@@ -99,8 +99,9 @@ public class WarForgeToast implements IToast {
             ResourceLocation face = SkinUtil.getPlayerFace(this.playerId);
             mc.getTextureManager().bindTexture(face);
             GlStateManager.color(1.0F, 1.0F, 1.0F);
-            int iconY = (targetHeight - 8) / 2;
-            Gui.drawScaledCustomSizeModalRect(10, iconY, 0, 0, 8, 8, 16, 16, 8, 8);
+            int iconSize = 20;
+            int iconY = (targetHeight - iconSize) / 2;
+            Gui.drawScaledCustomSizeModalRect(10, iconY, 0, 0, 8, 8, 64, 64, iconSize, iconSize);
         }
 
         int textY = (targetHeight - contentHeight) / 2;

@@ -73,6 +73,7 @@ public class BlockIslandCollector extends Block implements ITileEntityProvider {
                     && !WarForgeMod.isOp(playerIn)) {
                 return true;
             }
+            WarForgeMod.syncClaimToPlayer(playerIn, pos);
             TileEntityGuiFactory.INSTANCE.open(playerIn, pos);
             return true;
         }

@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import com.flansmod.warforge.client.ClientPacketHandler;
 import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.Tags;
 
@@ -19,7 +20,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageCodec;
-import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.network.INetHandler;
@@ -226,7 +226,7 @@ public class PacketHandler extends MessageToMessageCodec<FMLProxyPacket, PacketB
 		while(!receivedPacketsClient.isEmpty())
 		{
 			PacketBase packet = receivedPacketsClient.poll();
-			packet.handleClientSide(getClientPlayer());
+			ClientPacketHandler.handle(packet);
 		}
 	}
 
@@ -310,12 +310,6 @@ public class PacketHandler extends MessageToMessageCodec<FMLProxyPacket, PacketB
 				com = c1.getCanonicalName().compareTo(c2.getCanonicalName());
 			return com;
 		});
-	}
-
-	@SideOnly(Side.CLIENT)
-	private EntityPlayer getClientPlayer()
-	{
-		return Minecraft.getMinecraft().player;
 	}
 
 	/**
@@ -405,9 +399,10 @@ public class PacketHandler extends MessageToMessageCodec<FMLProxyPacket, PacketB
 	/**
 	 * Send a packet to the server
 	 */
+	@SideOnly(Side.CLIENT)
 	public void sendToServer(Packet<?> packet)
 	{
-		Minecraft.getMinecraft().player.connection.sendPacket(packet);
+		ClientPacketHandler.sendToServer(packet);
 	}
 
 	/**

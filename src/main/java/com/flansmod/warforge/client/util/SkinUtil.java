@@ -1,10 +1,13 @@
 package com.flansmod.warforge.client.util;
 
+import com.cleanroommc.modularui.screen.viewport.GuiContext;
 import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.Tags;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.minecraft.MinecraftProfileTexture;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Gui;
+import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.ThreadDownloadImageData;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.ITextureObject;
@@ -59,6 +62,13 @@ public class SkinUtil {
             }
         }
 
+    }
+
+    public static void drawFace(GuiContext context, UUID uuid, int x, int y, int size) {
+        GlStateManager.color(1.0f, 1.0f, 1.0f, 1.0f);
+        ResourceLocation face = getPlayerFace(uuid);
+        mc.getTextureManager().bindTexture(face);
+        Gui.drawScaledCustomSizeModalRect(x, y, 0, 0, 8, 8, size, size, 8, 8);
     }
 
     public static BufferedImage overlayImages(BufferedImage base, BufferedImage overlay) {

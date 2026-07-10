@@ -10,6 +10,7 @@ import com.flansmod.warforge.Tags;
 import com.flansmod.warforge.common.network.*;
 import com.flansmod.warforge.common.util.DimBlockPos;
 import com.flansmod.warforge.common.util.DimChunkPos;
+import com.flansmod.warforge.common.util.TimeHelper;
 import org.apache.commons.lang3.tuple.Pair;
 import com.flansmod.warforge.server.Faction.PlayerData;
 import com.flansmod.warforge.server.Leaderboard.FactionStat;
@@ -39,7 +40,7 @@ public class CommandFactions extends CommandBase {
     private static final String[] tabCompletionsOp = new String[]{
             "invite", "accept", "disband", "expel", "leave", "time", "info", "top", "notoriety", "wealth", "legacy",
             "promote", "demote", "msg", "setleader", "rename", "siege", "borders", "vault",
-            "safe", "war", "protection", "resetflagcooldowns", "offlineprotection", "debugmsg", "vein"
+            "zone", "conquered", "protection", "resetflagcooldowns", "offlineprotection", "debugmsg", "vein"
     };
 
     static {
@@ -66,7 +67,7 @@ public class CommandFactions extends CommandBase {
         final String base = "/f <help|create|invite|accept|disband|expel|remove|leave|exit|setleader|time|info|top|" +
                             "wealth|bal|baltop|notoriety|pvp|pvptop|legacy|playtime|playtimetop|home|spawn|" + "promote|demote|chat|msg|borders|vault>";
         if (!isOp) return base;
-        final String opExtras = " | safezone|claimsafe|warzone|claimwarzone|war|protection|sieges|clearnotoriety|clearlegacy|resetflagcooldowns|offlineprotection|rename";
+        final String opExtras = " | zone|conquered|protection|sieges|clearnotoriety|clearlegacy|resetflagcooldowns|offlineprotection|rename";
         return base + opExtras;
     }
 
@@ -138,8 +139,7 @@ public class CommandFactions extends CommandBase {
                 }
 
                 if (WarForgeMod.isOp(sender)) {
-                    sender.sendMessage(new TextComponentString("/f safezone"));
-                    sender.sendMessage(new TextComponentString("/f warzone"));
+                    sender.sendMessage(new TextComponentString("/f zone <safe|war|remove>"));
                     sender.sendMessage(new TextComponentString("/f rename <oldFactionName> <newFactionName>"));
                     sender.sendMessage(new TextComponentString("/f vein <info|set <vein> [quality]|clear|reroll> [at <chunkX> <chunkZ> [dim] [radius]]"));
                 }
@@ -450,35 +450,82 @@ public class CommandFactions extends CommandBase {
                 }
                 break;
             }
-            case "safe":
-            case "safezone":
-            case "claimsafe": {
-                if (WarForgeMod.isOp(sender)) {
-                    if (sender instanceof EntityPlayer) {
-                        EntityPlayer player = (EntityPlayer) sender;
-                        DimChunkPos pos = new DimBlockPos(player.dimension, player.getPosition()).toChunkPos();
-                        WarForgeMod.FACTIONS.requestOpClaim(player, pos, FactionStorage.SAFE_ZONE_ID);
-                    } else {
-                        sender.sendMessage(new TextComponentString("Use an in-game operator account."));
-                    }
-                } else {
+            case "zone": {
+                if (!WarForgeMod.isOp(sender)) {
                     sender.sendMessage(new TextComponentString("You are not op."));
+                    break;
+                }
+                if (args.length < 2) {
+                    sender.sendMessage(new TextComponentString("Usage: /f zone <safe|war|remove>"));
+                    break;
+                }
+                if (!(sender instanceof EntityPlayer)) {
+                    sender.sendMessage(new TextComponentString("Use an in-game operator account."));
+                    break;
+                }
+                EntityPlayer zonePlayer = (EntityPlayer) sender;
+                DimChunkPos zonePos = new DimBlockPos(zonePlayer).toChunkPos();
+                switch (args[1].toLowerCase()) {
+                    case "safe":
+                        WarForgeMod.FACTIONS.requestZoneClaim(zonePlayer, zonePos, FactionStorage.SAFE_ZONE_ID);
+                        refreshClaimViews(server);
+                        break;
+                    case "war":
+                        WarForgeMod.FACTIONS.requestZoneClaim(zonePlayer, zonePos, FactionStorage.WAR_ZONE_ID);
+                        refreshClaimViews(server);
+                        break;
+                    case "remove":
+                        WarForgeMod.FACTIONS.requestZoneUnclaim(zonePlayer, zonePos);
+                        refreshClaimViews(server);
+                        break;
+                    default:
+                        sender.sendMessage(new TextComponentString("Usage: /f zone <safe|war|remove>"));
                 }
                 break;
             }
-            case "warzone":
-            case "war":
-            case "claimwarzone": {
-                if (WarForgeMod.isOp(sender)) {
-                    if (sender instanceof EntityPlayer) {
-                        EntityPlayer player = (EntityPlayer) sender;
-                        DimChunkPos pos = new DimBlockPos(player.dimension, player.getPosition()).toChunkPos();
-                        WarForgeMod.FACTIONS.requestOpClaim(player, pos, FactionStorage.WAR_ZONE_ID);
-                    } else {
-                        sender.sendMessage(new TextComponentString("Use an in-game operator account."));
-                    }
-                } else {
+            case "conquered": {
+                if (!WarForgeMod.isOp(sender)) {
                     sender.sendMessage(new TextComponentString("You are not op."));
+                    break;
+                }
+                if (!(sender instanceof EntityPlayer)) {
+                    sender.sendMessage(new TextComponentString("Use an in-game operator account."));
+                    break;
+                }
+                if (args.length < 2) {
+                    sender.sendMessage(new TextComponentString("Usage: /f conquered <clear|set <time>>"));
+                    break;
+                }
+                EntityPlayer conqueredPlayer = (EntityPlayer) sender;
+                DimChunkPos conqueredChunk = new DimBlockPos(conqueredPlayer.dimension, conqueredPlayer.getPosition()).toChunkPos();
+                switch (args[1].toLowerCase()) {
+                    case "clear": {
+                        if (WarForgeMod.FACTIONS.clearConquered(conqueredChunk)) {
+                            sender.sendMessage(new TextComponentString("Cleared conquered status of chunk [" + conqueredChunk.x + ", " + conqueredChunk.z + "]"));
+                        } else {
+                            sender.sendMessage(new TextComponentString("This chunk is not conquered"));
+                        }
+                        break;
+                    }
+                    case "set": {
+                        if (args.length < 3) {
+                            sender.sendMessage(new TextComponentString("Usage: /f conquered set <time> (e.g. 30s, 15m, 2h, 1d)"));
+                            break;
+                        }
+                        String timeArg = args[2];
+                        long ms = TimeHelper.parseDurationMs(timeArg);
+                        if (ms <= 0 || ms > Integer.MAX_VALUE) {
+                            sender.sendMessage(new TextComponentString("Invalid time '" + timeArg + "'. Use e.g. 30s, 15m, 2h, 1d (bare numbers are seconds)."));
+                            break;
+                        }
+                        Faction factionOfSender = WarForgeMod.FACTIONS.getFactionOfPlayer(conqueredPlayer.getUniqueID());
+                        WarForgeMod.FACTIONS.setConquered(conqueredChunk, factionOfSender == null ? Faction.nullUuid : factionOfSender.uuid, (int) ms);
+                        sender.sendMessage(new TextComponentString("Chunk [" + conqueredChunk.x + ", " + conqueredChunk.z
+                                + "] is now conquered wilderness, reverting in " + TimeHelper.formatTime(ms)));
+                        break;
+                    }
+                    default:
+                        sender.sendMessage(new TextComponentString("Usage: /f conquered <clear|set <time>>"));
                 }
                 break;
             }
