@@ -27,6 +27,7 @@ public class UpgradeHandler {
             claim_limit = 5
             insurance_slots = 0
             loaded_chunks = 4
+            extra_claim_cost = []
             requirements = []
 
             [[levels]]
@@ -34,6 +35,9 @@ public class UpgradeHandler {
             claim_limit = 10
             insurance_slots = 9
             loaded_chunks = 8
+            extra_claim_cost = [
+                { type = "item", id = "minecraft:emerald", count = 1 },
+            ]
             requirements = [
                 { type = "ore", id = "forge:ingots/iron", count = 64 },
                 { type = "item", id = "minecraft:diamond", count = 1 },
@@ -44,6 +48,10 @@ public class UpgradeHandler {
             claim_limit = 15
             insurance_slots = 18
             loaded_chunks = 16
+            extra_claim_cost = [
+                { type = "item", id = "minecraft:emerald", count = 2 },
+                { type = "ore", id = "forge:ingots/gold", count = 4 },
+            ]
             requirements = [
                 { type = "item", id = "minecraft:netherite_ingot", count = 1 },
             ]
@@ -53,12 +61,14 @@ public class UpgradeHandler {
     protected int[] LIMITS;
     protected int[] INSURANCE_SLOTS;
     protected int[] LOADED_CHUNKS;
+    protected HashMap<ItemMatcher, Integer>[] EXTRA_CLAIM_COST;
 
     public UpgradeHandler() {
         LEVELS = new HashMap[0];
         LIMITS = new int[0];
         INSURANCE_SLOTS = new int[0];
         LOADED_CHUNKS = new int[0];
+        EXTRA_CLAIM_COST = new HashMap[0];
     }
 
     public int[] getLIMITS() {
@@ -113,6 +123,7 @@ public class UpgradeHandler {
         List<Integer> claims = new ArrayList<>();
         List<Integer> insuranceSlots = new ArrayList<>();
         List<Integer> loadedChunks = new ArrayList<>();
+        List<Map<ItemMatcher, Integer>> extraCosts = new ArrayList<>();
 
         for (Object rawLevel : rawLevelList) {
             if (!(rawLevel instanceof Config levelMap)) {
@@ -138,6 +149,7 @@ public class UpgradeHandler {
                 claims.add(-1);
                 insuranceSlots.add(0);
                 loadedChunks.add(0);
+                extraCosts.add(new HashMap<>());
             }
 
             HashMap<ItemMatcher, Integer> requirements = new HashMap<>();
@@ -171,14 +183,54 @@ public class UpgradeHandler {
                 }
             }
 
+            HashMap<ItemMatcher, Integer> extraCost = new HashMap<>();
+            Object rawExtraCost = levelMap.get("extra_claim_cost");
+            if (rawExtraCost instanceof List<?> extraCostList) {
+                for (Object rawEntry : extraCostList) {
+                    if (!(rawEntry instanceof Config costMap)) {
+                        throw new IllegalArgumentException("extra_claim_cost entries must be tables");
+                    }
+                    int cnt = readOptionalInt(costMap, "count", 1);
+                    if (cnt <= 0) {
+                        continue;
+                    }
+                    String type = coerceString(costMap.get("type")).toLowerCase(Locale.ROOT);
+                    String id = coerceString(costMap.get("id"));
+                    ItemMatcher matcher = parseCostMatcher(type, id, level);
+                    if (matcher != null) {
+                        extraCost.put(matcher, cnt);
+                    }
+                }
+            }
+
             levels.set(level, requirements);
             claims.set(level, claimLimit);
             insuranceSlots.set(level, insurance);
             loadedChunks.set(level, loaded);
+            extraCosts.set(level, extraCost);
         }
 
         validateMonotonicClaims(claims);
-        applyParsedData(levels, claims, insuranceSlots, loadedChunks);
+        applyParsedData(levels, claims, insuranceSlots, loadedChunks, extraCosts);
+    }
+
+    private static ItemMatcher parseCostMatcher(String type, String id, int level) {
+        ItemMatcher matcher;
+        if ("ore".equals(type)) {
+            matcher = ItemMatcher.ofTag(id);
+        } else if ("item".equals(type)) {
+            String[] parts = id.split(":");
+            if (parts.length != 2 && parts.length != 3) {
+                throw new IllegalArgumentException("Invalid item id format: " + id);
+            }
+            matcher = ItemMatcher.ofItem(id);
+        } else {
+            throw new IllegalArgumentException("Unknown extra_claim_cost type: " + type);
+        }
+        if (matcher == null) {
+            WarForgeMod.LOGGER.warn("UpgradeHandler config: extra_claim_cost '{}' (type {}) at level {} does not resolve; no extra cost applied.", id, type, level);
+        }
+        return matcher;
     }
 
     public HashMap<ItemMatcher, Integer> getRequirementsFor(int level) {
@@ -209,17 +261,26 @@ public class UpgradeHandler {
         return LOADED_CHUNKS[level];
     }
 
-    private static void applyParsedData(List<Map<ItemMatcher, Integer>> levels, List<Integer> claims, List<Integer> insuranceSlots, List<Integer> loadedChunks) {
+    public HashMap<ItemMatcher, Integer> getExtraClaimCostForLevel(int level) {
+        if (level < 0 || level >= EXTRA_CLAIM_COST.length) {
+            return null;
+        }
+        return EXTRA_CLAIM_COST[level];
+    }
+
+    private static void applyParsedData(List<Map<ItemMatcher, Integer>> levels, List<Integer> claims, List<Integer> insuranceSlots, List<Integer> loadedChunks, List<Map<ItemMatcher, Integer>> extraCosts) {
         int size = levels.size();
         WarForgeMod.UPGRADE_HANDLER.LEVELS = new HashMap[size];
         WarForgeMod.UPGRADE_HANDLER.LIMITS = new int[size];
         WarForgeMod.UPGRADE_HANDLER.INSURANCE_SLOTS = new int[size];
         WarForgeMod.UPGRADE_HANDLER.LOADED_CHUNKS = new int[size];
+        WarForgeMod.UPGRADE_HANDLER.EXTRA_CLAIM_COST = new HashMap[size];
         for (int i = 0; i < size; i++) {
             WarForgeMod.UPGRADE_HANDLER.LEVELS[i] = new HashMap<>(levels.get(i));
             WarForgeMod.UPGRADE_HANDLER.LIMITS[i] = claims.get(i);
             WarForgeMod.UPGRADE_HANDLER.INSURANCE_SLOTS[i] = insuranceSlots.get(i);
             WarForgeMod.UPGRADE_HANDLER.LOADED_CHUNKS[i] = loadedChunks.get(i);
+            WarForgeMod.UPGRADE_HANDLER.EXTRA_CLAIM_COST[i] = new HashMap<>(extraCosts.get(i));
         }
     }
 

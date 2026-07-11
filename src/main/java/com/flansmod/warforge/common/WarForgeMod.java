@@ -80,6 +80,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
@@ -515,6 +516,31 @@ public class WarForgeMod {
                         + " chunk(s) of opposing faction " + tooClose.name));
                 event.setCanceled(true);
             }
+
+            if (!event.isCanceled() && WarForgeConfig.ENABLE_CITADEL_UPGRADES && !player.getAbilities().instabuild) {
+                HashMap<ItemMatcher, Integer> claimCost = UPGRADE_HANDLER.getExtraClaimCostForLevel(playerFaction.citadelLevel);
+                if (claimCost != null && !claimCost.isEmpty()) {
+                    StringBuilder missing = new StringBuilder();
+                    for (Map.Entry<ItemMatcher, Integer> entry : claimCost.entrySet()) {
+                        int have = countMatchingItems(player, entry.getKey());
+                        if (have < entry.getValue()) {
+                            if (missing.length() > 0) {
+                                missing.append(", ");
+                            }
+                            missing.append(entry.getValue()).append(" ").append(describeCost(entry.getKey())).append(" (have ").append(have).append(")");
+                        }
+                    }
+                    if (missing.length() > 0) {
+                        player.sendSystemMessage(Component.literal("Claiming at citadel level " + playerFaction.citadelLevel
+                                + " also costs " + missing + " besides the claim block"));
+                        event.setCanceled(true);
+                    } else {
+                        for (Map.Entry<ItemMatcher, Integer> entry : claimCost.entrySet()) {
+                            consumeMatchingItems(player, entry.getKey(), entry.getValue());
+                        }
+                    }
+                }
+            }
         } else {
             if (playerFaction == null) {
                 player.sendSystemMessage(Component.literal("You aren't in a faction. Craft a citadel or join a faction"));
@@ -541,6 +567,38 @@ public class WarForgeMod {
                 event.setCanceled(true);
             }
         }
+    }
+
+    private static String describeCost(ItemMatcher target) {
+        ItemStack sample = target.toStack(1);
+        if (sample != null && !sample.isEmpty()) {
+            return sample.getHoverName().getString();
+        }
+        return target.id();
+    }
+
+    private static int countMatchingItems(Player player, ItemMatcher target) {
+        int total = 0;
+        for (ItemStack stack : player.getInventory().items) {
+            if (!stack.isEmpty() && target.matches(stack)) {
+                total += stack.getCount();
+            }
+        }
+        return total;
+    }
+
+    private static void consumeMatchingItems(Player player, ItemMatcher target, int amount) {
+        int remaining = amount;
+        for (int i = 0; i < player.getInventory().items.size() && remaining > 0; i++) {
+            ItemStack stack = player.getInventory().items.get(i);
+            if (stack.isEmpty() || !target.matches(stack)) {
+                continue;
+            }
+            int take = Math.min(remaining, stack.getCount());
+            stack.shrink(take);
+            remaining -= take;
+        }
+        player.inventoryMenu.broadcastChanges();
     }
 
     @SubscribeEvent
