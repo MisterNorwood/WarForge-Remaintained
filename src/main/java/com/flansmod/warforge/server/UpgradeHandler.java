@@ -28,12 +28,17 @@ public class UpgradeHandler {
                 claim_limit: 5
                 insurance_slots: 0
                 loaded_chunks: 4
+                extra_claim_cost: []
                 requirements: []
 
               - level: 1
                 claim_limit: 10
                 insurance_slots: 9
                 loaded_chunks: 8
+                extra_claim_cost:
+                  - type: item
+                    id: minecraft:emerald
+                    count: 1
                 requirements:
                   - type: ore
                     id: ingotIron
@@ -46,6 +51,13 @@ public class UpgradeHandler {
                 claim_limit: 15
                 insurance_slots: 18
                 loaded_chunks: 16
+                extra_claim_cost:
+                  - type: item
+                    id: minecraft:emerald
+                    count: 2
+                  - type: ore
+                    id: ingotGold
+                    count: 4
                 requirements:
                   - type: item
                     id: modid:custom_item:3
@@ -56,12 +68,14 @@ public class UpgradeHandler {
     protected int[] LIMITS;
     protected int[] INSURANCE_SLOTS;
     protected int[] LOADED_CHUNKS;
+    protected HashMap<StackComparable, Integer>[] EXTRA_CLAIM_COST;
 
     public UpgradeHandler() {
         LEVELS = new HashMap[0];
         LIMITS = new int[0];
         INSURANCE_SLOTS = new int[0];
         LOADED_CHUNKS = new int[0];
+        EXTRA_CLAIM_COST = new HashMap[0];
     }
 
     public int[] getLIMITS() {
@@ -101,13 +115,20 @@ public class UpgradeHandler {
         return LOADED_CHUNKS[level];
     }
 
+    public HashMap<StackComparable, Integer> getExtraClaimCostForLevel(int level) {
+        if (level < 0 || level >= EXTRA_CLAIM_COST.length) {
+            return null;
+        }
+        return EXTRA_CLAIM_COST[level];
+    }
+
     public static void migrateLegacyConfigIfNeeded(Path legacyCfg, Path yamlPath) throws IOException {
         if (Files.exists(yamlPath) || !Files.exists(legacyCfg)) {
             return;
         }
 
         LegacyConfigData migrated = parseLegacyConfig(legacyCfg);
-        writeYamlConfig(yamlPath, migrated.levels, migrated.claims, migrated.insuranceSlots, migrated.loadedChunks);
+        writeYamlConfig(yamlPath, migrated.levels, migrated.claims, migrated.insuranceSlots, migrated.loadedChunks, migrated.extraCosts);
         Files.move(legacyCfg, legacyCfg.resolveSibling(legacyCfg.getFileName() + ".migrated"), StandardCopyOption.REPLACE_EXISTING);
     }
 
@@ -137,6 +158,7 @@ public class UpgradeHandler {
         List<Integer> claims = new ArrayList<>();
         List<Integer> insuranceSlots = new ArrayList<>();
         List<Integer> loadedChunks = new ArrayList<>();
+        List<Map<StackComparable, Integer>> extraCosts = new ArrayList<>();
 
         for (Object rawLevel : rawLevelList) {
             if (!(rawLevel instanceof Map<?, ?> levelMap)) {
@@ -159,6 +181,7 @@ public class UpgradeHandler {
                 claims.add(-1);
                 insuranceSlots.add(0);
                 loadedChunks.add(0);
+                extraCosts.add(new HashMap<>());
             }
 
             HashMap<StackComparable, Integer> requirements = new HashMap<>();
@@ -196,14 +219,54 @@ public class UpgradeHandler {
                 }
             }
 
+            HashMap<StackComparable, Integer> extraCost = new HashMap<>();
+            Object rawExtraCost = levelMap.get("extra_claim_cost");
+            if (rawExtraCost instanceof List<?> extraCostList) {
+                for (Object rawEntry : extraCostList) {
+                    if (!(rawEntry instanceof Map<?, ?> costMap)) {
+                        throw new IllegalArgumentException("extra_claim_cost entries must be maps");
+                    }
+                    int cnt = readOptionalInt(costMap, "count", 1);
+                    if (cnt <= 0) {
+                        continue;
+                    }
+                    String type = String.valueOf(costMap.get("type")).toLowerCase(Locale.ROOT);
+                    String id = String.valueOf(costMap.get("id"));
+                    extraCost.put(parseStackComparable(type, id, level), cnt);
+                }
+            }
+
             levels.set(level, requirements);
             claims.set(level, claimLimit);
             insuranceSlots.set(level, insurance);
             loadedChunks.set(level, loadedChunkVal);
+            extraCosts.set(level, extraCost);
         }
 
         validateMonotonicClaims(claims);
-        applyParsedData(levels, claims, insuranceSlots, loadedChunks);
+        applyParsedData(levels, claims, insuranceSlots, loadedChunks, extraCosts);
+    }
+
+    private static StackComparable parseStackComparable(String type, String id, int level) {
+        if ("ore".equals(type)) {
+            return new StackComparable().toOredict(id);
+        } else if ("item".equals(type)) {
+            String[] parts = id.split(":");
+            StackComparable stackComparable;
+            if (parts.length == 2) {
+                stackComparable = new StackComparable(parts[0] + ":" + parts[1]);
+            } else if (parts.length == 3) {
+                stackComparable = new StackComparable(parts[0] + ":" + parts[1], Integer.parseInt(parts[2]));
+            } else {
+                throw new IllegalArgumentException("Invalid item id format: " + id);
+            }
+            ResourceLocation resourceLocation = new ResourceLocation(stackComparable.getRegistryName());
+            if (!ForgeRegistries.ITEMS.containsKey(resourceLocation)) {
+                WarForgeMod.LOGGER.warn("UpgradeHandler config: Item {} does not exist. Extra claim cost at level {} may be unpayable.", resourceLocation, level);
+            }
+            return stackComparable;
+        }
+        throw new IllegalArgumentException("Unknown extra_claim_cost type: " + type);
     }
 
     public HashMap<StackComparable, Integer> getRequirementsFor(int level) {
@@ -227,17 +290,19 @@ public class UpgradeHandler {
         return INSURANCE_SLOTS[level];
     }
 
-    private static void applyParsedData(List<Map<StackComparable, Integer>> levels, List<Integer> claims, List<Integer> insuranceSlots, List<Integer> loadedChunks) {
+    private static void applyParsedData(List<Map<StackComparable, Integer>> levels, List<Integer> claims, List<Integer> insuranceSlots, List<Integer> loadedChunks, List<Map<StackComparable, Integer>> extraCosts) {
         int size = levels.size();
         WarForgeMod.UPGRADE_HANDLER.LEVELS = new HashMap[size];
         WarForgeMod.UPGRADE_HANDLER.LIMITS = new int[size];
         WarForgeMod.UPGRADE_HANDLER.INSURANCE_SLOTS = new int[size];
         WarForgeMod.UPGRADE_HANDLER.LOADED_CHUNKS = new int[size];
+        WarForgeMod.UPGRADE_HANDLER.EXTRA_CLAIM_COST = new HashMap[size];
         for (int i = 0; i < size; i++) {
             WarForgeMod.UPGRADE_HANDLER.LEVELS[i] = new HashMap<>(levels.get(i));
             WarForgeMod.UPGRADE_HANDLER.LIMITS[i] = claims.get(i);
             WarForgeMod.UPGRADE_HANDLER.INSURANCE_SLOTS[i] = insuranceSlots.get(i);
             WarForgeMod.UPGRADE_HANDLER.LOADED_CHUNKS[i] = loadedChunks.get(i);
+            WarForgeMod.UPGRADE_HANDLER.EXTRA_CLAIM_COST[i] = new HashMap<>(extraCosts.get(i));
         }
     }
 
@@ -262,7 +327,7 @@ public class UpgradeHandler {
         return value == null ? fallback : Integer.parseInt(String.valueOf(value));
     }
 
-    private static void writeYamlConfig(Path path, List<Map<StackComparable, Integer>> levels, List<Integer> claims, List<Integer> insuranceSlots, List<Integer> loadedChunks) throws IOException {
+    private static void writeYamlConfig(Path path, List<Map<StackComparable, Integer>> levels, List<Integer> claims, List<Integer> insuranceSlots, List<Integer> loadedChunks, List<Map<StackComparable, Integer>> extraCosts) throws IOException {
         List<Map<String, Object>> yamlLevels = new ArrayList<>();
         for (int i = 0; i < levels.size(); i++) {
             Map<String, Object> levelMap = new LinkedHashMap<>();
@@ -270,6 +335,25 @@ public class UpgradeHandler {
             levelMap.put("claim_limit", claims.get(i));
             levelMap.put("insurance_slots", insuranceSlots.get(i));
             levelMap.put("loaded_chunks", loadedChunks.get(i));
+
+            List<Map<String, Object>> extraCost = new ArrayList<>();
+            for (Map.Entry<StackComparable, Integer> entry : extraCosts.get(i).entrySet()) {
+                Map<String, Object> costMap = new LinkedHashMap<>();
+                if (entry.getKey().getOredict() != null) {
+                    costMap.put("type", "ore");
+                    costMap.put("id", entry.getKey().getOredict());
+                } else {
+                    costMap.put("type", "item");
+                    String costId = entry.getKey().getRegistryName();
+                    if (entry.getKey().getMeta() != -1) {
+                        costId = costId + ":" + entry.getKey().getMeta();
+                    }
+                    costMap.put("id", costId);
+                }
+                costMap.put("count", entry.getValue());
+                extraCost.add(costMap);
+            }
+            levelMap.put("extra_claim_cost", extraCost);
 
             List<Map<String, Object>> requirements = new ArrayList<>();
             for (Map.Entry<StackComparable, Integer> entry : levels.get(i).entrySet()) {
@@ -305,11 +389,13 @@ public class UpgradeHandler {
         List<Integer> claims = new ArrayList<>();
         List<Integer> insuranceSlots = new ArrayList<>();
         List<Integer> loadedChunks = new ArrayList<>();
+        List<Map<StackComparable, Integer>> extraCosts = new ArrayList<>();
 
         levels.add(new HashMap<>());
         claims.add(-1);
         insuranceSlots.add(0);
         loadedChunks.add(0);
+        extraCosts.add(new HashMap<>());
 
         Map<StackComparable, Integer> current = null;
         int currentLevel = 0;
@@ -337,6 +423,7 @@ public class UpgradeHandler {
                     claims.add(-1);
                     insuranceSlots.add(0);
                     loadedChunks.add(0);
+                    extraCosts.add(new HashMap<>());
                 }
 
                 claims.set(currentLevel, claimLimit);
@@ -385,7 +472,7 @@ public class UpgradeHandler {
         }
 
         validateMonotonicClaims(claims);
-        return new LegacyConfigData(levels, claims, insuranceSlots, loadedChunks);
+        return new LegacyConfigData(levels, claims, insuranceSlots, loadedChunks, extraCosts);
     }
 
     private static final class LegacyConfigData {
@@ -393,12 +480,14 @@ public class UpgradeHandler {
         private final List<Integer> claims;
         private final List<Integer> insuranceSlots;
         private final List<Integer> loadedChunks;
+        private final List<Map<StackComparable, Integer>> extraCosts;
 
-        private LegacyConfigData(List<Map<StackComparable, Integer>> levels, List<Integer> claims, List<Integer> insuranceSlots, List<Integer> loadedChunks) {
+        private LegacyConfigData(List<Map<StackComparable, Integer>> levels, List<Integer> claims, List<Integer> insuranceSlots, List<Integer> loadedChunks, List<Map<StackComparable, Integer>> extraCosts) {
             this.levels = levels;
             this.claims = claims;
             this.insuranceSlots = insuranceSlots;
             this.loadedChunks = loadedChunks;
+            this.extraCosts = extraCosts;
         }
     }
 }

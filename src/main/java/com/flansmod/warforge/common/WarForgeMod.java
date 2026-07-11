@@ -505,6 +505,31 @@ public class WarForgeMod implements ILateMixinLoader {
                         + " chunk(s) of opposing faction " + tooClose.name));
                 event.setCanceled(true);
             }
+
+            if (!event.isCanceled() && WarForgeConfig.ENABLE_CITADEL_UPGRADES && !player.capabilities.isCreativeMode) {
+                HashMap<StackComparable, Integer> claimCost = UPGRADE_HANDLER.getExtraClaimCostForLevel(playerFaction.citadelLevel);
+                if (claimCost != null && !claimCost.isEmpty()) {
+                    StringBuilder missing = new StringBuilder();
+                    for (Map.Entry<StackComparable, Integer> entry : claimCost.entrySet()) {
+                        int have = countMatchingItems(player, entry.getKey());
+                        if (have < entry.getValue()) {
+                            if (missing.length() > 0) {
+                                missing.append(", ");
+                            }
+                            missing.append(entry.getValue()).append(" ").append(describeCost(entry.getKey())).append(" (have ").append(have).append(")");
+                        }
+                    }
+                    if (missing.length() > 0) {
+                        player.sendMessage(new TextComponentString("Claiming at citadel level " + playerFaction.citadelLevel
+                                + " also costs " + missing + " besides the claim block"));
+                        event.setCanceled(true);
+                    } else {
+                        for (Map.Entry<StackComparable, Integer> entry : claimCost.entrySet()) {
+                            consumeMatchingItems(player, entry.getKey(), entry.getValue());
+                        }
+                    }
+                }
+            }
         } else { // Must be siege block
             if (playerFaction == null) // Can't start sieges if you aren't in a faction
             {
@@ -535,6 +560,38 @@ public class WarForgeMod implements ILateMixinLoader {
             // TODO: Check for alliances with those claims
         }
 
+    }
+
+    private static String describeCost(StackComparable target) {
+        ItemStack sample = target.toItem(1);
+        if (sample != null && !sample.isEmpty()) {
+            return sample.getDisplayName();
+        }
+        return target.getOredict() != null ? target.getOredict() : target.getRegistryName();
+    }
+
+    private static int countMatchingItems(EntityPlayer player, StackComparable target) {
+        int total = 0;
+        for (ItemStack stack : player.inventory.mainInventory) {
+            if (!stack.isEmpty() && target.equals(stack)) {
+                total += stack.getCount();
+            }
+        }
+        return total;
+    }
+
+    private static void consumeMatchingItems(EntityPlayer player, StackComparable target, int amount) {
+        int remaining = amount;
+        for (int i = 0; i < player.inventory.mainInventory.size() && remaining > 0; i++) {
+            ItemStack stack = player.inventory.mainInventory.get(i);
+            if (stack.isEmpty() || !target.equals(stack)) {
+                continue;
+            }
+            int take = Math.min(remaining, stack.getCount());
+            stack.shrink(take);
+            remaining -= take;
+        }
+        player.inventoryContainer.detectAndSendChanges();
     }
 
     @SubscribeEvent
