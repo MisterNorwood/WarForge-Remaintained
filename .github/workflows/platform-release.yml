@@ -42,18 +42,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up JDK 25
+      - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
-          distribution: graalvm
-          java-version: '25'
+          distribution: temurin
+          java-version: '17'
           cache: gradle
           cache-dependency-path: |
             **/*.gradle*
-            **/buildscript.properties
             **/gradle-wrapper.properties
             **/gradle.lockfile
-            src/main/resources/warforge_at.cfg
+            src/main/resources/META-INF/accesstransformer.cfg
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew

@@ -5,6 +5,8 @@ plugins {
     id 'net.minecraftforge.gradle' version '[6.0.24,6.2)'
     id 'org.parchmentmc.librarian.forgegradle' version '1.+'
     id 'org.spongepowered.mixin' version '0.7.+'
+    id 'net.darkhax.curseforgegradle' version '1.1.24' apply false
+    id 'com.modrinth.minotaur' version '2.8.7' apply false
 }
 
 // ---- Project coordinates (driven by gradle.properties) ----
@@ -213,4 +215,117 @@ publishing {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.compilerArgs.addAll(['-Xmaxerrs', '2000', '-Xmaxwarns', '0'])
+}
+
+def resolveReleaseType() {
+    def t = (System.getenv('RELEASE_TYPE') ?: 'release').toLowerCase()
+    if (!(t in ['release', 'beta', 'alpha'])) {
+        throw new GradleException("RELEASE_TYPE must be release, beta, or alpha. Got: ${t}")
+    }
+    return t
+}
+
+def resolvePlatformChangelog() {
+    def loc = System.getenv('CHANGELOG_LOCATION') ?: 'build/platform-changelog.md'
+    def f = file(loc)
+    return f.exists() ? f.getText('UTF-8')
+            : "Automated ${resolveReleaseType()} release of ${project.modName} ${project.modVersion} for Minecraft ${project.minecraftVersion}."
+}
+
+def platformVersionName() {
+    return "${project.modName} ${project.modVersion} (MC ${project.minecraftVersion})"
+}
+
+def deploymentDebug = (System.getenv('DEPLOYMENT_DEBUG') ?: 'false').toBoolean()
+def cfApiKey = System.getenv('CURSEFORGE_API_KEY') ?: System.getenv('CF_API_TOKEN')
+def mrApiKey = System.getenv('MODRINTH_API_KEY') ?: System.getenv('MPR_TOKEN')
+def cfProjectId = System.getenv('CURSEFORGE_PROJECT_ID') ?: ''
+def mrProjectId = System.getenv('MODRINTH_PROJECT_ID') ?: ''
+def cfRelations = System.getenv('CURSEFORGE_RELATIONS') ?: ''
+def mrRelations = System.getenv('MODRINTH_RELATIONS') ?: ''
+
+if ((cfApiKey != null && !cfApiKey.isEmpty()) || deploymentDebug) {
+    apply plugin: 'net.darkhax.curseforgegradle'
+    tasks.register('curseforge', net.darkhax.curseforgegradle.TaskPublishCurseForge) {
+        group = 'publishing'
+        dependsOn('build', 'reobfJar')
+        disableVersionDetection()
+        debugMode = deploymentDebug
+        apiToken = (cfApiKey ?: 'debug_token')
+        doFirst {
+            if (cfProjectId.isEmpty()) {
+                throw new GradleException('CURSEFORGE_PROJECT_ID is not set')
+            }
+            def mainFile = upload(cfProjectId, tasks.jar)
+            mainFile.displayName = platformVersionName()
+            mainFile.releaseType = resolveReleaseType()
+            mainFile.changelog = resolvePlatformChangelog()
+            mainFile.changelogType = 'markdown'
+            mainFile.addModLoader 'Forge'
+            mainFile.addJavaVersion 'Java 17'
+            mainFile.addGameVersion project.minecraftVersion
+            if (!cfRelations.isEmpty()) {
+                def typeMap = [req: 'requiredDependency', required: 'requiredDependency',
+                               opt: 'optionalDependency', optional: 'optionalDependency',
+                               embed: 'embeddedLibrary', embedded: 'embeddedLibrary',
+                               incomp: 'incompatible', fail: 'incompatible', tool: 'tool']
+                cfRelations.split(';').each { dep ->
+                    if (dep.isEmpty()) return
+                    def parts = dep.split(':')
+                    def type = typeMap.getOrDefault(parts[0], parts[0])
+                    if (!(type in ['requiredDependency', 'optionalDependency', 'embeddedLibrary', 'incompatible', 'tool'])) {
+                        throw new GradleException('Invalid CurseForge dependency type: ' + parts[0])
+                    }
+                    mainFile.addRelation(parts[1], type)
+                }
+            }
+            def sources = mainFile.withAdditionalFile(tasks.sourcesJar)
+            sources.changelog = resolvePlatformChangelog()
+        }
+    }
+}
+
+if ((mrApiKey != null && !mrApiKey.isEmpty()) || deploymentDebug) {
+    apply plugin: 'com.modrinth.minotaur'
+    modrinth {
+        token = (mrApiKey ?: 'debug_token')
+        projectId = mrProjectId
+        versionName = platformVersionName()
+        versionNumber = project.modVersion
+        versionType = resolveReleaseType()
+        changelog = resolvePlatformChangelog()
+        gameVersions = [project.minecraftVersion]
+        loaders = ['forge']
+        debugMode = deploymentDebug
+        uploadFile = tasks.jar
+        additionalFiles = [tasks.sourcesJar]
+    }
+    if (!mrRelations.isEmpty()) {
+        def scopeMap = [req: 'required', required: 'required', opt: 'optional', optional: 'optional',
+                        embed: 'embedded', embedded: 'embedded', incomp: 'incompatible', fail: 'incompatible']
+        mrRelations.split(';').each { dep ->
+            if (dep.isEmpty()) return
+            def parts = dep.split(':')
+            def qual = parts[0].split('-')
+            def scope = scopeMap.getOrDefault(qual[0], qual[0])
+            if (!(scope in ['required', 'optional', 'incompatible', 'embedded'])) {
+                throw new GradleException('Invalid Modrinth dependency scope: ' + qual[0])
+            }
+            def kind = qual.length > 1 ? qual[1] : 'project'
+            if (kind in ['proj', 'p', 'project']) {
+                project.modrinth.dependencies.add(new com.modrinth.minotaur.dependencies.ModDependency(parts[1], scope))
+            } else if (kind in ['ver', 'v', 'version']) {
+                project.modrinth.dependencies.add(new com.modrinth.minotaur.dependencies.VersionDependency(parts[1], scope))
+            } else {
+                throw new GradleException('Invalid Modrinth dependency kind: ' + kind)
+            }
+        }
+    }
+    tasks.named('modrinth').configure { dependsOn('build', 'reobfJar') }
+}
+
+tasks.register('releaseBuild') {
+    group = 'build'
+    description = 'Builds and reobfuscates the release jar for CurseForge/Modrinth publishing.'
+    dependsOn('build')
 }
