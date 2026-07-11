@@ -72,6 +72,12 @@ public class WarForgeConfig {
     public static int SUPPORT_STRENGTH_BASIC = 1;
     public static int FORCE_LOADED_CHUNKS_TOTAL = 8;
     public static int MAX_CLAIMS_PER_FACTION = -1;
+    public static int MAX_FOBS = 3;
+    public static int FOB_TICKET_LIMIT = 5;
+    public static int FOB_TICKET_REGEN_PER_SIEGE_TICK = 1;
+    public static int FOB_WARP_TICKS = 200;
+    public static boolean FOB_BLOCK_BREAKABLE = false;
+    public static Map<String, Integer> FOB_VEHICLE_TICKET_COST = new HashMap<>();
     public static int MIN_DISTANCE_BETWEEN_FACTIONS = 1;
     public static int CLAIM_MANAGER_RADIUS = 4;
     public static int ISLAND_COLLECTOR_SLOTS = 100;
@@ -186,6 +192,7 @@ public class WarForgeConfig {
     public static boolean ENABLE_SPAWN_COMMAND = true;
     public static boolean ENABLE_SPAWN_POTION_EFFECT = false; // TODO
     public static boolean ALLOW_SPAWN_BETWEEN_DIMENSIONS = false;
+    public static boolean SPAWN_AT_CITADEL = false;
     public static boolean ENABLE_TPA_POTIONS = true;
 
     // When enabled, logs every server-side setBlockState that lands inside a claimed chunk.
@@ -332,6 +339,12 @@ public class WarForgeConfig {
     private static ForgeConfigSpec.IntValue SUPPORT_STRENGTH_BASIC_V;
     private static ForgeConfigSpec.IntValue FORCE_LOADED_CHUNKS_TOTAL_V;
     private static ForgeConfigSpec.IntValue MAX_CLAIMS_PER_FACTION_V;
+    private static ForgeConfigSpec.IntValue MAX_FOBS_V;
+    private static ForgeConfigSpec.IntValue FOB_TICKET_LIMIT_V;
+    private static ForgeConfigSpec.IntValue FOB_TICKET_REGEN_PER_SIEGE_TICK_V;
+    private static ForgeConfigSpec.IntValue FOB_WARP_TICKS_V;
+    private static ForgeConfigSpec.BooleanValue FOB_BLOCK_BREAKABLE_V;
+    private static ForgeConfigSpec.ConfigValue<List<? extends String>> FOB_VEHICLE_TICKET_COST_V;
     private static ForgeConfigSpec.IntValue MIN_DISTANCE_BETWEEN_FACTIONS_V;
     private static ForgeConfigSpec.IntValue CLAIM_MANAGER_RADIUS_V;
     private static ForgeConfigSpec.IntValue ISLAND_COLLECTOR_SLOTS_V;
@@ -445,6 +458,7 @@ public class WarForgeConfig {
     private static ForgeConfigSpec.BooleanValue ENABLE_SPAWN_COMMAND_V;
     private static ForgeConfigSpec.BooleanValue ENABLE_SPAWN_POTION_EFFECT_V;
     private static ForgeConfigSpec.BooleanValue ALLOW_SPAWN_BETWEEN_DIMENSIONS_V;
+    private static ForgeConfigSpec.BooleanValue SPAWN_AT_CITADEL_V;
     private static ForgeConfigSpec.IntValue NUM_TICKS_FOR_WARP_COMMANDS_V;
 
     // Debug
@@ -484,6 +498,12 @@ public class WarForgeConfig {
         SUPPORT_STRENGTH_BASIC_V = cfg.comment("The support strength a basic claim gives to adjacent claims").defineInRange("Basic Support Strength", SUPPORT_STRENGTH_BASIC, 1, 1024);
         FORCE_LOADED_CHUNKS_TOTAL_V = cfg.comment("Total chunks each faction can force-load. Ignored when the citadel upgrade system is enabled; the per-level 'loaded_chunks' value from upgrade_levels.toml is used instead.").defineInRange("Force-loaded Chunks Total", FORCE_LOADED_CHUNKS_TOTAL, 0, 1024);
         MAX_CLAIMS_PER_FACTION_V = cfg.comment("Maximum number of chunks a single faction may claim. Set to -1 for unlimited. When the citadel upgrade system is enabled, the per-level limit is applied in addition to this cap.").defineInRange("Max Claims Per Faction", MAX_CLAIMS_PER_FACTION, -1, 1000000);
+        MAX_FOBS_V = cfg.comment("Maximum number of forward operating bases (FOBs) a single faction may establish. Ignored when the citadel upgrade system is enabled; the per-level 'max_fobs' value from upgrade_levels.toml is used instead.").defineInRange("Max FOBs Per Faction", MAX_FOBS, 0, 1024);
+        FOB_TICKET_LIMIT_V = cfg.comment("Maximum warp tickets a FOB can hold. Ignored when the citadel upgrade system is enabled; the per-level 'fob_ticket_limit' value from upgrade_levels.toml is used instead.").defineInRange("FOB Ticket Limit", FOB_TICKET_LIMIT, 0, 1024);
+        FOB_TICKET_REGEN_PER_SIEGE_TICK_V = cfg.comment("Warp tickets restored to a FOB each time a siege timer resets. Ignored when the citadel upgrade system is enabled; the per-level 'fob_ticket_regen' value from upgrade_levels.toml is used instead.").defineInRange("FOB Ticket Regen Per Siege Tick", FOB_TICKET_REGEN_PER_SIEGE_TICK, 0, 1024);
+        FOB_WARP_TICKS_V = cfg.comment("Number of ticks a player must wait before a FOB warp fires.").defineInRange("FOB Warp Ticks", FOB_WARP_TICKS, 0, 1000000);
+        FOB_BLOCK_BREAKABLE_V = cfg.comment("If true, the central FOB block can be mined (very slowly, at a fixed rate independent of tool tier); otherwise it is only removed programmatically.").define("FOB Block Breakable", FOB_BLOCK_BREAKABLE);
+        FOB_VEHICLE_TICKET_COST_V = cfg.comment("Extra warp ticket cost per vehicle entity, in the form 'namespace:path=extraCost'. A warp with a vehicle costs 1 plus this value.").defineList("FOB Vehicle Ticket Cost", asList(new String[]{}), o -> o instanceof String);
         MIN_DISTANCE_BETWEEN_FACTIONS_V = cfg.comment("Minimum gap, in chunks, that must separate a new claim from an opposing (non-allied) faction's claims. A value of N forbids claiming within N chunks (square radius) of an opposing faction; allied factions are exempt. Set to 0 to disable.").defineInRange("Minimum Distance Between Opposing Factions", MIN_DISTANCE_BETWEEN_FACTIONS, 0, 64);
         CLAIM_MANAGER_RADIUS_V = cfg.comment("Square radius in chunks shown in the claim manager UI.").defineInRange("Claim Manager Radius", CLAIM_MANAGER_RADIUS, 1, 12);
         ISLAND_COLLECTOR_SLOTS_V = cfg.comment("Number of pull-only storage slots in the faction yield collector block. Shrinking this on an existing world relocates any items that no longer fit into remaining slots.").defineInRange("Island Collector Slot Count", ISLAND_COLLECTOR_SLOTS, 1, 1024);
@@ -625,6 +645,7 @@ public class WarForgeConfig {
         ENABLE_SPAWN_COMMAND_V = cfg.comment("Allow players to use /spawn to teleport to the world spawn").define("Enable /spawn Command", ENABLE_SPAWN_COMMAND);
         ENABLE_SPAWN_POTION_EFFECT_V = cfg.comment("Allow players to craft a potion that takes them to the world spawn").define("Enable /spawn Potion", ENABLE_SPAWN_POTION_EFFECT);
         ALLOW_SPAWN_BETWEEN_DIMENSIONS_V = cfg.comment("Allow players to use /spawn when in a different dimension to the world spawn").define("Allow /spawn across dimensions", ALLOW_SPAWN_BETWEEN_DIMENSIONS);
+        SPAWN_AT_CITADEL_V = cfg.comment("If enabled, bed and respawn-anchor spawn points are disabled and players respawn in their faction citadel's chunk, at the citadel's Y level. Players not in a faction fall back to the world spawn.").define("Respawn At Citadel", SPAWN_AT_CITADEL);
         NUM_TICKS_FOR_WARP_COMMANDS_V = cfg.comment("How many ticks must the player stand still for a warp command to take effect").defineInRange("Num Ticks for Warps", NUM_TICKS_FOR_WARP_COMMANDS, 0, 20 * 60 * 5);
         cfg.pop();
 
@@ -690,6 +711,23 @@ public class WarForgeConfig {
         SUPPORT_STRENGTH_BASIC = SUPPORT_STRENGTH_BASIC_V.get();
         FORCE_LOADED_CHUNKS_TOTAL = FORCE_LOADED_CHUNKS_TOTAL_V.get();
         MAX_CLAIMS_PER_FACTION = MAX_CLAIMS_PER_FACTION_V.get();
+        MAX_FOBS = MAX_FOBS_V.get();
+        FOB_TICKET_LIMIT = FOB_TICKET_LIMIT_V.get();
+        FOB_TICKET_REGEN_PER_SIEGE_TICK = FOB_TICKET_REGEN_PER_SIEGE_TICK_V.get();
+        FOB_WARP_TICKS = FOB_WARP_TICKS_V.get();
+        FOB_BLOCK_BREAKABLE = FOB_BLOCK_BREAKABLE_V.get();
+
+        FOB_VEHICLE_TICKET_COST.clear();
+        for (String s : FOB_VEHICLE_TICKET_COST_V.get()) {
+            String[] split = s.split("=");
+            if (split.length == 2) {
+                try {
+                    FOB_VEHICLE_TICKET_COST.put(split[0].trim(), Integer.parseInt(split[1].trim()));
+                } catch (RuntimeException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
         MIN_DISTANCE_BETWEEN_FACTIONS = MIN_DISTANCE_BETWEEN_FACTIONS_V.get();
         CLAIM_MANAGER_RADIUS = CLAIM_MANAGER_RADIUS_V.get();
         ISLAND_COLLECTOR_SLOTS = ISLAND_COLLECTOR_SLOTS_V.get();
@@ -814,6 +852,7 @@ public class WarForgeConfig {
         ENABLE_SPAWN_COMMAND = ENABLE_SPAWN_COMMAND_V.get();
         ENABLE_SPAWN_POTION_EFFECT = ENABLE_SPAWN_POTION_EFFECT_V.get();
         ALLOW_SPAWN_BETWEEN_DIMENSIONS = ALLOW_SPAWN_BETWEEN_DIMENSIONS_V.get();
+        SPAWN_AT_CITADEL = SPAWN_AT_CITADEL_V.get();
         NUM_TICKS_FOR_WARP_COMMANDS = NUM_TICKS_FOR_WARP_COMMANDS_V.get();
 
         // Graphics controls

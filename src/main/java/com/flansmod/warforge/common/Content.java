@@ -49,6 +49,7 @@ public class Content
 	public static final RegistryObject<Block> WEALTH_LEADERBOARD_BLOCK = BLOCKS.register("wealthleaderboard", () -> new BlockLeaderboard(FactionStat.WEALTH));
 	public static final RegistryObject<Block> NOTORIETY_LEADERBOARD_BLOCK = BLOCKS.register("notorietyleaderboard", () -> new BlockLeaderboard(FactionStat.NOTORIETY));
 	public static final RegistryObject<Block> LEGACY_LEADERBOARD_BLOCK = BLOCKS.register("legacyleaderboard", () -> new BlockLeaderboard(FactionStat.LEGACY));
+	public static final RegistryObject<Block> FOB_BLOCK = BLOCKS.register("fobblock", BlockFob::new);
 
 	// Block items (statue/dummyTranslusent intentionally have no item)
 	public static final RegistryObject<Item> CITADEL_BLOCK_ITEM = ITEMS.register("citadelblock", () -> new BlockItem(CITADEL_BLOCK.get(), new Item.Properties()));
@@ -60,6 +61,7 @@ public class Content
 	public static final RegistryObject<Item> WEALTH_LEADERBOARD_ITEM = ITEMS.register("wealthleaderboard", () -> new BlockItem(WEALTH_LEADERBOARD_BLOCK.get(), new Item.Properties()));
 	public static final RegistryObject<Item> NOTORIETY_LEADERBOARD_ITEM = ITEMS.register("notorietyleaderboard", () -> new BlockItem(NOTORIETY_LEADERBOARD_BLOCK.get(), new Item.Properties()));
 	public static final RegistryObject<Item> LEGACY_LEADERBOARD_ITEM = ITEMS.register("legacyleaderboard", () -> new BlockItem(LEGACY_LEADERBOARD_BLOCK.get(), new Item.Properties()));
+	public static final RegistryObject<Item> FOB_BLOCK_ITEM = ITEMS.register("fobblock", () -> new BlockItem(FOB_BLOCK.get(), new Item.Properties()));
 
 	// Block entities. Names referenced by the BlockEntity classes via Content.TE_*.get().
 	public static final RegistryObject<BlockEntityType<TileEntityCitadel>> TE_CITADEL =
@@ -85,6 +87,9 @@ public class Content
 	public static final RegistryObject<BlockEntityType<TileEntityDummy>> TE_DUMMY =
 			BLOCK_ENTITIES.register("tileentity_dummy",
 					() -> BlockEntityType.Builder.of(TileEntityDummy::new, STATUE.get(), DUMMY_TRANSLUSENT.get()).build(null));
+	public static final RegistryObject<BlockEntityType<TileEntityFob>> TE_FOB =
+			BLOCK_ENTITIES.register("fob",
+					() -> BlockEntityType.Builder.of(TileEntityFob::new, FOB_BLOCK.get()).build(null));
 
 	// Creative tab
 	public static final RegistryObject<CreativeModeTab> TAB = CREATIVE_TABS.register("main",
@@ -101,6 +106,7 @@ public class Content
 						output.accept(WEALTH_LEADERBOARD_ITEM.get());
 						output.accept(NOTORIETY_LEADERBOARD_ITEM.get());
 						output.accept(LEGACY_LEADERBOARD_ITEM.get());
+						output.accept(FOB_BLOCK_ITEM.get());
 					})
 					.build());
 

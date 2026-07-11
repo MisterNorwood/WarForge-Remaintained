@@ -13,6 +13,7 @@ public final class WarForgeGuiFactories {
         FactionMemberManagerGuiFactory.init();
         FactionStatsGuiFactory.init();
         FactionUpgradeGuiFactory.init();
+        FobGuiFactory.init();
         SiegeCampGuiFactory.init();
     }
 }

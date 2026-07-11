@@ -16,6 +16,7 @@ public class ServerTickHandler
 		WarForgeMod.NETWORK.handleServerPackets();
 		WarForgeMod.PROTECTIONS.UpdateServer();
 		WarForgeMod.TELEPORTS.update();
+		WarForgeMod.FOBS.getWarpQueue().update();
 		WarForgeMod.proxy.TickServer();
 		WarForgeMod.FACTIONS.update();
 		WarForgeMod.JOURNEYMAP_SYNC.tick();

@@ -27,6 +27,9 @@ public class UpgradeHandler {
             claim_limit = 5
             insurance_slots = 0
             loaded_chunks = 4
+            fob_ticket_limit = 5
+            fob_ticket_regen = 1
+            max_fobs = 3
             extra_claim_cost = []
             requirements = []
 
@@ -35,6 +38,9 @@ public class UpgradeHandler {
             claim_limit = 10
             insurance_slots = 9
             loaded_chunks = 8
+            fob_ticket_limit = 5
+            fob_ticket_regen = 1
+            max_fobs = 3
             extra_claim_cost = [
                 { type = "item", id = "minecraft:emerald", count = 1 },
             ]
@@ -48,6 +54,9 @@ public class UpgradeHandler {
             claim_limit = 15
             insurance_slots = 18
             loaded_chunks = 16
+            fob_ticket_limit = 5
+            fob_ticket_regen = 1
+            max_fobs = 3
             extra_claim_cost = [
                 { type = "item", id = "minecraft:emerald", count = 2 },
                 { type = "ore", id = "forge:ingots/gold", count = 4 },
@@ -61,6 +70,9 @@ public class UpgradeHandler {
     protected int[] LIMITS;
     protected int[] INSURANCE_SLOTS;
     protected int[] LOADED_CHUNKS;
+    protected int[] FOB_TICKET_LIMIT;
+    protected int[] FOB_TICKET_REGEN;
+    protected int[] MAX_FOBS;
     protected HashMap<ItemMatcher, Integer>[] EXTRA_CLAIM_COST;
 
     public UpgradeHandler() {
@@ -68,6 +80,9 @@ public class UpgradeHandler {
         LIMITS = new int[0];
         INSURANCE_SLOTS = new int[0];
         LOADED_CHUNKS = new int[0];
+        FOB_TICKET_LIMIT = new int[0];
+        FOB_TICKET_REGEN = new int[0];
+        MAX_FOBS = new int[0];
         EXTRA_CLAIM_COST = new HashMap[0];
     }
 
@@ -94,6 +109,9 @@ public class UpgradeHandler {
             LIMITS = Arrays.copyOf(LIMITS, newSize);
             INSURANCE_SLOTS = Arrays.copyOf(INSURANCE_SLOTS, newSize);
             LOADED_CHUNKS = Arrays.copyOf(LOADED_CHUNKS, newSize);
+            FOB_TICKET_LIMIT = Arrays.copyOf(FOB_TICKET_LIMIT, newSize);
+            FOB_TICKET_REGEN = Arrays.copyOf(FOB_TICKET_REGEN, newSize);
+            MAX_FOBS = Arrays.copyOf(MAX_FOBS, newSize);
         }
         LEVELS[level] = requirements;
         LIMITS[level] = limit;
@@ -123,6 +141,9 @@ public class UpgradeHandler {
         List<Integer> claims = new ArrayList<>();
         List<Integer> insuranceSlots = new ArrayList<>();
         List<Integer> loadedChunks = new ArrayList<>();
+        List<Integer> fobTicketLimits = new ArrayList<>();
+        List<Integer> fobTicketRegens = new ArrayList<>();
+        List<Integer> maxFobs = new ArrayList<>();
         List<Map<ItemMatcher, Integer>> extraCosts = new ArrayList<>();
 
         for (Object rawLevel : rawLevelList) {
@@ -134,6 +155,9 @@ public class UpgradeHandler {
             int claimLimit = readRequiredInt(levelMap, "claim_limit");
             int insurance = readOptionalInt(levelMap, "insurance_slots", 0);
             int loaded = readOptionalInt(levelMap, "loaded_chunks", 0);
+            int fobTicketLimit = readOptionalInt(levelMap, "fob_ticket_limit", 0);
+            int fobTicketRegen = readOptionalInt(levelMap, "fob_ticket_regen", 0);
+            int fobCap = readOptionalInt(levelMap, "max_fobs", 0);
             if (claimLimit != -1 && claimLimit <= 0) {
                 throw new IllegalArgumentException("Claim limit must be > 0 or -1");
             }
@@ -149,6 +173,9 @@ public class UpgradeHandler {
                 claims.add(-1);
                 insuranceSlots.add(0);
                 loadedChunks.add(0);
+                fobTicketLimits.add(0);
+                fobTicketRegens.add(0);
+                maxFobs.add(0);
                 extraCosts.add(new HashMap<>());
             }
 
@@ -207,11 +234,14 @@ public class UpgradeHandler {
             claims.set(level, claimLimit);
             insuranceSlots.set(level, insurance);
             loadedChunks.set(level, loaded);
+            fobTicketLimits.set(level, fobTicketLimit);
+            fobTicketRegens.set(level, fobTicketRegen);
+            maxFobs.set(level, fobCap);
             extraCosts.set(level, extraCost);
         }
 
         validateMonotonicClaims(claims);
-        applyParsedData(levels, claims, insuranceSlots, loadedChunks, extraCosts);
+        applyParsedData(levels, claims, insuranceSlots, loadedChunks, fobTicketLimits, fobTicketRegens, maxFobs, extraCosts);
     }
 
     private static ItemMatcher parseCostMatcher(String type, String id, int level) {
@@ -261,6 +291,27 @@ public class UpgradeHandler {
         return LOADED_CHUNKS[level];
     }
 
+    public int getFobTicketLimitForLevel(int level) {
+        if (level >= FOB_TICKET_LIMIT.length || level < 0) {
+            return 0;
+        }
+        return FOB_TICKET_LIMIT[level];
+    }
+
+    public int getFobRegenForLevel(int level) {
+        if (level >= FOB_TICKET_REGEN.length || level < 0) {
+            return 0;
+        }
+        return FOB_TICKET_REGEN[level];
+    }
+
+    public int getMaxFobsForLevel(int level) {
+        if (level >= MAX_FOBS.length || level < 0) {
+            return 0;
+        }
+        return MAX_FOBS[level];
+    }
+
     public HashMap<ItemMatcher, Integer> getExtraClaimCostForLevel(int level) {
         if (level < 0 || level >= EXTRA_CLAIM_COST.length) {
             return null;
@@ -268,18 +319,24 @@ public class UpgradeHandler {
         return EXTRA_CLAIM_COST[level];
     }
 
-    private static void applyParsedData(List<Map<ItemMatcher, Integer>> levels, List<Integer> claims, List<Integer> insuranceSlots, List<Integer> loadedChunks, List<Map<ItemMatcher, Integer>> extraCosts) {
+    private static void applyParsedData(List<Map<ItemMatcher, Integer>> levels, List<Integer> claims, List<Integer> insuranceSlots, List<Integer> loadedChunks, List<Integer> fobTicketLimits, List<Integer> fobTicketRegens, List<Integer> maxFobs, List<Map<ItemMatcher, Integer>> extraCosts) {
         int size = levels.size();
         WarForgeMod.UPGRADE_HANDLER.LEVELS = new HashMap[size];
         WarForgeMod.UPGRADE_HANDLER.LIMITS = new int[size];
         WarForgeMod.UPGRADE_HANDLER.INSURANCE_SLOTS = new int[size];
         WarForgeMod.UPGRADE_HANDLER.LOADED_CHUNKS = new int[size];
+        WarForgeMod.UPGRADE_HANDLER.FOB_TICKET_LIMIT = new int[size];
+        WarForgeMod.UPGRADE_HANDLER.FOB_TICKET_REGEN = new int[size];
+        WarForgeMod.UPGRADE_HANDLER.MAX_FOBS = new int[size];
         WarForgeMod.UPGRADE_HANDLER.EXTRA_CLAIM_COST = new HashMap[size];
         for (int i = 0; i < size; i++) {
             WarForgeMod.UPGRADE_HANDLER.LEVELS[i] = new HashMap<>(levels.get(i));
             WarForgeMod.UPGRADE_HANDLER.LIMITS[i] = claims.get(i);
             WarForgeMod.UPGRADE_HANDLER.INSURANCE_SLOTS[i] = insuranceSlots.get(i);
             WarForgeMod.UPGRADE_HANDLER.LOADED_CHUNKS[i] = loadedChunks.get(i);
+            WarForgeMod.UPGRADE_HANDLER.FOB_TICKET_LIMIT[i] = fobTicketLimits.get(i);
+            WarForgeMod.UPGRADE_HANDLER.FOB_TICKET_REGEN[i] = fobTicketRegens.get(i);
+            WarForgeMod.UPGRADE_HANDLER.MAX_FOBS[i] = maxFobs.get(i);
             WarForgeMod.UPGRADE_HANDLER.EXTRA_CLAIM_COST[i] = new HashMap<>(extraCosts.get(i));
         }
     }

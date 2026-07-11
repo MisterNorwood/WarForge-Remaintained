@@ -19,6 +19,7 @@ import com.flansmod.warforge.common.network.PlayerDisplayInfo;
 import com.flansmod.warforge.common.util.DimBlockPos;
 import com.flansmod.warforge.common.util.DimChunkPos;
 import com.flansmod.warforge.server.Leaderboard.FactionStat;
+import com.flansmod.warforge.server.fob.Fob;
 import com.mojang.authlib.GameProfile;
 import lombok.Getter;
 import org.apache.commons.lang3.tuple.Pair;
@@ -71,6 +72,7 @@ public class Faction {
     public HashMap<DimBlockPos, ClaimType> claimTypes;
     public HashSet<DimChunkPos> forcedChunks;
     public HashSet<DimBlockPos> islandCollectors;
+    public ArrayList<Fob> fobs = new ArrayList<>();
     public HashMap<UUID, PlayerData> members;
     public HashSet<UUID> pendingInvites;
     public HashMap<UUID, Integer> killCounter;
@@ -328,6 +330,10 @@ public class Faction {
         claimTypes.clear();
         forcedChunks.clear();
         islandCollectors.clear();
+        for (Fob fob : new ArrayList<>(fobs)) {
+            WarForgeMod.FOBS.removeFob(fob);
+        }
+        fobs.clear();
         pendingInvites.clear();
         insuranceStacks.clear();
         allies.clear();
@@ -382,6 +388,27 @@ public class Faction {
             return Math.max(0, WarForgeMod.UPGRADE_HANDLER.getLoadedChunksForLevel(citadelLevel));
         }
         return Math.max(0, WarForgeConfig.FORCE_LOADED_CHUNKS_TOTAL);
+    }
+
+    public int getMaxFobs() {
+        if (WarForgeConfig.ENABLE_CITADEL_UPGRADES) {
+            return Math.max(0, WarForgeMod.UPGRADE_HANDLER.getMaxFobsForLevel(citadelLevel));
+        }
+        return Math.max(0, WarForgeConfig.MAX_FOBS);
+    }
+
+    public int getFobTicketLimit() {
+        if (WarForgeConfig.ENABLE_CITADEL_UPGRADES) {
+            return Math.max(0, WarForgeMod.UPGRADE_HANDLER.getFobTicketLimitForLevel(citadelLevel));
+        }
+        return Math.max(0, WarForgeConfig.FOB_TICKET_LIMIT);
+    }
+
+    public int getFobRegenPerSiegeTick() {
+        if (WarForgeConfig.ENABLE_CITADEL_UPGRADES) {
+            return Math.max(0, WarForgeMod.UPGRADE_HANDLER.getFobRegenForLevel(citadelLevel));
+        }
+        return Math.max(0, WarForgeConfig.FOB_TICKET_REGEN_PER_SIEGE_TICK);
     }
 
     public int getInsuranceSlotCount() {
@@ -485,6 +512,10 @@ public class Faction {
 
         // Uh oh
         if (claimBlockPos.equals(citadelPos)) {
+            for (Fob fob : new ArrayList<>(fobs)) {
+                WarForgeMod.FOBS.removeFob(fob);
+            }
+            fobs.clear();
             WarForgeMod.FACTIONS.FactionDefeated(this);
             WarForgeMod.INSTANCE.messageAll(Component.literal(name + "'s citadel was destroyed. " + name + " is no more."), true);
         } else {
@@ -689,6 +720,7 @@ public class Faction {
         claimTypes.clear();
         forcedChunks.clear();
         islandCollectors.clear();
+        fobs.clear();
         members.clear();
         pendingInvites.clear();
         allies.clear();
@@ -754,6 +786,16 @@ public class Faction {
             DimBlockPos collectorPos = DimBlockPos.readFromNBT((CompoundTag) base);
             if (!collectorPos.equals(DimBlockPos.ZERO)) {
                 islandCollectors.add(collectorPos);
+            }
+        }
+
+        ListTag fobList = tags.getList("fobs", Tag.TAG_COMPOUND);
+        for (Tag base : fobList) {
+            Fob fob = new Fob();
+            fob.readFromNBT((CompoundTag) base);
+            fob.ownerFaction = uuid;
+            if (!fob.pos.equals(DimBlockPos.ZERO)) {
+                fobs.add(fob);
             }
         }
 
@@ -865,6 +907,17 @@ public class Faction {
             collectorsList.add(collectorPos.writeToNBT());
         }
         tags.put("collectors", collectorsList);
+
+        ListTag fobsList = new ListTag();
+        for (Fob fob : fobs) {
+            if (fob.pos.equals(DimBlockPos.ZERO)) {
+                continue;
+            }
+            CompoundTag fobTags = new CompoundTag();
+            fob.writeToNBT(fobTags);
+            fobsList.add(fobTags);
+        }
+        tags.put("fobs", fobsList);
 
         // Set gameplay params
         tags.putInt("notoriety", notoriety);

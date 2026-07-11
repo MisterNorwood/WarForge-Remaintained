@@ -77,6 +77,9 @@ public class PacketHandler
 		register(id++, PacketRequestTerrainColors.class, PacketRequestTerrainColors::new);
 		register(id++, PacketTerrainColors.class, PacketTerrainColors::new);
 		register(id++, PacketFactionAllianceAction.class, PacketFactionAllianceAction::new);
+		register(id++, PacketEstablishFob.class, PacketEstablishFob::new);
+		register(id++, PacketRequestFobWarp.class, PacketRequestFobWarp::new);
+		register(id++, PacketFobManagerAction.class, PacketFobManagerAction::new);
 	}
 
 	private static <T extends PacketBase> void register(int id, Class<T> clazz, java.util.function.Supplier<T> factory)

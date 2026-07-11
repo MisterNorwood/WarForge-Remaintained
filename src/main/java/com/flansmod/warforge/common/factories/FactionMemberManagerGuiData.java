@@ -1,6 +1,7 @@
 package com.flansmod.warforge.common.factories;
 
 import brachy.modularui.factory.GuiData;
+import com.flansmod.warforge.common.util.DimBlockPos;
 import com.flansmod.warforge.server.Faction;
 import net.minecraft.world.entity.player.Player;
 
@@ -12,7 +13,17 @@ public class FactionMemberManagerGuiData extends GuiData {
     public enum Page {
         MEMBERS,
         INVITES,
-        ALLIANCES
+        ALLIANCES,
+        FOBS
+    }
+
+    public static class FobEntry {
+        public DimBlockPos pos = DimBlockPos.ZERO;
+        public String name = "";
+        public int tickets;
+        public int maxTickets;
+        public boolean canWarp;
+        public boolean canEstablish;
     }
 
     public static class AllianceEntry {
@@ -65,6 +76,7 @@ public class FactionMemberManagerGuiData extends GuiData {
     public final List<MemberEntry> members = new ArrayList<>();
     public final List<InviteEntry> inviteCandidates = new ArrayList<>();
     public final List<AllianceEntry> alliances = new ArrayList<>();
+    public final List<FobEntry> fobs = new ArrayList<>();
 
     public FactionMemberManagerGuiData(Player player, Page page) {
         super(player);

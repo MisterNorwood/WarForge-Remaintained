@@ -1,0 +1,116 @@
+package com.flansmod.warforge.common.blocks;
+
+import com.flansmod.warforge.common.Content;
+import com.flansmod.warforge.common.WarForgeMod;
+import com.flansmod.warforge.common.util.DimChunkPos;
+import com.flansmod.warforge.server.Faction;
+import com.flansmod.warforge.server.fob.Fob;
+import com.flansmod.warforge.server.fob.FobPresence;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.Connection;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+
+import java.util.UUID;
+
+public class TileEntityFob extends BlockEntity {
+    public UUID ownerFaction = new UUID(0, 0);
+    public UUID placer = new UUID(0, 0);
+    public String name = "";
+    public int tickets = 0;
+    public int maxTickets = 0;
+
+    public TileEntityFob(BlockPos pos, BlockState state) {
+        super(Content.TE_FOB.get(), pos, state);
+    }
+
+    public void tick() {
+        if (level == null || level.isClientSide) {
+            return;
+        }
+        if (ownerFaction.equals(Faction.nullUuid)) {
+            return;
+        }
+
+        Fob fob = WarForgeMod.FOBS.getFobAt(new DimChunkPos(level.dimension(), getBlockPos()));
+        if (fob == null) {
+            return;
+        }
+
+        if (tickets != fob.tickets || maxTickets != fob.maxTickets) {
+            tickets = fob.tickets;
+            maxTickets = fob.maxTickets;
+            setChanged();
+        }
+
+        int threshold = WarForgeMod.FOBS.getSiegeHoldThresholdTicks(fob);
+        if (threshold <= 0) {
+            if (fob.enemyHoldTicks > 0) {
+                fob.enemyHoldTicks--;
+            }
+            return;
+        }
+
+        boolean enemyHeld = FobPresence.enemyHeld(fob);
+        boolean ownerHeld = FobPresence.ownerOrAllyAbove(fob);
+
+        if (enemyHeld && !ownerHeld) {
+            fob.enemyHoldTicks++;
+            if (fob.enemyHoldTicks >= threshold) {
+                WarForgeMod.FOBS.destroyFob(fob);
+            }
+        } else if (fob.enemyHoldTicks > 0) {
+            fob.enemyHoldTicks--;
+        }
+    }
+
+    @Override
+    public void saveAdditional(CompoundTag nbt) {
+        super.saveAdditional(nbt);
+        nbt.putUUID("ownerFaction", ownerFaction);
+        nbt.putUUID("placer", placer);
+        nbt.putString("name", name);
+        nbt.putInt("tickets", tickets);
+        nbt.putInt("maxTickets", maxTickets);
+    }
+
+    @Override
+    public void load(CompoundTag nbt) {
+        super.load(nbt);
+        ownerFaction = nbt.getUUID("ownerFaction");
+        placer = nbt.getUUID("placer");
+        name = nbt.getString("name");
+        tickets = nbt.getInt("tickets");
+        maxTickets = nbt.getInt("maxTickets");
+    }
+
+    @Override
+    public ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet) {
+        handleUpdateTag(packet.getTag());
+    }
+
+    @Override
+    public CompoundTag getUpdateTag() {
+        CompoundTag tags = super.getUpdateTag();
+        tags.putUUID("ownerFaction", ownerFaction);
+        tags.putString("name", name);
+        tags.putInt("tickets", tickets);
+        tags.putInt("maxTickets", maxTickets);
+        return tags;
+    }
+
+    @Override
+    public void handleUpdateTag(CompoundTag tags) {
+        ownerFaction = tags.getUUID("ownerFaction");
+        name = tags.getString("name");
+        tickets = tags.getInt("tickets");
+        maxTickets = tags.getInt("maxTickets");
+    }
+}

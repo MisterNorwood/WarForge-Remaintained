@@ -55,5 +55,14 @@
 	"key.warforge.toggleveinoverlay": "Toggle Chunk Ore Overlay",
 	"key.warforge.cathegory": "WarForge",
 	"key.factionchat.desc": "Faction Chat",
-	"gui.warforge.claims": "Claims"
+	"gui.warforge.claims": "Claims",
+
+	"block.warforge.fobblock": "Forward Operating Base",
+	"gui.warforge.fob.title": "Forward Operating Base",
+	"gui.warforge.fob.establish_prompt": "Enter a name to establish this FOB.",
+	"gui.warforge.fob.name_hint": "FOB name",
+	"gui.warforge.fob.establish": "Establish",
+	"gui.warforge.fob.established": "FOB established.",
+	"gui.warforge.fob.tickets": "Warp Tickets",
+	"gui.warforge.fob.warp": "Warp"
 }

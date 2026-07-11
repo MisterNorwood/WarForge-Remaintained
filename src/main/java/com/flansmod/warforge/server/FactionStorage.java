@@ -15,6 +15,7 @@ import com.flansmod.warforge.common.util.FactionDisplay;
 import com.flansmod.warforge.common.util.TimeHelper;
 import com.flansmod.warforge.server.Faction.PlayerData;
 import com.flansmod.warforge.server.Faction.Role;
+import com.flansmod.warforge.server.fob.Fob;
 import com.mojang.authlib.GameProfile;
 import lombok.Getter;
 import net.minecraft.ChatFormatting;
@@ -792,6 +793,12 @@ public class FactionStorage {
             }
             return false;
         }
+        if (WarForgeMod.FOBS.getFobAt(chunkPos) != null) {
+            if (notify) {
+                player.sendSystemMessage(Component.literal("This chunk already has a FOB"));
+            }
+            return false;
+        }
         if (!isClaimDimWhitelisted(chunkPos.dim)) {
             if (notify) {
                 player.sendSystemMessage(Component.literal("You cannot claim chunks in this dimension"));
@@ -880,6 +887,10 @@ public class FactionStorage {
         if (mClaims.containsKey(pos))
             return mClaims.get(pos);
         return Faction.nullUuid;
+    }
+
+    public Fob getFobAt(DimChunkPos pos) {
+        return WarForgeMod.FOBS.getFobAt(pos);
     }
 
     public Faction getFactionOfPlayer(UUID playerID) {
@@ -973,6 +984,22 @@ public class FactionStorage {
         return false;
     }
 
+    public Siege getActiveSiegeForFaction(UUID factionId) {
+        if (factionId == null || factionId.equals(Faction.nullUuid)) {
+            return null;
+        }
+        for (Siege siege : sieges.values()) {
+            if (factionId.equals(siege.attackingFaction) || factionId.equals(siege.defendingFaction)) {
+                return siege;
+            }
+        }
+        return null;
+    }
+
+    public boolean isFactionInActiveSiege(UUID factionId) {
+        return getActiveSiegeForFaction(factionId) != null;
+    }
+
     public void update() {
         for (HashMap.Entry<UUID, Faction> entry : mFactions.entrySet()) {
             entry.getValue().update();
@@ -1016,6 +1043,7 @@ public class FactionStorage {
         pruneInvalidSieges();
         for (HashMap.Entry<DimChunkPos, Siege> kvp : sieges.entrySet()) {
             kvp.getValue().AdvanceDay();
+            WarForgeMod.FOBS.onSiegeTimerReset(kvp.getValue());
             if (kvp.getValue().isCompleted())
                 finishedSiegeQueue.add(kvp.getKey());
         }
@@ -3037,6 +3065,8 @@ public class FactionStorage {
                 mClaims.put(blockPos.toChunkPos(), uuid);
             }
         }
+
+        WarForgeMod.FOBS.rebuildGlobalIndex();
 
         list = tags.getList("sieges", Tag.TAG_COMPOUND);
         for (Tag baseTag : list) {

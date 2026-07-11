@@ -20,6 +20,7 @@ import com.flansmod.warforge.common.util.FactionDisplay;
 import com.flansmod.warforge.common.util.TimeHelper;
 import com.flansmod.warforge.server.*;
 import com.flansmod.warforge.server.Faction.Role;
+import com.flansmod.warforge.server.fob.FobManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -98,6 +99,7 @@ public class WarForgeMod {
     public static final PotionsModule POTIONS = new PotionsModule();
     public static final UpgradeHandler UPGRADE_HANDLER = new UpgradeHandler();
     public static final FactionChunkLoadingManager CHUNK_LOADING_MANAGER = new FactionChunkLoadingManager();
+    public static final FobManager FOBS = new FobManager();
     public static final ServerFlagRegistry FLAG_REGISTRY = new ServerFlagRegistry();
     public static VeinUtils VEIN_HANDLER = null;
 
@@ -154,6 +156,7 @@ public class WarForgeMod {
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(new ServerTickHandler());
         MinecraftForge.EVENT_BUS.register(PROTECTIONS);
+        MinecraftForge.EVENT_BUS.register(new SpawnModule());
 
         NETWORK.initialise();
     }
@@ -429,6 +432,38 @@ public class WarForgeMod {
         }
 
         Item item = event.getItemStack().getItem();
+
+        if (item.equals(Content.FOB_BLOCK_ITEM.get())) {
+            Direction fobFace = event.getFace() != null ? event.getFace() : Direction.UP;
+            BlockPos fobPlacementPos = event.getPos().relative(fobFace);
+            Player fobPlayer = event.getEntity();
+            Faction fobFaction = FACTIONS.getFactionOfPlayer(fobPlayer.getUUID());
+            DimChunkPos fobChunk = new DimBlockPos(level.dimension(), fobPlacementPos).toChunkPos();
+
+            if (fobFaction == null) {
+                fobPlayer.sendSystemMessage(Component.literal("You aren't in a faction. Craft a citadel or join a faction"));
+                event.setCanceled(true);
+                return;
+            }
+            if (!fobFaction.isPlayerRoleInFaction(fobPlayer.getUUID(), Role.OFFICER)) {
+                fobPlayer.sendSystemMessage(Component.literal("You are not an officer of your faction"));
+                event.setCanceled(true);
+                return;
+            }
+            if (!FOBS.canPlaceFob(fobFaction, fobChunk)) {
+                fobPlayer.sendSystemMessage(Component.literal("You cannot place a FOB here"));
+                event.setCanceled(true);
+                return;
+            }
+            if (!FOBS.hasFobCapacity(fobFaction)) {
+                fobPlayer.sendSystemMessage(Component.literal(WarForgeConfig.ENABLE_CITADEL_UPGRADES
+                        ? "Your faction reached it's level's FOB limit, upgrade the level to increase the limit"
+                        : "Your faction has reached its FOB limit"));
+                event.setCanceled(true);
+            }
+            return;
+        }
+
         if (!isClaim(item)) {
             return;
         }

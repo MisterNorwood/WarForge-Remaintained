@@ -301,6 +301,8 @@ public class Siege {
 
             siegeEndTimeStamp = System.currentTimeMillis() + timeRemainingMillis;
 
+            WarForgeMod.FOBS.onSiegeTimerReset(this);
+
             WarForgeMod.FACTIONS.sendSiegeInfoToNearby(defendingClaim.toChunkPos());
         } else {
             timeRemainingMillis -= 50L;
