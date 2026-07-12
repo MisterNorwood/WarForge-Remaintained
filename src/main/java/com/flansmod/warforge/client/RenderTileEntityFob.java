@@ -16,7 +16,7 @@ public class RenderTileEntityFob implements BlockEntityRenderer<TileEntityFob> {
                        int packedLight, int packedOverlay) {
         if (te.ownerFaction.equals(Faction.nullUuid)) return;
         PoleFlagRenderer.render(pose, buffers, packedOverlay, te.getLevel(), te.getBlockPos(),
-                0, te.factionFlagId, partialTicks);
+                0, te.factionFlagId, te.getPoleLength(), partialTicks);
     }
 
     @Override

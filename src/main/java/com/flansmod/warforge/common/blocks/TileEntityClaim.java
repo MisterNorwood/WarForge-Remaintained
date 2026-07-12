@@ -26,6 +26,9 @@ public abstract class TileEntityClaim extends BlockEntity implements IClaim {
     protected UUID factionUUID = Faction.nullUuid;
     public byte rotation;
 
+    public static final float DEFAULT_POLE_LENGTH = 8.75F;
+    public float poleLength = DEFAULT_POLE_LENGTH;
+
     // This is so weird
     private Level worldCreate;
 
@@ -42,6 +45,15 @@ public abstract class TileEntityClaim extends BlockEntity implements IClaim {
     public void increaseRotation() {
         rotation += 1;
         rotation  = (byte) (rotation % 8);
+        updateTileEntity();
+    }
+
+    public float getPoleLength() {
+        return poleLength;
+    }
+
+    public void setPoleLength(float length) {
+        poleLength = length;
         updateTileEntity();
     }
 
@@ -155,6 +167,10 @@ public abstract class TileEntityClaim extends BlockEntity implements IClaim {
 
         nbt.putUUID("faction", factionUUID);
         nbt.putByte("rotation", rotation);
+        nbt.putFloat("poleLength", poleLength);
+        nbt.putString("flagId", factionFlagId);
+        nbt.putString("name", factionName);
+        nbt.putInt("colour", colour);
     }
 
     @Override
@@ -163,6 +179,12 @@ public abstract class TileEntityClaim extends BlockEntity implements IClaim {
 
         factionUUID = nbt.getUUID("faction");
         rotation = nbt.getByte("rotation");
+        poleLength = nbt.contains("poleLength") ? nbt.getFloat("poleLength") : DEFAULT_POLE_LENGTH;
+        factionFlagId = nbt.getString("flagId");
+        factionName = nbt.getString("name");
+        if (nbt.contains("colour")) {
+            colour = nbt.getInt("colour");
+        }
 
         // Verifications
         if (level != null && !level.isClientSide) {
@@ -201,6 +223,7 @@ public abstract class TileEntityClaim extends BlockEntity implements IClaim {
         tags.putString("name", factionName);
         tags.putString("flagId", factionFlagId);
         tags.putByte("rotation", rotation);
+        tags.putFloat("poleLength", poleLength);
         return tags;
     }
 
@@ -211,6 +234,7 @@ public abstract class TileEntityClaim extends BlockEntity implements IClaim {
         factionName = tags.getString("name");
         factionFlagId = tags.getString("flagId");
         rotation = tags.getByte("rotation");
+        poleLength = tags.contains("poleLength") ? tags.getFloat("poleLength") : DEFAULT_POLE_LENGTH;
     }
 
     @Override

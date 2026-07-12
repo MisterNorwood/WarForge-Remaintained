@@ -1,6 +1,7 @@
 package com.flansmod.warforge.client;
 
 import com.flansmod.warforge.Tags;
+import com.flansmod.warforge.common.blocks.PoleGeometry;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
@@ -30,46 +31,73 @@ public final class PoleFlagRenderer {
     private static final float WAVE_SPEED = 0.12F;
     private static final float WAVE_FREQUENCY = 0.45F;
 
-    private static final float ANCHOR_X = 0.5625F;
-    private static final float BANNER_TOP_Y = 4.6F;
+    private static final float ANCHOR_X = 0.0625F;
     private static final float MAX_BANNER_WIDTH = 1.4F;
     private static final float MAX_BANNER_HEIGHT = 0.95F;
+
+    private static final float MODEL_SCALE = PoleGeometry.MODEL_SCALE;
+    private static final float SHAFT_BASE_Y = PoleGeometry.SHAFT_BASE_Y;
+    public static final float NATURAL_SHAFT_LENGTH = 4.375F;
+    private static final float BANNER_BELOW_TOP = 0.1F;
 
     private PoleFlagRenderer() {
     }
 
     public static void render(PoseStack pose, MultiBufferSource buffers, int packedOverlay,
-                              Level level, BlockPos pos, int rotation, String flagId, float partialTicks) {
+                              Level level, BlockPos pos, int rotation, String flagId,
+                              float poleLength, float partialTicks) {
         BakedModel bakedModel = Minecraft.getInstance().getModelManager().getModel(POLE_MODEL);
         BlockState dummyState = Blocks.STONE.defaultBlockState();
 
-        pose.pushPose();
-        pose.translate(0.0D, 1.0D, 0.0D);
-        pose.translate(0.5D, 0.0D, 0.5D);
-        pose.mulPose(Axis.YP.rotationDegrees(rotation * 45.0F));
-        pose.translate(-0.5D, 0.0D, -0.5D);
-
         int poleLight = LevelRenderer.getLightColor(level, pos.above());
 
+        pose.pushPose();
+        pose.translate(0.5D, 1.0D, 0.5D);
+        pose.mulPose(Axis.YP.rotationDegrees(rotation * 45.0F));
+        pose.scale(MODEL_SCALE, MODEL_SCALE, MODEL_SCALE);
+        //pose.translate(-0.5D, 0.0D, -0.5D);
+
         VertexConsumer consumer = buffers.getBuffer(RenderType.cutout());
-        PoseStack.Pose last = pose.last();
+        PoseStack.Pose basePose = pose.last();
+
+        float shaftStretch = poleLength / NATURAL_SHAFT_LENGTH;
+        pose.pushPose();
+        pose.translate(0.0D, SHAFT_BASE_Y, 0.0D);
+        pose.scale(1.0F, shaftStretch, 1.0F);
+        pose.translate(0.0D, -SHAFT_BASE_Y, 0.0D);
+        PoseStack.Pose shaftPose = pose.last();
+
         RandomSource random = RandomSource.create();
         for (Direction dir : Direction.values()) {
             for (BakedQuad quad : bakedModel.getQuads(dummyState, dir, random)) {
-                consumer.putBulkData(last, quad, 1.0F, 1.0F, 1.0F, poleLight, packedOverlay);
+                consumer.putBulkData(isShaftQuad(quad) ? shaftPose : basePose, quad, 1.0F, 1.0F, 1.0F, poleLight, packedOverlay);
             }
         }
         for (BakedQuad quad : bakedModel.getQuads(dummyState, null, random)) {
-            consumer.putBulkData(last, quad, 1.0F, 1.0F, 1.0F, poleLight, packedOverlay);
+            consumer.putBulkData(isShaftQuad(quad) ? shaftPose : basePose, quad, 1.0F, 1.0F, 1.0F, poleLight, packedOverlay);
         }
+        pose.popPose();
 
-        renderFlag(pose, buffers, level, poleLight, packedOverlay, flagId, partialTicks);
+        float bannerTop = SHAFT_BASE_Y + poleLength - BANNER_BELOW_TOP;
+        renderFlag(pose, buffers, level, poleLight, packedOverlay, flagId, bannerTop, partialTicks);
 
         pose.popPose();
     }
 
+    private static boolean isShaftQuad(BakedQuad quad) {
+        int[] vertices = quad.getVertices();
+        int stride = vertices.length / 4;
+        for (int i = 0; i < 4; i++) {
+            if (Float.intBitsToFloat(vertices[i * stride + 1]) > SHAFT_BASE_Y + 1.0E-4F) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static void renderFlag(PoseStack pose, MultiBufferSource buffers, Level level,
-                                   int packedLight, int packedOverlay, String flagId, float partialTicks) {
+                                   int packedLight, int packedOverlay, String flagId,
+                                   float bannerTop, float partialTicks) {
         ResourceLocation flagTexture = ClientFlagRegistry.getFlagTexture(flagId);
         if (flagTexture == null) return;
 
@@ -86,7 +114,6 @@ public final class PoleFlagRenderer {
             bannerWidth = bannerHeight * aspect;
         }
 
-        float bannerTop = BANNER_TOP_Y;
         float bannerBottom = bannerTop - bannerHeight;
 
         float time = WAVE_SPEED * ((float) (level.getGameTime() % 100000L) + partialTicks);

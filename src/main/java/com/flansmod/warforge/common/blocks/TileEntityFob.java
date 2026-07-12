@@ -22,10 +22,23 @@ public class TileEntityFob extends BlockEntity {
     public int tickets = 0;
     public int maxTickets = 0;
     public String factionFlagId = "";
+    public float poleLength = TileEntityClaim.DEFAULT_POLE_LENGTH;
     private DimChunkPos cachedChunkPos;
 
     public TileEntityFob(BlockPos pos, BlockState state) {
         super(Content.TE_FOB.get(), pos, state);
+    }
+
+    public float getPoleLength() {
+        return poleLength;
+    }
+
+    public void setPoleLength(float length) {
+        poleLength = length;
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+            setChanged();
+        }
     }
 
     public void tick() {
@@ -90,6 +103,7 @@ public class TileEntityFob extends BlockEntity {
         nbt.putInt("tickets", tickets);
         nbt.putInt("maxTickets", maxTickets);
         nbt.putString("flagId", factionFlagId);
+        nbt.putFloat("poleLength", poleLength);
     }
 
     @Override
@@ -101,6 +115,7 @@ public class TileEntityFob extends BlockEntity {
         tickets = nbt.getInt("tickets");
         maxTickets = nbt.getInt("maxTickets");
         factionFlagId = nbt.getString("flagId");
+        poleLength = nbt.contains("poleLength") ? nbt.getFloat("poleLength") : TileEntityClaim.DEFAULT_POLE_LENGTH;
     }
 
     @Override
@@ -121,6 +136,7 @@ public class TileEntityFob extends BlockEntity {
         tags.putInt("tickets", tickets);
         tags.putInt("maxTickets", maxTickets);
         tags.putString("flagId", factionFlagId);
+        tags.putFloat("poleLength", poleLength);
         return tags;
     }
 
@@ -131,5 +147,6 @@ public class TileEntityFob extends BlockEntity {
         tickets = tags.getInt("tickets");
         maxTickets = tags.getInt("maxTickets");
         factionFlagId = tags.getString("flagId");
+        poleLength = tags.contains("poleLength") ? tags.getFloat("poleLength") : TileEntityClaim.DEFAULT_POLE_LENGTH;
     }
 }

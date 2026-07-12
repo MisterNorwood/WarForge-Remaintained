@@ -142,7 +142,15 @@ public class TileEntityDummy extends BlockEntity implements IBlockDummy {
     public AABB getRenderBoundingBox() {
         if (canRenderLaser) {
             BlockPos pos = getBlockPos();
-            return new AABB(pos.getX(), pos.getY(), pos.getZ(), pos.getX() + 0.5, 256, pos.getZ() + 0.5);
+            double poleTop = pos.getY() + PoleGeometry.BASE_TRANSLATE;
+            if (masterPos != null) {
+                float poleLength = TileEntityClaim.DEFAULT_POLE_LENGTH;
+                if (level != null && level.getBlockEntity(masterPos) instanceof TileEntityClaim claim) {
+                    poleLength = claim.getPoleLength();
+                }
+                poleTop = masterPos.getY() + PoleGeometry.topOffset(poleLength);
+            }
+            return new AABB(pos.getX(), poleTop, pos.getZ(), pos.getX() + 1, 257, pos.getZ() + 1);
         }
         return super.getRenderBoundingBox();
     }

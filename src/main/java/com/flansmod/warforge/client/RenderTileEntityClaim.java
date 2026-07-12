@@ -16,7 +16,7 @@ public class RenderTileEntityClaim implements BlockEntityRenderer<TileEntityClai
                        int packedLight, int packedOverlay) {
         if (te.getFaction().equals(Faction.nullUuid)) return;
         PoleFlagRenderer.render(pose, buffers, packedOverlay, te.getLevel(), te.getBlockPos(),
-                te.rotation, te.factionFlagId, partialTicks);
+                te.rotation, te.factionFlagId, te.getPoleLength(), partialTicks);
     }
 
     @Override
