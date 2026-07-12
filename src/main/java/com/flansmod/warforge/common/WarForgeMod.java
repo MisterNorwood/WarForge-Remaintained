@@ -334,8 +334,9 @@ public class WarForgeMod {
     }
 
     public void updateServer() {
-        currTickTimestamp = System.currentTimeMillis();
         previousUpdateTimestamp = currTickTimestamp;
+        currTickTimestamp = System.currentTimeMillis();
+        if (previousUpdateTimestamp == 0L) previousUpdateTimestamp = currTickTimestamp;
 
         FACTIONS.updateConqueredChunks(currTickTimestamp);
 

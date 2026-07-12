@@ -119,8 +119,8 @@ public class Faction {
     }
 
     private static String getPlayerName(UUID playerID) {
-        Player player = getPlayer(playerID);
-        return player.getName().getString();
+        GameProfile p = WarForgeMod.MC_SERVER.getProfileCache().get(playerID).orElse(null);
+        return p != null ? p.getName() : playerID.toString();
     }
 
     // the map used in getPlayerByUUID removes players on logout
@@ -136,11 +136,11 @@ public class Faction {
         }
         momentumExpireryTimestamp = System.currentTimeMillis() + (long) WarForgeConfig.SIEGE_MOMENTUM_DURATION * 60 * 1000;
         if (increased) {
-            long nextSiegeMillis = WarForgeConfig.SIEGE_MOMENTUM_TIME.get(siegeMomentum) * 1000;
+            long nextSiegeMillis = WarForgeConfig.SIEGE_MOMENTUM_TIME.getOrDefault(siegeMomentum, 0) * 1000;
             String formattedTime = new Time(nextSiegeMillis)
                     .getFormattedTime(Time.TimeFormat.MINUTES_SECONDS, Time.Verbality.FULL);
 
-            if (increased && message) {
+            if (message) {
                 MutableComponent msg = Component.literal("")
                         .append(Component.literal("Your power grows. Siege momentum increased to "))
                         .append(Component.literal(String.valueOf(siegeMomentum)).setStyle(Style.EMPTY.withBold(true).withColor(ChatFormatting.GOLD)))
@@ -148,12 +148,12 @@ public class Faction {
                         .append(Component.literal(formattedTime).setStyle(Style.EMPTY.withColor(ChatFormatting.GREEN)));
 
                 messageAll(msg);
-            } else if (!increased && message) {
-                MutableComponent msg = Component.literal("")
-                        .append(Component.literal("You haven't gained any more momentum, however it's time was extended by another " + WarForgeConfig.SIEGE_MOMENTUM_DURATION + "minutes"));
-
-                messageAll(msg);
             }
+        } else if (message) {
+            MutableComponent msg = Component.literal("")
+                    .append(Component.literal("You haven't gained any more momentum, however it's time was extended by another " + WarForgeConfig.SIEGE_MOMENTUM_DURATION + "minutes"));
+
+            messageAll(msg);
         }
         return increased;
     }
@@ -179,8 +179,11 @@ public class Faction {
 
     public void update() {
         if (!loggedInToday) {
-            for (HashMap.Entry<UUID, PlayerData> kvp : members.entrySet()) {
-                loggedInToday = true;
+            for (UUID id : members.keySet()) {
+                if (getPlayer(id) != null) {
+                    loggedInToday = true;
+                    break;
+                }
             }
         }
     }
@@ -191,7 +194,7 @@ public class Faction {
         //mMembers.keySet() seems to have a null default
         for (UUID playerID : members.keySet()) {
             Player player = getPlayer(playerID);
-            if (playerCondition.test(player)) players.add(player);
+            if (player != null && playerCondition.test(player)) players.add(player);
         }
 
         return players;
@@ -242,7 +245,8 @@ public class Faction {
 
     public void invitePlayer(UUID playerID) {
         // Don't invite offline players
-        getPlayer(playerID);
+        Player p = getPlayer(playerID);
+        if (p == null) return;
         pendingInvites.add(playerID);
     }
 
@@ -259,7 +263,7 @@ public class Faction {
 
 
         // re-check number of online players
-        onlinePlayerCount = getOnlinePlayers(entityPlayer -> true).size();
+        onlinePlayerCount = getOnlinePlayers(entityPlayer -> entityPlayer != null).size();
 
         FactionDisplay.refreshTabName(playerID);
     }
@@ -304,12 +308,16 @@ public class Faction {
         // Clean up remaining claims
         for (Map.Entry<DimBlockPos, Integer> kvp : claims.entrySet()) {
             ServerLevel world = WarForgeMod.MC_SERVER.getLevel(kvp.getKey().dim);
-            world.removeBlock(kvp.getKey().toRegularPos(), false);
+            if (world != null) {
+                world.removeBlock(kvp.getKey().toRegularPos(), false);
+            }
         }
 
         ServerLevel world = WarForgeMod.MC_SERVER.getLevel(citadelPos.dim);
         this.citadelLevel = 0;
-        world.removeBlock(citadelPos.toRegularPos(), false);
+        if (world != null) {
+            world.removeBlock(citadelPos.toRegularPos(), false);
+        }
         for (DimBlockPos collectorPos : islandCollectors) {
             ServerLevel collectorWorld = WarForgeMod.MC_SERVER.getLevel(collectorPos.dim);
             if (collectorWorld != null) {
@@ -331,7 +339,7 @@ public class Faction {
         forcedChunks.clear();
         islandCollectors.clear();
         for (Fob fob : new ArrayList<>(fobs)) {
-            WarForgeMod.FOBS.removeFob(fob);
+            WarForgeMod.FOBS.destroyFob(fob);
         }
         fobs.clear();
         pendingInvites.clear();
@@ -495,25 +503,27 @@ public class Faction {
         boolean removedForceLoad = forcedChunks.remove(claimBlockPos.toChunkPos());
         // Destroy our claim block if this claim has a physical block.
         ServerLevel world = WarForgeMod.MC_SERVER.getLevel(claimBlockPos.dim);
-        BlockState claimBlock = world.getBlockState(claimBlockPos.toRegularPos());
-        if (WarForgeMod.isClaim(claimBlock.getBlock(), Content.statue, Content.dummyTranslusent)) {
-            ItemStack drop = new ItemStack(claimBlock.getBlock().asItem());
-            world.removeBlock(claimBlockPos.toRegularPos(), false);
-            if (!captureAttempted || !WarForgeConfig.SIEGE_CAPTURE) {
-                world.addFreshEntity(new ItemEntity(
-                        world,
-                        claimBlockPos.getX() + 0.5d,
-                        claimBlockPos.getY() + 0.5d,
-                        claimBlockPos.getZ() + 0.5d,
-                        drop
-                ));
+        if (world != null) {
+            BlockState claimBlock = world.getBlockState(claimBlockPos.toRegularPos());
+            if (WarForgeMod.isClaim(claimBlock.getBlock(), Content.statue, Content.dummyTranslusent)) {
+                ItemStack drop = new ItemStack(claimBlock.getBlock().asItem());
+                world.removeBlock(claimBlockPos.toRegularPos(), false);
+                if (!captureAttempted || !WarForgeConfig.SIEGE_CAPTURE) {
+                    world.addFreshEntity(new ItemEntity(
+                            world,
+                            claimBlockPos.getX() + 0.5d,
+                            claimBlockPos.getY() + 0.5d,
+                            claimBlockPos.getZ() + 0.5d,
+                            drop
+                    ));
+                }
             }
         }
 
         // Uh oh
         if (claimBlockPos.equals(citadelPos)) {
             for (Fob fob : new ArrayList<>(fobs)) {
-                WarForgeMod.FOBS.removeFob(fob);
+                WarForgeMod.FOBS.destroyFob(fob);
             }
             fobs.clear();
             WarForgeMod.FACTIONS.FactionDefeated(this);
@@ -645,6 +655,9 @@ public class Faction {
         for (HashMap.Entry<DimBlockPos, Integer> kvp : claims.entrySet()) {
             DimBlockPos pos = kvp.getKey();
             ServerLevel world = WarForgeMod.MC_SERVER.getLevel(pos.dim);
+            if (world == null) {
+                continue;
+            }
             kvp.setValue(kvp.getValue() + 1);  // increment number of yields
 
             // If It's loaded and the handler is ready, try to process yields
@@ -816,6 +829,7 @@ public class Faction {
         siegeMomentum = tags.getByte("siegeMomentum");
         momentumExpireryTimestamp = tags.getLong("momentumExpireryTimestamp");
         isCurrentlyDefending = tags.getBoolean("isDefending");
+        loggedInToday = tags.getBoolean("loggedInToday");
 
 
         // Get member data
@@ -991,6 +1005,7 @@ public class Faction {
         }
         tags.put("insurance", insuranceList);
         tags.putBoolean("isDefending", isCurrentlyDefending);
+        tags.putBoolean("loggedInToday", loggedInToday);
     }
 
     // forced-chunk persistence: dimension is a ResourceKey<Level> stored as its location string
@@ -1044,6 +1059,14 @@ public class Faction {
         public final int defenceStrength;
         public final int supportStrength;
 
+        private static final Map<String, ClaimType> BY_NAME;
+        static {
+            BY_NAME = new HashMap<>();
+            for (ClaimType type : values()) {
+                BY_NAME.put(type.serializedName, type);
+            }
+        }
+
         ClaimType(String serializedName, String shortLabel, int defenceStrength, int supportStrength) {
             this.serializedName = serializedName;
             this.shortLabel = shortLabel;
@@ -1060,12 +1083,7 @@ public class Faction {
         }
 
         public static ClaimType fromSerialized(String value) {
-            for (ClaimType type : values()) {
-                if (type.serializedName.equals(value)) {
-                    return type;
-                }
-            }
-            return NONE;
+            return BY_NAME.getOrDefault(value, NONE);
         }
     }
 
@@ -1079,7 +1097,8 @@ public class Faction {
 
         public void readFromNBT(CompoundTag tags) {
             // Read and write role by string so enum order can change
-            role = Faction.Role.valueOf(tags.getString("role"));
+            try { role = Faction.Role.valueOf(tags.getString("role")); }
+            catch (IllegalArgumentException e) { role = Faction.Role.MEMBER; WarForgeMod.LOGGER.warn("Unknown role '{}', defaulting to MEMBER", tags.getString("role")); }
             //mHasMovedFlagToday = tags.getBoolean("movedFlag");
             moveFlagCooldown = tags.getLong("flagCooldown");
             flagPosition = DimBlockPos.readFromNBT(tags, "flagPosition");

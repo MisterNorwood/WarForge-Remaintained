@@ -47,6 +47,11 @@ public abstract class PacketBase
 		return data.readUtf();
 	}
 
+	public static String readUTF(FriendlyByteBuf data, int maxLength)
+	{
+		return data.readUtf(maxLength);
+	}
+
 	public static void writeUUID(FriendlyByteBuf data, UUID id)
 	{
 		data.writeUUID(id);

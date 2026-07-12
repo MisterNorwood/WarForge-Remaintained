@@ -144,6 +144,9 @@ public class FobManager {
         if (player == null || fob == null) {
             return false;
         }
+        if (warpQueue.hasPendingWarp(player.getUUID())) {
+            return false;
+        }
         Faction owner = WarForgeMod.FACTIONS.getFaction(fob.ownerFaction);
         if (owner == null || !owner.isPlayerInFaction(player.getUUID())) {
             return false;
@@ -164,6 +167,14 @@ public class FobManager {
         fob.tickets -= cost;
         warpQueue.requestFobWarp(player, fob, cost);
         return true;
+    }
+
+    public void onDefendingSiegeEnded(java.util.UUID factionUuid) {
+        for (Fob fob : mFobChunks.values()) {
+            if (fob.ownerFaction.equals(factionUuid)) {
+                fob.enemyHoldTicks = 0;
+            }
+        }
     }
 
     public void destroyFob(Fob fob) {
@@ -198,7 +209,7 @@ public class FobManager {
             return -1;
         }
         long millis = seconds.longValue() * 1000L;
-        return (int) Math.max(20L, millis / 50L);
+        return (int) Math.min(Integer.MAX_VALUE, Math.max(20L, millis / 50L));
     }
 
     public void onSiegeTimerReset(Siege siege) {

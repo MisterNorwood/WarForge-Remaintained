@@ -28,12 +28,12 @@ public class PacketEstablishFob extends PacketBase {
 
     @Override
     public void decodeInto(FriendlyByteBuf data) {
-        ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(readUTF(data)));
+        ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(readUTF(data, 256)));
         int x = data.readInt();
         int y = data.readInt();
         int z = data.readInt();
         mPos = new DimBlockPos(dim, x, y, z);
-        mName = readUTF(data);
+        mName = readUTF(data, 32);
     }
 
     @Override
@@ -44,6 +44,10 @@ public class PacketEstablishFob extends PacketBase {
         }
 
         if (mName == null || mName.trim().isEmpty()) {
+            return;
+        }
+
+        if (mName.trim().length() > 32) {
             return;
         }
 

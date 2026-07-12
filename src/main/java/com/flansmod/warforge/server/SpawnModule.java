@@ -9,13 +9,15 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerSetSpawnEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 public class SpawnModule {
     private static BlockPos findCitadelSpawn(ServerLevel level, DimBlockPos citadel) {
-        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos(citadel.getX(), citadel.getY(), citadel.getZ());
+        int startY = Math.max(citadel.getY(), level.getMinBuildHeight());
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos(citadel.getX(), startY, citadel.getZ());
         int maxY = level.getMaxBuildHeight() - 1;
         while (cursor.getY() < maxY && !level.getBlockState(cursor).isAir()) {
             cursor.move(Direction.UP);
@@ -63,7 +65,8 @@ public class SpawnModule {
         BlockPos spawn = findCitadelSpawn(level, citadel);
 
         if (player.level().dimension() != citadel.dim) {
-            player.changeDimension(level, new WfTeleporter());
+            Entity result = player.changeDimension(level, new WfTeleporter());
+            if (result == null) return;
         }
 
         player.connection.teleport(spawn.getX() + 0.5D, spawn.getY(), spawn.getZ() + 0.5D, player.getYRot(), player.getXRot());

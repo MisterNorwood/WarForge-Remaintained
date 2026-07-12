@@ -24,7 +24,7 @@ public class PacketRequestFobWarp extends PacketBase {
 
     @Override
     public void decodeInto(FriendlyByteBuf data) {
-        ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(readUTF(data)));
+        ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(readUTF(data, 256)));
         int x = data.readInt();
         int y = data.readInt();
         int z = data.readInt();

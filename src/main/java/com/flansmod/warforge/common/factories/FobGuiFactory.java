@@ -98,7 +98,7 @@ public class FobGuiFactory extends AbstractUIFactory<FobGuiData> {
 
         Faction faction = WarForgeMod.FACTIONS.getFactionOfPlayer(player.getUUID());
         boolean isOfficer = faction != null
-                && (WarForgeMod.isOp(player) || faction.isPlayerRoleInFaction(player.getUUID(), Faction.Role.OFFICER));
+                && faction.isPlayerRoleInFaction(player.getUUID(), Faction.Role.OFFICER);
 
         BlockEntity be = player.level().getBlockEntity(pos);
         if (be instanceof TileEntityFob fob && !fob.ownerFaction.equals(Faction.nullUuid)) {
@@ -106,7 +106,7 @@ public class FobGuiFactory extends AbstractUIFactory<FobGuiData> {
             data.name = fob.name;
             data.tickets = fob.tickets;
             data.maxTickets = fob.maxTickets;
-            data.canWarp = faction != null && faction.uuid.equals(fob.ownerFaction);
+            data.canWarp = faction != null && faction.uuid.equals(fob.ownerFaction) && WarForgeMod.FACTIONS.isFactionInActiveSiege(faction.uuid);
         } else {
             data.canEstablish = isOfficer;
         }

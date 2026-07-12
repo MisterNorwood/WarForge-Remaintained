@@ -6,6 +6,7 @@ import com.flansmod.warforge.common.blocks.TileEntityCitadel;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -48,7 +49,8 @@ public class PacketCreateFaction extends PacketBase
 	{
 		if(!playerEntity.level().dimension().equals(mCitadelPos.dim))
 		{
-			WarForgeMod.LOGGER.error("Player requested creating a faction in the wrong dim");
+			WarForgeMod.LOGGER.warn("Player requested creating a faction in the wrong dim");
+			playerEntity.sendSystemMessage(Component.literal("You must be in the same dimension as the citadel to create a faction."));
 		}
 		else
 		{

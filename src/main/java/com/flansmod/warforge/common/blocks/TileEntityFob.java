@@ -22,6 +22,7 @@ public class TileEntityFob extends BlockEntity {
     public int tickets = 0;
     public int maxTickets = 0;
     public String factionFlagId = "";
+    private DimChunkPos cachedChunkPos;
 
     public TileEntityFob(BlockPos pos, BlockState state) {
         super(Content.TE_FOB.get(), pos, state);
@@ -35,22 +36,29 @@ public class TileEntityFob extends BlockEntity {
             return;
         }
 
-        Fob fob = WarForgeMod.FOBS.getFobAt(new DimChunkPos(level.dimension(), getBlockPos()));
+        if (cachedChunkPos == null) cachedChunkPos = new DimChunkPos(level.dimension(), getBlockPos());
+        Fob fob = WarForgeMod.FOBS.getFobAt(cachedChunkPos);
         if (fob == null) {
             return;
         }
 
+        boolean changed = false;
         if (tickets != fob.tickets || maxTickets != fob.maxTickets) {
             tickets = fob.tickets;
             maxTickets = fob.maxTickets;
-            setChanged();
+            changed = true;
         }
 
         Faction owner = WarForgeMod.FACTIONS.getFaction(ownerFaction);
         String ownerFlag = owner == null ? "" : owner.flagId;
         if (!factionFlagId.equals(ownerFlag)) {
             factionFlagId = ownerFlag;
+            changed = true;
+        }
+
+        if (changed) {
             setChanged();
+            level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
         }
 
         int threshold = WarForgeMod.FOBS.getSiegeHoldThresholdTicks(fob);
@@ -62,9 +70,8 @@ public class TileEntityFob extends BlockEntity {
         }
 
         boolean enemyHeld = FobPresence.enemyHeld(fob);
-        boolean ownerHeld = FobPresence.ownerOrAllyAbove(fob);
 
-        if (enemyHeld && !ownerHeld) {
+        if (enemyHeld && !FobPresence.ownerOrAllyAbove(fob)) {
             fob.enemyHoldTicks++;
             if (fob.enemyHoldTicks >= threshold) {
                 WarForgeMod.FOBS.destroyFob(fob);
@@ -88,8 +95,8 @@ public class TileEntityFob extends BlockEntity {
     @Override
     public void load(CompoundTag nbt) {
         super.load(nbt);
-        ownerFaction = nbt.getUUID("ownerFaction");
-        placer = nbt.getUUID("placer");
+        ownerFaction = nbt.hasUUID("ownerFaction") ? nbt.getUUID("ownerFaction") : Faction.nullUuid;
+        placer = nbt.hasUUID("placer") ? nbt.getUUID("placer") : Faction.nullUuid;
         name = nbt.getString("name");
         tickets = nbt.getInt("tickets");
         maxTickets = nbt.getInt("maxTickets");
@@ -119,7 +126,7 @@ public class TileEntityFob extends BlockEntity {
 
     @Override
     public void handleUpdateTag(CompoundTag tags) {
-        ownerFaction = tags.getUUID("ownerFaction");
+        ownerFaction = tags.hasUUID("ownerFaction") ? tags.getUUID("ownerFaction") : Faction.nullUuid;
         name = tags.getString("name");
         tickets = tags.getInt("tickets");
         maxTickets = tags.getInt("maxTickets");

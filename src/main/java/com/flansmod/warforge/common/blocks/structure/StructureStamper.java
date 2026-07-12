@@ -27,7 +27,6 @@ public class StructureStamper {
         }
 
         level.setBlock(pos, state, 3);
-        level.sendBlockUpdated(pos, existing, state, 3);
     }
 
     public static void clearStructure(Level level, BlockPos center) {
@@ -48,7 +47,6 @@ public class StructureStamper {
             }
 
             level.setBlock(pos, air, 3);
-            level.sendBlockUpdated(pos, existing, air, 3);
         }
     }
 }

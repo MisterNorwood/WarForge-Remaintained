@@ -142,7 +142,8 @@ public final class GuiCreateFactionModular {
                 .name("create_faction_colour_bar_" + channel)
                 .size(BAR_WIDTH, BAR_HEIGHT)
                 .pos(x, y)
-                .background(bar)
+                .background((ctx, bx, by, bw, bh, th) -> {})
+                .overlay(bar)
                 .onMousePressed((context, mouseButton) -> {
                     int width = rect[1] <= 0 ? BAR_WIDTH : rect[1];
                     float value = (context.getMouseX() - rect[0]) / (float) width;
@@ -153,10 +154,10 @@ public final class GuiCreateFactionModular {
 
     private static int componentColour(float[] hsb, int channel, float fraction) {
         if (channel == 0) {
-            return Color.HSBtoRGB(fraction, hsb[1], hsb[2]);
+            return Color.HSBtoRGB(fraction, 1.0f, 1.0f);
         }
         if (channel == 1) {
-            return Color.HSBtoRGB(hsb[0], fraction, hsb[2]);
+            return Color.HSBtoRGB(hsb[0], fraction, 1.0f);
         }
         return Color.HSBtoRGB(hsb[0], hsb[1], fraction);
     }

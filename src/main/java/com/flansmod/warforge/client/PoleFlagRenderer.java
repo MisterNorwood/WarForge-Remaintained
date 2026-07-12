@@ -8,15 +8,16 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.block.ModelBlockRenderer;
+import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.client.model.data.ModelData;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 
@@ -50,10 +51,17 @@ public final class PoleFlagRenderer {
 
         int poleLight = LevelRenderer.getLightColor(level, pos.above());
 
-        ModelBlockRenderer modelRenderer = Minecraft.getInstance().getBlockRenderer().getModelRenderer();
-        VertexConsumer consumer = buffers.getBuffer(RenderType.solid());
-        modelRenderer.renderModel(pose.last(), consumer, dummyState, bakedModel,
-                1.0F, 1.0F, 1.0F, poleLight, packedOverlay, ModelData.EMPTY, RenderType.solid());
+        VertexConsumer consumer = buffers.getBuffer(RenderType.cutout());
+        PoseStack.Pose last = pose.last();
+        RandomSource random = RandomSource.create();
+        for (Direction dir : Direction.values()) {
+            for (BakedQuad quad : bakedModel.getQuads(dummyState, dir, random)) {
+                consumer.putBulkData(last, quad, 1.0F, 1.0F, 1.0F, poleLight, packedOverlay);
+            }
+        }
+        for (BakedQuad quad : bakedModel.getQuads(dummyState, null, random)) {
+            consumer.putBulkData(last, quad, 1.0F, 1.0F, 1.0F, poleLight, packedOverlay);
+        }
 
         renderFlag(pose, buffers, level, poleLight, packedOverlay, flagId, partialTicks);
 

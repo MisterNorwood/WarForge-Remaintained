@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FobWarpQueue {
+    private static final int TICKS_PER_SECOND = 20;
     private final List<PendingWarp> mPendingWarps = new ArrayList<PendingWarp>();
 
     public static void forceTouchChunk(DimBlockPos target) {
@@ -33,9 +34,8 @@ public class FobWarpQueue {
         return extra == null ? 0 : Math.max(0, extra);
     }
 
-    private static void warpVehicle(ServerPlayer player, DimBlockPos target) {
-        Entity vehicle = player.getVehicle();
-        if (vehicle == null) {
+    private static void warpVehicle(ServerPlayer player, Entity vehicle, DimBlockPos target) {
+        if (vehicle == null || player.getVehicle() != vehicle) {
             return;
         }
 
@@ -52,7 +52,7 @@ public class FobWarpQueue {
         double z = target.getZ() + 0.5D;
 
         Entity movedVehicle = vehicle;
-        if (movedVehicle.level().dimension() != target.dim) {
+        if (!movedVehicle.level().dimension().equals(target.dim)) {
             movedVehicle = movedVehicle.changeDimension(targetLevel, new WfTeleporter());
         }
         if (movedVehicle == null) {
@@ -65,7 +65,7 @@ public class FobWarpQueue {
                 continue;
             }
             Entity moved = passenger;
-            if (moved.level().dimension() != target.dim) {
+            if (!moved.level().dimension().equals(target.dim)) {
                 moved = moved.changeDimension(targetLevel, new WfTeleporter());
             }
             if (moved != null) {
@@ -75,6 +75,13 @@ public class FobWarpQueue {
         }
     }
 
+    public boolean hasPendingWarp(java.util.UUID playerId) {
+        for (PendingWarp warp : mPendingWarps) {
+            if (warp.player != null && warp.player.getUUID().equals(playerId)) return true;
+        }
+        return false;
+    }
+
     public void requestFobWarp(ServerPlayer player, Fob fob, int cost) {
         if (player == null || fob == null) {
             return;
@@ -82,6 +89,7 @@ public class FobWarpQueue {
 
         PendingWarp warp = new PendingWarp();
         warp.player = player;
+        warp.vehicle = player.getVehicle();
         warp.pos = player.blockPosition();
         warp.target = new DimBlockPos(fob.pos.dim, fob.pos.getX(), fob.pos.getY(), fob.pos.getZ());
         warp.fob = fob;
@@ -103,8 +111,8 @@ public class FobWarpQueue {
                 continue;
             }
 
-            if (warp.ticksRemaining % 20 == 0) {
-                warp.player.sendSystemMessage(Component.literal("Warping in " + (warp.ticksRemaining / 20)));
+            if (warp.ticksRemaining % TICKS_PER_SECOND == 0) {
+                warp.player.sendSystemMessage(Component.literal("Warping in " + (warp.ticksRemaining / TICKS_PER_SECOND)));
             }
 
             warp.ticksRemaining--;
@@ -118,12 +126,13 @@ public class FobWarpQueue {
 
     private void fireWarp(PendingWarp warp) {
         forceTouchChunk(warp.target);
-        warpVehicle(warp.player, warp.target);
+        warpVehicle(warp.player, warp.vehicle, warp.target);
         TeleportUtil.teleportPlayer(warp.player, warp.target.dim, warp.target.toRegularPos());
     }
 
     private static class PendingWarp {
         public ServerPlayer player;
+        public Entity vehicle;
         public int ticksRemaining;
         public BlockPos pos;
 

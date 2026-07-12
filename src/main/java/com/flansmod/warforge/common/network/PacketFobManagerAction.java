@@ -37,51 +37,62 @@ public class PacketFobManagerAction extends PacketBase {
 
     @Override
     public void decodeInto(FriendlyByteBuf data) {
-        action = Action.values()[data.readByte()];
-        ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(readUTF(data)));
+        int actionOrd = Byte.toUnsignedInt(data.readByte());
+        action = actionOrd < Action.values().length ? Action.values()[actionOrd] : Action.values()[0];
+        ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(readUTF(data, 256)));
         int x = data.readInt();
         int y = data.readInt();
         int z = data.readInt();
         target = new DimBlockPos(dim, x, y, z);
-        name = readUTF(data);
-        page = FactionMemberManagerGuiData.Page.values()[data.readByte()];
+        name = readUTF(data, 32);
+        int pageOrd = Byte.toUnsignedInt(data.readByte());
+        page = pageOrd < FactionMemberManagerGuiData.Page.values().length ? FactionMemberManagerGuiData.Page.values()[pageOrd] : FactionMemberManagerGuiData.Page.values()[0];
     }
 
     @Override
     public void handleServerSide(ServerPlayer playerEntity) {
-        switch (action) {
+        boolean success = switch (action) {
             case ESTABLISH -> handleEstablish(playerEntity);
             case WARP -> handleWarp(playerEntity);
+        };
+        if (success) {
+            FactionMemberManagerGuiFactory.INSTANCE.open(playerEntity, page);
         }
-        FactionMemberManagerGuiFactory.INSTANCE.open(playerEntity, page);
     }
 
-    private void handleEstablish(ServerPlayer playerEntity) {
+    private boolean handleEstablish(ServerPlayer playerEntity) {
         if (name == null || name.trim().isEmpty()) {
-            return;
+            return false;
+        }
+
+        if (name.trim().length() > 32) {
+            return false;
         }
 
         Faction faction = WarForgeMod.FACTIONS.getFactionOfPlayer(playerEntity.getUUID());
         if (faction == null) {
-            return;
+            return false;
         }
 
         if (!faction.isPlayerRoleInFaction(playerEntity.getUUID(), Faction.Role.OFFICER)) {
-            return;
+            return false;
         }
 
         BlockEntity te = playerEntity.level().getBlockEntity(target.toRegularPos());
         if (te instanceof TileEntityFob) {
             WarForgeMod.FOBS.requestCreateFob((TileEntityFob) te, playerEntity, name);
+            return true;
         }
+        return false;
     }
 
-    private void handleWarp(ServerPlayer playerEntity) {
+    private boolean handleWarp(ServerPlayer playerEntity) {
         Fob fob = WarForgeMod.FOBS.getFobAt(target.toChunkPos());
         if (fob == null) {
-            return;
+            return false;
         }
         WarForgeMod.FOBS.requestFobWarp(playerEntity, fob);
+        return true;
     }
 
     @Override
