@@ -51,6 +51,20 @@ public class FobManager {
         return mFobChunks.get(chunk);
     }
 
+    public boolean isNearActiveFob(DimChunkPos chunk, int radius) {
+        if (mFobChunks.isEmpty() || radius < 0) {
+            return false;
+        }
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                if (mFobChunks.containsKey(new DimChunkPos(chunk.dim, chunk.x + dx, chunk.z + dz))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public List<Fob> allFobs() {
         return new ArrayList<>(mFobChunks.values());
     }
@@ -66,7 +80,7 @@ public class FobManager {
         if (owner == null || chunk == null) {
             return false;
         }
-        if (!WarForgeMod.FACTIONS.getClaim(chunk).equals(Faction.nullUuid)) {
+        if (WarForgeMod.FACTIONS.hasClaimWithin(chunk, WarForgeConfig.FOB_CLAIM_EXCLUSION_RADIUS)) {
             return false;
         }
         if (WarForgeMod.FACTIONS.isChunkContested(chunk)) {
@@ -129,6 +143,11 @@ public class FobManager {
         }
         BlockPos placedPos = te.getBlockPos();
         DimChunkPos chunk = new DimChunkPos(level.dimension(), placedPos);
+        if (WarForgeMod.FACTIONS.hasClaimWithin(chunk, WarForgeConfig.FOB_CLAIM_EXCLUSION_RADIUS)) {
+            placer.sendSystemMessage(Component.literal("You cannot establish a FOB within "
+                    + WarForgeConfig.FOB_CLAIM_EXCLUSION_RADIUS + " chunk(s) of a claim"));
+            return false;
+        }
         if (!canPlaceFob(owner, chunk)) {
             return false;
         }

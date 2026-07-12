@@ -769,6 +769,20 @@ public class FactionStorage {
         return null;
     }
 
+    public boolean hasClaimWithin(DimChunkPos center, int radius) {
+        if (center == null || radius < 0) {
+            return false;
+        }
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                if (!getClaim(new DimChunkPos(center.dim, center.x + dx, center.z + dz)).equals(Faction.nullUuid)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private boolean canClaimChunkNoTile(ServerPlayer player, Faction faction, DimChunkPos chunkPos, boolean notify) {
         if (!isOp(player) && !faction.isPlayerRoleInFaction(player.getUUID(), Faction.Role.OFFICER)) {
             if (notify) {
@@ -788,9 +802,10 @@ public class FactionStorage {
             }
             return false;
         }
-        if (WarForgeMod.FOBS.getFobAt(chunkPos) != null) {
+        if (WarForgeMod.FOBS.isNearActiveFob(chunkPos, WarForgeConfig.FOB_CLAIM_EXCLUSION_RADIUS)) {
             if (notify) {
-                player.sendSystemMessage(Component.literal("This chunk already has a FOB"));
+                player.sendSystemMessage(Component.literal("You cannot claim within " + WarForgeConfig.FOB_CLAIM_EXCLUSION_RADIUS
+                        + " chunk(s) of an active FOB"));
             }
             return false;
         }

@@ -508,6 +508,13 @@ public class WarForgeMod {
             return;
         }
 
+        if (FOBS.isNearActiveFob(pos, WarForgeConfig.FOB_CLAIM_EXCLUSION_RADIUS)) {
+            player.sendSystemMessage(Component.literal("You cannot claim within " + WarForgeConfig.FOB_CLAIM_EXCLUSION_RADIUS
+                    + " chunk(s) of an active FOB"));
+            event.setCanceled(true);
+            return;
+        }
+
         if (block == Content.citadelBlock) {
             if (playerFaction != null) {
                 player.sendSystemMessage(Component.literal("You are already in a faction"));

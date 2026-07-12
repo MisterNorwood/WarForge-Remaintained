@@ -77,6 +77,7 @@ public class WarForgeConfig {
     public static int FOB_TICKET_REGEN_PER_SIEGE_TICK = 1;
     public static int FOB_WARP_TICKS = 200;
     public static boolean FOB_BLOCK_BREAKABLE = false;
+    public static int FOB_CLAIM_EXCLUSION_RADIUS = 1;
     public static Map<String, Integer> FOB_VEHICLE_TICKET_COST = new HashMap<>();
     public static int MIN_DISTANCE_BETWEEN_FACTIONS = 1;
     public static int CLAIM_MANAGER_RADIUS = 4;
@@ -342,6 +343,7 @@ public class WarForgeConfig {
     private static ForgeConfigSpec.IntValue FOB_TICKET_REGEN_PER_SIEGE_TICK_V;
     private static ForgeConfigSpec.IntValue FOB_WARP_TICKS_V;
     private static ForgeConfigSpec.BooleanValue FOB_BLOCK_BREAKABLE_V;
+    private static ForgeConfigSpec.IntValue FOB_CLAIM_EXCLUSION_RADIUS_V;
     private static ForgeConfigSpec.ConfigValue<List<? extends String>> FOB_VEHICLE_TICKET_COST_V;
     private static ForgeConfigSpec.IntValue MIN_DISTANCE_BETWEEN_FACTIONS_V;
     private static ForgeConfigSpec.IntValue CLAIM_MANAGER_RADIUS_V;
@@ -499,6 +501,7 @@ public class WarForgeConfig {
         FOB_TICKET_REGEN_PER_SIEGE_TICK_V = cfg.comment("Warp tickets restored to a FOB each time a siege timer resets. Ignored when the citadel upgrade system is enabled; the per-level 'fob_ticket_regen' value from upgrade_levels.toml is used instead.").defineInRange("FOB Ticket Regen Per Siege Tick", FOB_TICKET_REGEN_PER_SIEGE_TICK, 0, 1024);
         FOB_WARP_TICKS_V = cfg.comment("Number of ticks a player must wait before a FOB warp fires.").defineInRange("FOB Warp Ticks", FOB_WARP_TICKS, 0, 1000000);
         FOB_BLOCK_BREAKABLE_V = cfg.comment("If true, the central FOB block can be mined (very slowly, at a fixed rate independent of tool tier); otherwise it is only removed programmatically.").define("FOB Block Breakable", FOB_BLOCK_BREAKABLE);
+        FOB_CLAIM_EXCLUSION_RADIUS_V = cfg.comment("Buffer, in chunks, that must separate any new claim (including a founding citadel) from an active (faction-owned) FOB. A value of N forbids claiming within N chunks (square/Chebyshev radius) of any established FOB. This applies to everyone, including the FOB's own faction. Set to 0 to forbid only the exact FOB chunk.").defineInRange("FOB Claim Exclusion Radius", FOB_CLAIM_EXCLUSION_RADIUS, 0, 64);
         FOB_VEHICLE_TICKET_COST_V = cfg.comment("Extra warp ticket cost per vehicle entity, in the form 'namespace:path=extraCost'. A warp with a vehicle costs 1 plus this value.").defineList("FOB Vehicle Ticket Cost", asList(new String[]{}), o -> o instanceof String);
         MIN_DISTANCE_BETWEEN_FACTIONS_V = cfg.comment("Minimum gap, in chunks, that must separate a new claim from an opposing (non-allied) faction's claims. A value of N forbids claiming within N chunks (square radius) of an opposing faction; allied factions are exempt. Set to 0 to disable.").defineInRange("Minimum Distance Between Opposing Factions", MIN_DISTANCE_BETWEEN_FACTIONS, 0, 64);
         CLAIM_MANAGER_RADIUS_V = cfg.comment("Square radius in chunks shown in the claim manager UI.").defineInRange("Claim Manager Radius", CLAIM_MANAGER_RADIUS, 1, 12);
@@ -710,6 +713,7 @@ public class WarForgeConfig {
         FOB_TICKET_REGEN_PER_SIEGE_TICK = FOB_TICKET_REGEN_PER_SIEGE_TICK_V.get();
         FOB_WARP_TICKS = FOB_WARP_TICKS_V.get();
         FOB_BLOCK_BREAKABLE = FOB_BLOCK_BREAKABLE_V.get();
+        FOB_CLAIM_EXCLUSION_RADIUS = FOB_CLAIM_EXCLUSION_RADIUS_V.get();
 
         FOB_VEHICLE_TICKET_COST.clear();
         for (String s : FOB_VEHICLE_TICKET_COST_V.get()) {
