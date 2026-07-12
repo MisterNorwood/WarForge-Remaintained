@@ -1,7 +1,5 @@
 {
-    "variants": {
-        "model=king": { "model": "warforge:block/dummy/king" },
-        "model=knight": { "model": "warforge:block/dummy/knight" },
-        "model=berserker": { "model": "warforge:block/dummy/berserker" }
-    }
+  "variants": {
+    "": { "model": "warforge:block/empty" }
+  }
 }

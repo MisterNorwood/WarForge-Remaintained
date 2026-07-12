@@ -21,6 +21,7 @@ import com.flansmod.warforge.client.util.FlagDrawable;
 import com.flansmod.warforge.common.WarForgeConfig;
 import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.common.blocks.TileEntityCitadel;
+import com.flansmod.warforge.common.factories.CreateFactionGuiFactory;
 import com.flansmod.warforge.common.factories.FactionFlagSelectGuiFactory;
 import com.flansmod.warforge.common.factories.FactionInsuranceGuiFactory;
 import com.flansmod.warforge.common.factories.FactionMemberManagerGuiData;
@@ -28,9 +29,9 @@ import com.flansmod.warforge.common.factories.FactionMemberManagerGuiFactory;
 import com.flansmod.warforge.common.factories.FactionStatsGuiFactory;
 import com.flansmod.warforge.common.factories.FactionUpgradeGuiFactory;
 import com.flansmod.warforge.common.network.PacketDisbandFaction;
+import com.flansmod.warforge.common.util.DimBlockPos;
 import com.flansmod.warforge.server.Faction;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 
 public final class ModularCitadelGui {
@@ -162,13 +163,13 @@ public final class ModularCitadelGui {
             if (WarForgeConfig.ENABLE_CITADEL_UPGRADES) {
                 secondRow.child(openButton("Upgrade", 75, () -> FactionUpgradeGuiFactory.INSTANCE.openClientChild(reopenCitadel, citadel.getFaction())));
             }
-            secondRow.child(openButton("Recolor", 75, () -> Minecraft.getInstance().setScreen(new GuiCreateFaction(citadel, true))));
+            secondRow.child(openButton("Recolor", 75, () -> CreateFactionGuiFactory.INSTANCE.openClientChild(reopenCitadel, new DimBlockPos(citadel), citadel.colour, true)));
             secondRow.child(dangerButton("Disband", 75));
             actionsPanel.child(secondRow);
         } else {
             firstRow.coverChildrenHeight();
             var columnStart = new Flow(GuiAxis.Y);
-            columnStart.child(openButton("Create Faction", 100, () -> Minecraft.getInstance().setScreen(new GuiCreateFaction(citadel, false))).margin(2));
+            columnStart.child(openButton("Create Faction", 100, () -> CreateFactionGuiFactory.INSTANCE.openClientChild(reopenCitadel, new DimBlockPos(citadel), citadel.colour, false)).margin(2));
             columnStart.child(Text.str("The placer can establish the faction from here.").asWidget()
                     .color(0xB8BDC3).margin(2));
             firstRow.child(columnStart);

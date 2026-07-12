@@ -21,6 +21,7 @@ public class TileEntityFob extends BlockEntity {
     public String name = "";
     public int tickets = 0;
     public int maxTickets = 0;
+    public String factionFlagId = "";
 
     public TileEntityFob(BlockPos pos, BlockState state) {
         super(Content.TE_FOB.get(), pos, state);
@@ -42,6 +43,13 @@ public class TileEntityFob extends BlockEntity {
         if (tickets != fob.tickets || maxTickets != fob.maxTickets) {
             tickets = fob.tickets;
             maxTickets = fob.maxTickets;
+            setChanged();
+        }
+
+        Faction owner = WarForgeMod.FACTIONS.getFaction(ownerFaction);
+        String ownerFlag = owner == null ? "" : owner.flagId;
+        if (!factionFlagId.equals(ownerFlag)) {
+            factionFlagId = ownerFlag;
             setChanged();
         }
 
@@ -74,6 +82,7 @@ public class TileEntityFob extends BlockEntity {
         nbt.putString("name", name);
         nbt.putInt("tickets", tickets);
         nbt.putInt("maxTickets", maxTickets);
+        nbt.putString("flagId", factionFlagId);
     }
 
     @Override
@@ -84,6 +93,7 @@ public class TileEntityFob extends BlockEntity {
         name = nbt.getString("name");
         tickets = nbt.getInt("tickets");
         maxTickets = nbt.getInt("maxTickets");
+        factionFlagId = nbt.getString("flagId");
     }
 
     @Override
@@ -103,6 +113,7 @@ public class TileEntityFob extends BlockEntity {
         tags.putString("name", name);
         tags.putInt("tickets", tickets);
         tags.putInt("maxTickets", maxTickets);
+        tags.putString("flagId", factionFlagId);
         return tags;
     }
 
@@ -112,5 +123,6 @@ public class TileEntityFob extends BlockEntity {
         name = tags.getString("name");
         tickets = tags.getInt("tickets");
         maxTickets = tags.getInt("maxTickets");
+        factionFlagId = tags.getString("flagId");
     }
 }

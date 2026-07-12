@@ -4,7 +4,6 @@ import com.flansmod.warforge.api.vein.Vein;
 import com.flansmod.warforge.common.CommonProxy;
 import com.flansmod.warforge.common.Content;
 import com.flansmod.warforge.common.WarForgeMod;
-import com.flansmod.warforge.common.blocks.models.ClaimModels;
 import com.flansmod.warforge.common.effect.AnimatedEffectHandler;
 import com.flansmod.warforge.common.factories.FactionStatsGuiFactory;
 import com.flansmod.warforge.common.network.SiegeCampProgressInfo;
@@ -70,9 +69,10 @@ public class ClientProxy extends CommonProxy
 
 	public void registerRenderers(EntityRenderersEvent.RegisterRenderers event)
 	{
-		event.registerBlockEntityRenderer(Content.TE_CITADEL.get(), ctx -> new RenderTileEntityClaim(ClaimModels.ModelType.CITADEL));
-		event.registerBlockEntityRenderer(Content.TE_BASIC_CLAIM.get(), ctx -> new RenderTileEntityClaim(ClaimModels.ModelType.BASIC_CLAIM));
-		event.registerBlockEntityRenderer(Content.TE_SIEGE_CAMP.get(), ctx -> new RenderTileEntityClaim(ClaimModels.ModelType.SIEGE));
+		event.registerBlockEntityRenderer(Content.TE_CITADEL.get(), ctx -> new RenderTileEntityClaim());
+		event.registerBlockEntityRenderer(Content.TE_BASIC_CLAIM.get(), ctx -> new RenderTileEntityClaim());
+		event.registerBlockEntityRenderer(Content.TE_SIEGE_CAMP.get(), ctx -> new RenderTileEntityClaim());
+		event.registerBlockEntityRenderer(Content.TE_FOB.get(), ctx -> new RenderTileEntityFob());
 		event.registerBlockEntityRenderer(Content.TE_DUMMY.get(), RenderTileEntityDummy::new);
 		event.registerBlockEntityRenderer(Content.TE_LEADERBOARD.get(), TileEntityLeaderboardRenderer::new);
 	}

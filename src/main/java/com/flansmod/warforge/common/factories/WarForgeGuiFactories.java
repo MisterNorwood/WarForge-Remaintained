@@ -8,6 +8,7 @@ public final class WarForgeGuiFactories {
         BasicClaimGuiFactory.init();
         CitadelGuiFactory.init();
         ClaimManagerGuiFactory.init();
+        CreateFactionGuiFactory.init();
         FactionFlagSelectGuiFactory.init();
         FactionInsuranceGuiFactory.init();
         FactionMemberManagerGuiFactory.init();

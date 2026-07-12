@@ -148,7 +148,6 @@ public class WarForgeConfig {
     public static int NOTORIETY_PER_SIEGE_DEFEND_SUCCESS = 10;
     public static int LEGACY_PER_DAY = 3;
     public static boolean LEGACY_USES_YIELD_TIMER = true;
-    public static boolean MODERN_WARFARE_MODELS = false;
 
     // Wealth - Vault blocks
     public static String[] VAULT_BLOCK_IDS = new String[]{"minecraft:gold_block"};
@@ -436,7 +435,6 @@ public class WarForgeConfig {
     private static ForgeConfigSpec.ConfigValue<String> JOURNEYMAP_VEIN_MODE_V;
     private static ForgeConfigSpec.IntValue JOURNEYMAP_VEIN_AUTO_RADIUS_V;
     private static ForgeConfigSpec.IntValue VEIN_MEMBER_DISPLAY_TIME_MS_V;
-    private static ForgeConfigSpec.BooleanValue MODERN_WARFARE_MODELS_V;
     private static ForgeConfigSpec.DoubleValue HUD_VERT_CUTOFF_PERCENT_V;
     private static ForgeConfigSpec.ConfigValue<String> POS_TIMERS_V;
     private static ForgeConfigSpec.ConfigValue<String> POS_SIEGE_V;
@@ -609,7 +607,6 @@ public class WarForgeConfig {
         SHOW_NEW_AREA_TIMER_V = cfg.comment("How many in-game ticks to show the 'You have entered {faction}' message for.").defineInRange("New Area Timer", (double) SHOW_NEW_AREA_TIMER, 0.0d, 1000d);
         SHOW_YIELD_TIMERS_V = cfg.comment("Whether to show a readout of the time until the next yield / siege in top left of your screen").define("Show yield timers", SHOW_YIELD_TIMERS);
         VEIN_MEMBER_DISPLAY_TIME_MS_V = cfg.comment("The time in milliseconds for which each member of a vein will be displayed when it is being cycled through, to the precision allowed by the client tick system.").defineInRange("Vein Member Display Time", (int) VEIN_MEMBER_DISPLAY_TIME_MS, 100, Integer.MAX_VALUE);
-        MODERN_WARFARE_MODELS_V = cfg.comment("Enable modern warfare models, instead of medival more vanilla-friendly models").define("Enable modern warfare models", MODERN_WARFARE_MODELS);
         HUD_VERT_CUTOFF_PERCENT_V = cfg.comment("What percent of the entire screen resolution from the top must certain displays (such as vein info) be before they stop rendering. Set to 0.0 to disable all relevant displays, or 1.0 to turn this off.").defineInRange("HUD Vertical cutoff", (double) HUD_VERT_CUTOFF_PERCENT, 0.0d, 1.0d);
         POS_TIMERS_V = cfg.comment("Position of the yield timers").define("Yield timer position", "BOTTOM_RIGHT");
         POS_SIEGE_V = cfg.comment("Position of the siege status").define("Siege status position", "TOP");
@@ -833,7 +830,6 @@ public class WarForgeConfig {
         JOURNEYMAP_VEIN_MODE = parseJourneyMapMode(JOURNEYMAP_VEIN_MODE_V.get());
         JOURNEYMAP_VEIN_AUTO_RADIUS = JOURNEYMAP_VEIN_AUTO_RADIUS_V.get();
         VEIN_MEMBER_DISPLAY_TIME_MS = VEIN_MEMBER_DISPLAY_TIME_MS_V.get();
-        MODERN_WARFARE_MODELS = MODERN_WARFARE_MODELS_V.get();
         HUD_VERT_CUTOFF_PERCENT = HUD_VERT_CUTOFF_PERCENT_V.get().floatValue();
 
         POS_TIMERS = ScreenPos.fromString(POS_TIMERS_V.get());

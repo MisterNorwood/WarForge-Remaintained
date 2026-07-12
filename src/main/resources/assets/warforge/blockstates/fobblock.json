@@ -1,7 +1,5 @@
 {
   "variants": {
-    "": {
-      "model": "warforge:block/fobblock"
-    }
+    "": { "model": "warforge:block/fobblock" }
   }
 }

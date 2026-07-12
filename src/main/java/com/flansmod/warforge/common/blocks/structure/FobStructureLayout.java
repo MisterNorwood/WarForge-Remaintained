@@ -52,22 +52,26 @@ public class FobStructureLayout {
     public static Map<BlockPos, BlockState> resolve(BlockPos center, Level level) {
         Map<BlockPos, BlockState> result = new HashMap<>();
 
+        int chunkMinX = (center.getX() >> 4) << 4;
+        int chunkMinZ = (center.getZ() >> 4) << 4;
+        BlockPos anchor = new BlockPos(chunkMinX - MIN, center.getY(), chunkMinZ - MIN);
+
         for (int[] offset : FLOOR_OFFSETS) {
-            BlockPos pos = center.offset(offset[0], 0, offset[1]);
+            BlockPos pos = anchor.offset(offset[0], 0, offset[1]);
             if (!pos.equals(center)) {
                 result.put(pos, FLOOR);
             }
         }
 
         for (int[] offset : BRACKET_OFFSETS) {
-            BlockPos base = center.offset(offset[0], 0, offset[1]);
+            BlockPos base = anchor.offset(offset[0], 0, offset[1]);
             if (!base.equals(center)) {
                 result.put(base, BRACKET);
                 result.put(base.above(), BRACKET);
             }
         }
 
-        BlockPos accent = center.offset(0, 0, MIN);
+        BlockPos accent = anchor.offset(0, 0, MIN);
         if (!accent.equals(center)) {
             result.put(accent, ACCENT);
         }

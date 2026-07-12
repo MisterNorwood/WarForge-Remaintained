@@ -1,0 +1,24 @@
+package com.flansmod.warforge.client;
+
+import com.flansmod.warforge.common.blocks.TileEntityFob;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+
+public class RenderTileEntityFob implements BlockEntityRenderer<TileEntityFob> {
+
+    public RenderTileEntityFob() {
+    }
+
+    @Override
+    public void render(TileEntityFob te, float partialTicks, PoseStack pose, MultiBufferSource buffers,
+                       int packedLight, int packedOverlay) {
+        PoleFlagRenderer.render(pose, buffers, packedOverlay, te.getLevel(), te.getBlockPos(),
+                0, te.factionFlagId, partialTicks);
+    }
+
+    @Override
+    public boolean shouldRenderOffScreen(TileEntityFob te) {
+        return true;
+    }
+}
