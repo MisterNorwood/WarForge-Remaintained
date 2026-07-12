@@ -32,7 +32,7 @@ public final class GuiFactionStats {
     public static ModularPanel buildPanel(FactionStatsGuiData data) {
         int sectionWidth = WIDTH - CONTENT_LEFT * 2;
 
-        ModularPanel panel = ModularPanel.defaultPanel("faction_stats", WIDTH, HEIGHT).topRel(0.40f);
+        ModularPanel panel = ModularPanel.defaultPanel("faction_stats", WIDTH, HEIGHT).topRel(0.5f);
 
         Flow bodySection = ModularGuiStyle.section(sectionWidth, 118).name("faction_stats_body_section").pos(CONTENT_LEFT, BODY_Y);
         Flow actionSection = ModularGuiStyle.section(sectionWidth, 34).name("faction_stats_action_section").pos(CONTENT_LEFT, ACTIONS_Y);

@@ -29,7 +29,7 @@ public class SiegeCampGuiFactory extends AbstractUIFactory<SiegeCampGuiData> {
             if (guiData.isClient()) {
                 return GuiSiegeCamp.buildPanel(guiData);
             }
-            return ModularPanel.defaultPanel("siege_main", 380, 508).topRel(0.40f);
+            return ModularPanel.defaultPanel("siege_main", 380, 508).topRel(0.5f);
         }
 
         @Override

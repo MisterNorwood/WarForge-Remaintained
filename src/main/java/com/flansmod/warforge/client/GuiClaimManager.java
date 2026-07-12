@@ -99,7 +99,7 @@ public final class GuiClaimManager {
         ModularPanel panel = ModularPanel.defaultPanel("claim_manager")
                 .width(width)
                 .height(height)
-                .topRel(0.40f);
+                .topRel(0.5f);
 
         Flow infoSection = ModularGuiStyle.section(mapSectionWidth, INFO_HEIGHT).name("claim_manager_info_section").pos(CONTENT_LEFT, infoY);
         Flow legendSection = ModularGuiStyle.section(mapSectionWidth, LEGEND_HEIGHT).name("claim_manager_legend_section").pos(CONTENT_LEFT, legendY);

@@ -36,12 +36,16 @@ import net.minecraft.client.gui.GuiGraphics;
 
 public final class ModularCitadelGui {
     private static final int PANEL_WIDTH = 350;
-    private static final int PANEL_HEIGHT = 200;
+    private static final int PANEL_HEIGHT = 214;
     private static final int SLOT_SIZE = 18;
     private static final int CONTENT_LEFT = 12;
     private static final int HEADER_Y = 12;
-    private static final int STORAGE_Y = 40;
-    private static final int ACTIONS_Y = 130;
+    private static final int STORAGE_Y = 50;
+    private static final int ACTIONS_Y = 140;
+    private static final int INVENTORY_GAP = 8;
+    private static final int INVENTORY_BOX_HEIGHT = 86;
+    private static final int INVENTORY_Y = PANEL_HEIGHT + INVENTORY_GAP;
+    private static final int GROUP_VERTICAL_OFFSET = -(INVENTORY_GAP + INVENTORY_BOX_HEIGHT) / 2;
 
     private ModularCitadelGui() {
     }
@@ -56,7 +60,7 @@ public final class ModularCitadelGui {
         ModularPanel panel = ModularPanel.defaultPanel("citadel_modular")
                 .width(PANEL_WIDTH)
                 .height(PANEL_HEIGHT)
-                .topRel(0.40f);
+                .topRel(0.5f, GROUP_VERTICAL_OFFSET, 0.5f);
 
         var yeldPanel = new Flow(GuiAxis.Y)
                 .background(sectionBackdrop(100, 80, 0xEE20262B, 0xEE11161A))
@@ -74,7 +78,7 @@ public final class ModularCitadelGui {
                 .margin(5);
         panel.child(flagPanel);
 
-        panel.child(new IDrawable.DrawableWidget(sectionBackdrop(PANEL_WIDTH, 36, 0xFF171B1F, 0xFF0D1013)).size(PANEL_WIDTH, 36));
+        panel.child(new IDrawable.DrawableWidget(sectionBackdrop(PANEL_WIDTH, 40, 0xFF171B1F, 0xFF0D1013)).size(PANEL_WIDTH, 40));
 
         var actionsPanel = new Flow(GuiAxis.Y)
                 .background(sectionBackdrop(PANEL_WIDTH - CONTENT_LEFT * 2, 65, 0xEE20262B, 0xEE11161A))
@@ -92,9 +96,9 @@ public final class ModularCitadelGui {
                 .style(ChatFormatting.BOLD)
                 .color(hasFaction ? citadel.colour : 0xFFFFFF)
                 .shadow(true)
-                .scale(1.2f));
+                .scale(1.15f));
         panel.child(Text.str(hasFaction ? "Faction vault, banner relay, and command center" : "Claimed by the placer until a faction is founded").asWidget()
-                .pos(CONTENT_LEFT, HEADER_Y + 14)
+                .pos(CONTENT_LEFT, HEADER_Y + 15)
                 .color(0xC7CCD1));
 
         yeldPanel.child(new RichTextWidget()
@@ -114,7 +118,7 @@ public final class ModularCitadelGui {
                     .slot(new ModularSlot(citadel, slot))
                     .size(SLOT_SIZE));
         }
-        yieldGrid.size(3 * SLOT_SIZE, 3 * SLOT_SIZE);
+        yieldGrid.size(3 * SLOT_SIZE, 3 * SLOT_SIZE).relativeToParent().horizontalCenter().top(20);
         yeldPanel.child(yieldGrid);
 
         flagPanel.child(Text.str("Faction Flag").asWidget()
@@ -175,7 +179,7 @@ public final class ModularCitadelGui {
             firstRow.child(columnStart);
         }
 
-        panel.child(new ParentWidget<>().child(SlotGroupWidget.playerInventory(false)).background(GuiTextures.MC_BACKGROUND).coverChildren().margin(5).padding(5).horizontalCenter().top(PANEL_HEIGHT));
+        panel.child(new ParentWidget<>().child(SlotGroupWidget.playerInventory(false)).background(GuiTextures.MC_BACKGROUND).coverChildren().padding(5).horizontalCenter().top(INVENTORY_Y));
 
         return panel;
     }

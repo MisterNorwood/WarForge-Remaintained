@@ -135,7 +135,7 @@ public class GUIUpgradePanel {
         ModularPanel panel = ModularPanel.defaultPanel("citadel_upgrade_panel")
                 .width(WIDTH)
                 .height(HEIGHT)
-                .topRel(0.40f);
+                .topRel(0.5f);
 
         Flow bodySection = ModularGuiStyle.section(WIDTH - CONTENT_LEFT * 2, BODY_SECTION_HEIGHT).name("upgrade_body_section").pos(CONTENT_LEFT, BODY_Y);
         Flow actionSection = ModularGuiStyle.section(WIDTH - CONTENT_LEFT * 2, 28).name("upgrade_action_section").pos(CONTENT_LEFT, ACTIONS_Y);

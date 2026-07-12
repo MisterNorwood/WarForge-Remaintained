@@ -12,6 +12,7 @@ public class FobGuiData extends GuiData {
     public int maxTickets;
     public boolean canEstablish;
     public boolean canWarp;
+    public int factionColor = 0x4A4A4A;
 
     public FobGuiData(Player player, DimBlockPos pos) {
         super(player);

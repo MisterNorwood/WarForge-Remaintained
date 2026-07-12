@@ -39,9 +39,9 @@ public final class GuiFactionMemberManager {
         ModularPanel panel = ModularPanel.defaultPanel("faction_member_manager")
                 .width(WIDTH)
                 .height(HEIGHT)
-                .topRel(0.40f);
+                .topRel(0.5f);
 
-        Flow tabSection = ModularGuiStyle.section(sectionWidth, 24).name("faction_member_tabs_section").pos(CONTENT_LEFT, TAB_Y);
+        Flow tabSection = ModularGuiStyle.section(sectionWidth, 24).padding(5, 3).mainAxisAlignment(Alignment.MainAxis.CENTER).name("faction_member_tabs_section").pos(CONTENT_LEFT, TAB_Y);
         Flow listSection = ModularGuiStyle.section(sectionWidth, listSectionHeight).name("faction_member_list_section").pos(CONTENT_LEFT, LIST_Y);
 
         panel.child(new IDrawable.DrawableWidget(ModularGuiStyle.headerBackdrop()).size(WIDTH, 40));

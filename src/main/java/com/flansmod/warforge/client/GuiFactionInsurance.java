@@ -20,11 +20,14 @@ import net.minecraft.ChatFormatting;
 
 public final class GuiFactionInsurance {
     private static final int WIDTH = 356;
-    private static final int HEIGHT = 190;
+    private static final int HEIGHT = 180;
     private static final int CONTENT_LEFT = 12;
     private static final int HEADER_Y = 12;
     private static final int BODY_Y = 54;
-    private static final int INVENTORY_Y = 191;
+    private static final int INVENTORY_GAP = 8;
+    private static final int INVENTORY_BOX_HEIGHT = 86;
+    private static final int INVENTORY_Y = HEIGHT + INVENTORY_GAP;
+    private static final int GROUP_VERTICAL_OFFSET = -(INVENTORY_GAP + INVENTORY_BOX_HEIGHT) / 2;
     private static final int STASH_CELL_SIZE = 18;
     private static final int STASH_ROW_HEIGHT = STASH_CELL_SIZE;
     private static final int STASH_LIST_HEIGHT = 56;
@@ -39,17 +42,12 @@ public final class GuiFactionInsurance {
         ModularPanel panel = ModularPanel.defaultPanel("faction_insurance")
                 .width(WIDTH)
                 .height(HEIGHT)
-                .topRel(0.40f);
+                .topRel(0.5f, data.hasFaction ? GROUP_VERTICAL_OFFSET : 0, 0.5f);
 
         Flow bodySection = ModularGuiStyle.section(sectionWidth, 118).name("insurance_body_section").pos(CONTENT_LEFT, BODY_Y);
-        Flow inventorySection = new Flow(GuiAxis.Y)
-                .size(sectionWidth, 54)
-                .padding(5)
-                .margin(5).name("insurance_inventory_section").pos(CONTENT_LEFT, INVENTORY_Y);
 
         panel.child(new IDrawable.DrawableWidget(ModularGuiStyle.headerBackdrop()).size(WIDTH, 40));
         panel.child(bodySection);
-        panel.child(inventorySection);
         panel.child(new IDrawable.DrawableWidget(ModularGuiStyle.colorStripe(data.hasFaction ? data.factionColor : 0x4A4A4A)).size(6, HEIGHT));
         panel.child(ModularGuiStyle.subPanelCloseButton(WIDTH));
 
@@ -97,11 +95,13 @@ public final class GuiFactionInsurance {
         }
         bodySection.child(stashList);
 
-        inventorySection.child(new ParentWidget<>()
+        panel.child(new ParentWidget<>()
                 .child(SlotGroupWidget.playerInventory(false))
                 .background(GuiTextures.MC_BACKGROUND)
                 .coverChildren()
-                .padding(4));
+                .padding(5)
+                .horizontalCenter()
+                .top(INVENTORY_Y));
 
         return panel;
     }

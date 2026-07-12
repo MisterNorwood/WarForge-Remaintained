@@ -35,6 +35,9 @@ public final class GuiCreateFactionModular {
         boolean recolour = data.isRecolour;
         int height = recolour ? 150 : 190;
         int sectionWidth = WIDTH - CONTENT_LEFT * 2;
+        int innerPad = 8;
+        int innerLeft = CONTENT_LEFT + innerPad;
+        int innerWidth = sectionWidth - innerPad * 2;
 
         float[] hsb = new float[3];
         Color.RGBtoHSB((data.colour >> 16) & 0xFF, (data.colour >> 8) & 0xFF, data.colour & 0xFF, hsb);
@@ -42,9 +45,9 @@ public final class GuiCreateFactionModular {
         ModularPanel panel = ModularPanel.defaultPanel("create_faction_modular")
                 .width(WIDTH)
                 .height(height)
-                .topRel(0.40f);
+                .topRel(0.5f);
 
-        panel.child(new IDrawable.DrawableWidget(ModularGuiStyle.headerBackdrop()).name("create_faction_header").size(WIDTH, 34));
+        panel.child(new IDrawable.DrawableWidget(ModularGuiStyle.headerBackdrop()).name("create_faction_header").size(WIDTH, 40));
         panel.child(new IDrawable.DrawableWidget(ModularGuiStyle.sectionBackdrop()).name("create_faction_body").size(sectionWidth, height - BODY_Y - 10).pos(CONTENT_LEFT, BODY_Y));
         panel.child(ModularGuiStyle.subPanelCloseButton(WIDTH));
 
@@ -60,28 +63,28 @@ public final class GuiCreateFactionModular {
         int colourLabelY = BODY_Y + 8;
         if (!recolour) {
             panel.child(Text.str("Faction Name").asWidget()
-                    .pos(CONTENT_LEFT, BODY_Y + 8)
+                    .pos(innerLeft, BODY_Y + 8)
                     .color(ModularGuiStyle.TEXT_SECONDARY));
             panel.child(new TextFieldWidget()
                     .value(nameValue)
                     .setMaxLength(64)
                     .name("create_faction_name")
                     .background(ModularGuiStyle.insetBackdrop())
-                    .pos(CONTENT_LEFT, BODY_Y + 18)
-                    .size(sectionWidth - 16, 16));
+                    .pos(innerLeft, BODY_Y + 18)
+                    .size(innerWidth, 16));
             colourLabelY = BODY_Y + 42;
         }
 
         panel.child(Text.str("Colour").asWidget()
-                .pos(CONTENT_LEFT, colourLabelY)
+                .pos(innerLeft, colourLabelY)
                 .color(ModularGuiStyle.TEXT_SECONDARY));
 
         int barsY = colourLabelY + 12;
-        panel.child(colourBar(hsb, 0, CONTENT_LEFT, barsY));
-        panel.child(colourBar(hsb, 1, CONTENT_LEFT, barsY + BAR_HEIGHT + BAR_GAP));
-        panel.child(colourBar(hsb, 2, CONTENT_LEFT, barsY + (BAR_HEIGHT + BAR_GAP) * 2));
+        panel.child(colourBar(hsb, 0, innerLeft, barsY));
+        panel.child(colourBar(hsb, 1, innerLeft, barsY + BAR_HEIGHT + BAR_GAP));
+        panel.child(colourBar(hsb, 2, innerLeft, barsY + (BAR_HEIGHT + BAR_GAP) * 2));
 
-        int swatchX = CONTENT_LEFT + BAR_WIDTH + 12;
+        int swatchX = innerLeft + BAR_WIDTH + 12;
         int swatchHeight = BAR_HEIGHT * 3 + BAR_GAP * 2;
         panel.child(new IDrawable.DrawableWidget((context, x, y, w, h, theme) -> {
             GuiGraphics graphics = context.getGraphics();
@@ -91,9 +94,9 @@ public final class GuiCreateFactionModular {
             GuiDraw.drawRect(graphics, x, y + h - 1, w, 1, ModularGuiStyle.SECTION_BORDER);
             GuiDraw.drawRect(graphics, x, y, 1, h, ModularGuiStyle.SECTION_BORDER);
             GuiDraw.drawRect(graphics, x + w - 1, y, 1, h, ModularGuiStyle.SECTION_BORDER);
-        }).name("create_faction_swatch").size(WIDTH - swatchX - CONTENT_LEFT, swatchHeight).pos(swatchX, barsY));
+        }).name("create_faction_swatch").size(WIDTH - swatchX - CONTENT_LEFT - innerPad, swatchHeight).pos(swatchX, barsY));
 
-        int btnY = height - 30;
+        int btnY = height - 36;
         panel.child(ModularGuiStyle.actionButton(recolour ? "Set Colour" : "Create", 74, () -> {
             if (recolour) {
                 PacketSetFactionColour packet = new PacketSetFactionColour();
@@ -111,10 +114,10 @@ public final class GuiCreateFactionModular {
                 WarForgeMod.NETWORK.sendToServer(packet);
             }
             DeferredGuiOpen.closeOrReturnToParent();
-        }).pos(CONTENT_LEFT, btnY));
+        }).pos(innerLeft, btnY));
 
         panel.child(ModularGuiStyle.actionButton("Cancel", 74, DeferredGuiOpen::closeOrReturnToParent)
-                .pos(CONTENT_LEFT + 82, btnY));
+                .pos(innerLeft + 82, btnY));
 
         return panel;
     }

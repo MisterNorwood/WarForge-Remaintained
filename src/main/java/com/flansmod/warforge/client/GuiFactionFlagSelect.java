@@ -27,7 +27,7 @@ public final class GuiFactionFlagSelect {
         int bodyHeight = HEIGHT - BODY_Y - 12;
 
         ModularPanel panel = ModularPanel.defaultPanel("faction_flag_select", WIDTH, HEIGHT)
-                .topRel(0.40f);
+                .topRel(0.5f);
 
         Flow bodySection = ModularGuiStyle.section(sectionWidth, bodyHeight).name("faction_flag_body_section").pos(CONTENT_LEFT, BODY_Y);
 

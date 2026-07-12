@@ -3,6 +3,7 @@ package com.flansmod.warforge.client;
 import brachy.modularui.api.drawable.IDrawable;
 import brachy.modularui.api.drawable.Text;
 import brachy.modularui.screen.ModularPanel;
+import brachy.modularui.utils.Alignment;
 import brachy.modularui.value.StringValue;
 import brachy.modularui.widgets.textfield.TextFieldWidget;
 import com.flansmod.warforge.common.WarForgeMod;
@@ -30,10 +31,11 @@ public final class GuiFob {
         ModularPanel panel = ModularPanel.defaultPanel("fob_modular")
                 .width(WIDTH)
                 .height(HEIGHT)
-                .topRel(0.40f);
+                .topRel(0.5f);
 
         panel.child(new IDrawable.DrawableWidget(ModularGuiStyle.headerBackdrop()).name("fob_header_backdrop").size(WIDTH, 40));
         panel.child(new IDrawable.DrawableWidget(ModularGuiStyle.sectionBackdrop()).name("fob_body_section").size(sectionWidth, HEIGHT - BODY_Y - 12).pos(CONTENT_LEFT, BODY_Y));
+        panel.child(new IDrawable.DrawableWidget(ModularGuiStyle.colorStripe(data.factionColor)).name("fob_stripe").size(6, HEIGHT));
         panel.child(ModularGuiStyle.subPanelCloseButton(WIDTH));
 
         panel.child(Text.str("Forward Operating Base").asWidget()
@@ -80,7 +82,7 @@ public final class GuiFob {
             packet.mName = name;
             WarForgeMod.NETWORK.sendToServer(packet);
             panel.closeIfOpen();
-        }).pos(CONTENT_LEFT, BODY_Y + 34));
+        }).top(BODY_Y + 34).horizontalCenter());
     }
 
     private static void buildEstablished(ModularPanel panel, FobGuiData data, int sectionWidth) {
@@ -92,7 +94,9 @@ public final class GuiFob {
 
         panel.child(Text.str("Warp Tickets: " + data.tickets + " / " + data.maxTickets).asWidget()
                 .name("fob_tickets")
+                .alignment(Alignment.Center)
                 .pos(CONTENT_LEFT, BODY_Y + 8)
+                .width(sectionWidth)
                 .color(data.tickets > 0 ? ModularGuiStyle.TEXT_SUCCESS : ModularGuiStyle.TEXT_WARNING));
 
         boolean canWarp = data.canWarp && data.tickets > 0;
@@ -101,6 +105,6 @@ public final class GuiFob {
             packet.mPos = data.pos;
             WarForgeMod.NETWORK.sendToServer(packet);
             panel.closeIfOpen();
-        }).pos(CONTENT_LEFT, BODY_Y + 34));
+        }).top(BODY_Y + 34).horizontalCenter());
     }
 }

@@ -35,9 +35,9 @@ public class FactionMemberManagerGuiFactory extends AbstractUIFactory<FactionMem
                 return GuiFactionMemberManager.buildPanel(guiData);
             }
             return ModularPanel.defaultPanel("faction_member_manager")
-                    .width(360)
-                    .height(260)
-                    .topRel(0.40f);
+                    .width(372)
+                    .height(268)
+                    .topRel(0.5f);
         }
 
         @Override

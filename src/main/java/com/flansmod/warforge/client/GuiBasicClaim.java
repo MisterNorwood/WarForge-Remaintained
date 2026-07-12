@@ -34,7 +34,7 @@ public final class GuiBasicClaim {
     private static final int COLUMNS = 3;
     private static final int WIDTH = 200;
     private static final int HEIGHT = 182;
-    private static final int CONTENT_LEFT = 8;
+    private static final int CONTENT_LEFT = 12;
     private static final int GRID_Y = 30;
 
     private GuiBasicClaim() {
@@ -42,7 +42,7 @@ public final class GuiBasicClaim {
 
     public static ModularPanel buildUI(PosGuiData data, PanelSyncManager syncManager, UISettings settings, TileEntityBasicClaim claim) {
         ModularPanel panel = ModularPanel.defaultPanel("basic_claim", WIDTH, HEIGHT)
-                .topRel(0.40f);
+                .topRel(0.5f);
         panel.bindPlayerInventory();
 
         panel.child(Text.str(claim.getClaimDisplayName()).asWidget()

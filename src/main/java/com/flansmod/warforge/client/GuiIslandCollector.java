@@ -59,7 +59,7 @@ public final class GuiIslandCollector {
         boolean hasFaction = !collector.getFaction().equals(Faction.nullUuid);
 
         ModularPanel panel = ModularPanel.defaultPanel("island_collector", WIDTH, HEIGHT)
-                .topRel(0.40f);
+                .topRel(0.5f);
         panel.child(ModularGuiStyle.playerInventoryPanel(202));
 
         panel.child(new IDrawable.DrawableWidget(new Rectangle().color(HEADER_FILL))

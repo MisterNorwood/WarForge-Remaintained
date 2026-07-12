@@ -40,7 +40,7 @@ public class OperationsGuiFactory extends AbstractUIFactory<OperationsGuiData> {
             if (guiData.isClient()) {
                 return GuiOperations.buildPanel(guiData);
             }
-            return ModularPanel.defaultPanel("operations", 372, 268).topRel(0.40f);
+            return ModularPanel.defaultPanel("operations", 372, 268).topRel(0.5f);
         }
 
         @Override

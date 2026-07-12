@@ -40,7 +40,7 @@ public final class GuiOperations {
         ModularPanel panel = ModularPanel.defaultPanel("operations")
                 .width(WIDTH)
                 .height(HEIGHT)
-                .topRel(0.40f);
+                .topRel(0.5f);
 
         panel.child(new IDrawable.DrawableWidget(ModularGuiStyle.headerBackdrop()).size(WIDTH, 40));
         panel.child(new IDrawable.DrawableWidget(ModularGuiStyle.colorStripe(data.hasFaction ? data.factionColor : 0x4A4A4A)).size(6, HEIGHT));

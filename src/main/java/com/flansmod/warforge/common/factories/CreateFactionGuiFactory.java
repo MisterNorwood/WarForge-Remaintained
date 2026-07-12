@@ -31,7 +31,7 @@ public class CreateFactionGuiFactory extends AbstractUIFactory<CreateFactionGuiD
             if (guiData.isClient()) {
                 return GuiCreateFactionModular.buildPanel(guiData);
             }
-            return ModularPanel.defaultPanel("create_faction_modular", 264, 190).topRel(0.40f);
+            return ModularPanel.defaultPanel("create_faction_modular", 264, 190).topRel(0.5f);
         }
 
         @Override

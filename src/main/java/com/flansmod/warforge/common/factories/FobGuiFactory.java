@@ -33,7 +33,7 @@ public class FobGuiFactory extends AbstractUIFactory<FobGuiData> {
             if (guiData.isClient()) {
                 return GuiFob.buildPanel(guiData);
             }
-            return ModularPanel.defaultPanel("fob_modular", 300, 180).topRel(0.40f);
+            return ModularPanel.defaultPanel("fob_modular", 300, 150).topRel(0.5f);
         }
 
         @Override
@@ -74,6 +74,7 @@ public class FobGuiFactory extends AbstractUIFactory<FobGuiData> {
         buffer.writeInt(guiData.maxTickets);
         buffer.writeBoolean(guiData.canEstablish);
         buffer.writeBoolean(guiData.canWarp);
+        buffer.writeInt(guiData.factionColor);
     }
 
     @Override
@@ -89,6 +90,7 @@ public class FobGuiFactory extends AbstractUIFactory<FobGuiData> {
         data.maxTickets = buffer.readInt();
         data.canEstablish = buffer.readBoolean();
         data.canWarp = buffer.readBoolean();
+        data.factionColor = buffer.readInt();
         return data;
     }
 
@@ -107,8 +109,11 @@ public class FobGuiFactory extends AbstractUIFactory<FobGuiData> {
             data.tickets = fob.tickets;
             data.maxTickets = fob.maxTickets;
             data.canWarp = faction != null && faction.uuid.equals(fob.ownerFaction) && WarForgeMod.FACTIONS.isFactionInActiveSiege(faction.uuid);
+            Faction owner = WarForgeMod.FACTIONS.getFaction(fob.ownerFaction);
+            data.factionColor = owner != null ? owner.colour : 0x4A4A4A;
         } else {
             data.canEstablish = isOfficer;
+            data.factionColor = faction != null ? faction.colour : 0x4A4A4A;
         }
         return data;
     }

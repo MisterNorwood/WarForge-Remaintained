@@ -72,7 +72,7 @@ public final class GuiSiegeCamp {
         int mapLeft = CONTENT_LEFT + MAP_GUTTER;
         int mapTop = mapY + MAP_GUTTER;
 
-        ModularPanel panel = ModularPanel.defaultPanel("siege_main", width, height).topRel(0.40f);
+        ModularPanel panel = ModularPanel.defaultPanel("siege_main", width, height).topRel(0.5f);
 
         Flow infoSection = ModularGuiStyle.section(mapSectionWidth, INFO_HEIGHT).name("siege_info_section").pos(CONTENT_LEFT, infoY);
         Flow legendSection = ModularGuiStyle.section(mapSectionWidth, LEGEND_HEIGHT).name("siege_legend_section").pos(CONTENT_LEFT, legendY);

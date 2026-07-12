@@ -46,7 +46,7 @@ public class ClaimManagerGuiFactory extends AbstractUIFactory<ClaimManagerGuiDat
                 return GuiClaimManager.buildPanel(guiData);
             }
             return ModularPanel.defaultPanel("claim_manager", 636, 764)
-                    .topRel(0.40f);
+                    .topRel(0.5f);
         }
 
         @Override

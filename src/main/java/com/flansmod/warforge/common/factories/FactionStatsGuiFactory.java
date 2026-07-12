@@ -32,7 +32,7 @@ public class FactionStatsGuiFactory extends AbstractUIFactory<FactionStatsGuiDat
             if (guiData.isClient()) {
                 return GuiFactionStats.buildPanel(guiData);
             }
-            return ModularPanel.defaultPanel("faction_stats", 320, 240).topRel(0.40f);
+            return ModularPanel.defaultPanel("faction_stats", 320, 228).topRel(0.5f);
         }
 
         @Override

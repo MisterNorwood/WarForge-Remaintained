@@ -33,9 +33,9 @@ public class CitadelGuiFactory extends AbstractUIFactory<PosGuiData> {
                 if (be instanceof TileEntityCitadel citadel) {
                     return ModularCitadelGui.buildUI(guiData, syncManager, settings, citadel);
                 }
-                return ModularPanel.defaultPanel("citadel_modular", 350, 200).topRel(0.40f);
+                return ModularPanel.defaultPanel("citadel_modular", 350, 214).topRel(0.5f);
             }
-            return ModularPanel.defaultPanel("citadel_modular", 350, 200).topRel(0.40f);
+            return ModularPanel.defaultPanel("citadel_modular", 350, 214).topRel(0.5f);
         }
 
         @Override
