@@ -930,7 +930,7 @@ public class WarForgeConfig {
     }
 
     private static boolean globMatches(String pattern, String value) {
-        String regex = Pattern.quote(pattern).replace("\\*", "\\E.*\\Q");
+        String regex = Pattern.quote(pattern).replace("*", "\\E.*\\Q");
         return value.matches(regex);
     }
 
