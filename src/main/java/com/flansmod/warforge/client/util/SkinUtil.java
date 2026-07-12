@@ -15,19 +15,7 @@ import java.util.UUID;
  * System that parses and caches player's skins
  */
 public class SkinUtil {
-    /** Normalized (0..1) UV bounds of the 8x8 head face within the 64x64 skin sheet. */
-    public static final float FACE_U0 = PlayerFaceRenderer.SKIN_HEAD_U / (float) PlayerFaceRenderer.SKIN_TEX_WIDTH;
-    public static final float FACE_V0 = PlayerFaceRenderer.SKIN_HEAD_V / (float) PlayerFaceRenderer.SKIN_TEX_HEIGHT;
-    public static final float FACE_U1 = (PlayerFaceRenderer.SKIN_HEAD_U + PlayerFaceRenderer.SKIN_HEAD_WIDTH) / (float) PlayerFaceRenderer.SKIN_TEX_WIDTH;
-    public static final float FACE_V1 = (PlayerFaceRenderer.SKIN_HEAD_V + PlayerFaceRenderer.SKIN_HEAD_HEIGHT) / (float) PlayerFaceRenderer.SKIN_TEX_HEIGHT;
-
-    /** Normalized (0..1) UV bounds of the 8x8 hat overlay within the 64x64 skin sheet. */
-    public static final float HAT_U0 = PlayerFaceRenderer.SKIN_HAT_U / (float) PlayerFaceRenderer.SKIN_TEX_WIDTH;
-    public static final float HAT_V0 = PlayerFaceRenderer.SKIN_HAT_V / (float) PlayerFaceRenderer.SKIN_TEX_HEIGHT;
-    public static final float HAT_U1 = (PlayerFaceRenderer.SKIN_HAT_U + PlayerFaceRenderer.SKIN_HAT_WIDTH) / (float) PlayerFaceRenderer.SKIN_TEX_WIDTH;
-    public static final float HAT_V1 = (PlayerFaceRenderer.SKIN_HAT_V + PlayerFaceRenderer.SKIN_HAT_HEIGHT) / (float) PlayerFaceRenderer.SKIN_TEX_HEIGHT;
-
-    /**
+     /**
      * Resolves the full skin texture for a player UUID: the connection's {@link PlayerInfo} skin if
      * the player is known, else the default Steve/Alex skin for that UUID.
      */

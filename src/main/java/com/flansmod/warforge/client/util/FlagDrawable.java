@@ -35,6 +35,8 @@ public class FlagDrawable implements IDrawable {
         int drawX = x + (width - drawWidth) / 2;
         int drawY = y + (height - drawHeight) / 2;
 
+        GuiGraphics graphics = context.getGraphics();
+        graphics.flush();
         GuiDraw.drawTexture(context.getLastGraphicsPose(), texture, drawX, drawY, drawX + drawWidth, drawY + drawHeight,
                 0f, 0f, 1f, 1f, true);
     }
