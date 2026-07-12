@@ -18,8 +18,6 @@ import com.flansmod.warforge.common.factories.FactionMemberManagerGuiFactory;
 import com.flansmod.warforge.common.factories.FactionStatsGuiFactory;
 import com.flansmod.warforge.common.network.PacketFactionAllianceAction;
 import com.flansmod.warforge.common.network.PacketFactionMemberManagerAction;
-import com.flansmod.warforge.common.network.PacketRequestFobWarp;
-import com.flansmod.warforge.common.util.DimBlockPos;
 import com.flansmod.warforge.server.Faction;
 import net.minecraft.ChatFormatting;
 
@@ -94,9 +92,6 @@ public final class GuiFactionMemberManager {
         if (data.hasFaction) {
             Widget<?> alliancesTab = tabButton("Alliances", data.page == FactionMemberManagerGuiData.Page.ALLIANCES, FactionMemberManagerGuiData.Page.ALLIANCES);
             tabRow.child(alliancesTab);
-            Widget<?> fobsTab = tabButton("FOBs", data.page == FactionMemberManagerGuiData.Page.FOBS, FactionMemberManagerGuiData.Page.FOBS);
-            fobsTab.margin(8, 0);
-            tabRow.child(fobsTab);
         }
         tabSection.child(tabRow);
 
@@ -110,14 +105,11 @@ public final class GuiFactionMemberManager {
         String sectionTitle = switch (data.page) {
             case MEMBERS -> "Roster";
             case ALLIANCES -> "Alliances";
-            case FOBS -> "FOBs";
             default -> data.hasFaction ? "Invite Console" : "Pending Invites";
         };
         String sectionDescription = switch (data.page) {
             case MEMBERS -> "Faces, rank, presence, and direct faction actions.";
             case ALLIANCES -> "Ally with factions to stop sieges between you. Toggle whether allies may use your land.";
-            case FOBS ->
-                    "Warp to a forward operating base while your faction is under siege. Tickets regenerate each siege cycle.";
             default -> data.hasFaction
                     ? "Invite online unaffiliated players into the faction."
                     : "Accept one of your outstanding faction invites.";
@@ -132,7 +124,6 @@ public final class GuiFactionMemberManager {
                 .color(ModularGuiStyle.TEXT_MUTED));
 
         boolean alliancePage = data.page == FactionMemberManagerGuiData.Page.ALLIANCES;
-        boolean fobPage = data.page == FactionMemberManagerGuiData.Page.FOBS;
         if (alliancePage) {
             listSection.child(ModularGuiStyle.actionButton(
                             "Ally Access: " + (data.allowAllyInteraction ? "ENABLED" : "DISABLED"),
@@ -144,7 +135,7 @@ public final class GuiFactionMemberManager {
         ListWidget<IWidget, ?> list = new ListWidget<>()
                 .name(data.page == FactionMemberManagerGuiData.Page.MEMBERS ? "faction_member_roster_list"
                         : alliancePage ? "faction_alliance_list"
-                          : fobPage ? "faction_fob_list" : "faction_member_invite_list")
+                          : "faction_member_invite_list")
                 .scrollDirection(GuiAxis.Y)
                 .background(ModularGuiStyle.insetBackdrop())
                 .width(sectionWidth - 10)
@@ -171,15 +162,6 @@ public final class GuiFactionMemberManager {
                         lastKind = entry.kind;
                     }
                     list.addChild(createAllianceRow(entry, data.canManageAlliances, data.page), index++);
-                }
-            }
-        } else if (fobPage) {
-            if (data.fobs.isEmpty()) {
-                list.addChild(Text.str("No FOBs established yet.").asWidget().pos(6, 6), 0);
-            } else {
-                int index = 0;
-                for (FactionMemberManagerGuiData.FobEntry fob : data.fobs) {
-                    list.addChild(createFobRow(fob), index++);
                 }
             }
         } else {
@@ -360,36 +342,6 @@ public final class GuiFactionMemberManager {
             }
         }
         return row;
-    }
-
-    private static IWidget createFobRow(FactionMemberManagerGuiData.FobEntry fob) {
-        Flow row = new Flow(GuiAxis.X);
-        row.name(ModularGuiStyle.debugName("fob_row", fob.name));
-        row.width(WIDTH - 44);
-        row.height(24);
-        row.mainAxisAlignment(Alignment.MainAxis.START);
-        row.padding(3, 3);
-        row.margin(0, 0, 0, 2);
-        row.background(ModularGuiStyle.insetBackdrop(0xFF232A30));
-
-        row.child(new ScrollingTextWidget(Text.str(fob.name.isEmpty() ? "FOB" : fob.name))
-                .margin(5, 0)
-                .width(150)
-                .tooltip(tooltip -> tooltip.addLine(fob.pos.toFancyString())));
-        row.child(Text.str(fob.tickets + " / " + fob.maxTickets)
-                .color(fob.tickets > 0 ? ModularGuiStyle.TEXT_SUCCESS : 0xFFAA00)
-                .asWidget()
-                .width(58));
-        row.child(fobWarpButton("Warp", 52, fob.canWarp, fob.pos));
-        return row;
-    }
-
-    private static Widget<?> fobWarpButton(String label, int width, boolean enabled, DimBlockPos pos) {
-        return ModularGuiStyle.actionButton(label, width, enabled, () -> {
-            PacketRequestFobWarp packet = new PacketRequestFobWarp();
-            packet.mPos = pos;
-            WarForgeMod.NETWORK.sendToServer(packet);
-        });
     }
 
     private static Widget<?> allianceButton(String label, int width, boolean enabled, PacketFactionAllianceAction.Action action, java.util.UUID target, FactionMemberManagerGuiData.Page page) {

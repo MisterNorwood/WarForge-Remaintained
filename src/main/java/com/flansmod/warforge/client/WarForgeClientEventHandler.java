@@ -7,6 +7,7 @@ import com.flansmod.warforge.common.factories.ClaimManagerGuiFactory;
 import com.flansmod.warforge.common.factories.FactionMemberManagerGuiData;
 import com.flansmod.warforge.common.factories.FactionMemberManagerGuiFactory;
 import com.flansmod.warforge.common.factories.FactionStatsGuiFactory;
+import com.flansmod.warforge.common.factories.OperationsGuiFactory;
 import com.flansmod.warforge.common.network.PacketMoveCitadel;
 import com.flansmod.warforge.common.util.DimBlockPos;
 import com.flansmod.warforge.common.util.DimChunkPos;
@@ -47,6 +48,7 @@ public final class WarForgeClientEventHandler {
         event.addListener(new WarforgeIconButton(x, top + 26, WARFORGE_BUTTON_SIZE, () -> FactionMemberManagerGuiFactory.INSTANCE.openClient(FactionMemberManagerGuiData.Page.MEMBERS)));
         event.addListener(new WarforgeIconButton(x, top + 48, WARFORGE_BUTTON_SIZE * 2, () -> FactionStatsGuiFactory.INSTANCE.openClient(Faction.nullUuid)));
         event.addListener(new WarforgeIconButton(x, top + 70, WARFORGE_BUTTON_SIZE * 3, WarForgeClientEventHandler::moveCitadel));
+        event.addListener(new WarforgeIconButton(x, top + 92, WARFORGE_BUTTON_SIZE * 4, () -> OperationsGuiFactory.INSTANCE.openClient()));
     }
 
     private static void openClaims() {

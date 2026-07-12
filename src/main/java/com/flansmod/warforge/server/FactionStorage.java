@@ -3098,6 +3098,7 @@ public class FactionStorage {
         }
 
         WarForgeMod.FOBS.rebuildGlobalIndex();
+        WarForgeMod.FOBS.readFromNBT(tags);
 
         list = tags.getList("sieges", Tag.TAG_COMPOUND);
         for (Tag baseTag : list) {
@@ -3152,6 +3153,7 @@ public class FactionStorage {
     }
 
     public void WriteToNBT(CompoundTag tags) {
+        WarForgeMod.FOBS.writeToNBT(tags);
         ListTag factionList = new ListTag();
         for (HashMap.Entry<UUID, Faction> kvp : mFactions.entrySet()) {
             CompoundTag factionTags = new CompoundTag();

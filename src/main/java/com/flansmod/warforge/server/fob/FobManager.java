@@ -3,24 +3,32 @@ package com.flansmod.warforge.server.fob;
 import com.flansmod.warforge.common.WarForgeConfig;
 import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.common.blocks.TileEntityFob;
+import com.flansmod.warforge.common.blocks.structure.FobStructureLayout;
 import com.flansmod.warforge.common.blocks.structure.StructureStamper;
 import com.flansmod.warforge.common.util.DimBlockPos;
 import com.flansmod.warforge.common.util.DimChunkPos;
 import com.flansmod.warforge.server.Faction;
 import com.flansmod.warforge.server.Siege;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 
 public class FobManager {
     private final HashMap<DimChunkPos, Fob> mFobChunks = new HashMap<>();
     private final FobWarpQueue warpQueue = new FobWarpQueue();
+    private final List<DimBlockPos> mPendingCleanup = new ArrayList<>();
 
     public static boolean isClaimDimWhitelisted(ResourceKey<Level> dim) {
         return java.util.Arrays.asList(WarForgeConfig.CLAIM_DIM_WHITELIST).contains(dim.location().toString());
@@ -115,7 +123,12 @@ public class FobManager {
         if (!owner.isPlayerRoleInFaction(placer.getUUID(), Faction.Role.OFFICER)) {
             return false;
         }
-        DimChunkPos chunk = new DimChunkPos(te.getLevel().dimension(), te.getBlockPos());
+        Level level = te.getLevel();
+        if (level == null) {
+            return false;
+        }
+        BlockPos placedPos = te.getBlockPos();
+        DimChunkPos chunk = new DimChunkPos(level.dimension(), placedPos);
         if (!canPlaceFob(owner, chunk)) {
             return false;
         }
@@ -123,19 +136,31 @@ public class FobManager {
             return false;
         }
 
-        Fob fob = new Fob(new DimBlockPos(te.getLevel().dimension(), te.getBlockPos()), owner.uuid, name.trim());
+        BlockPos centerPos = FobStructureLayout.centerBlock(placedPos);
+        TileEntityFob centerTe = te;
+        if (!centerPos.equals(placedPos)) {
+            BlockState fobState = level.getBlockState(placedPos);
+            level.removeBlock(placedPos, false);
+            level.setBlock(centerPos, fobState, 3);
+            if (!(level.getBlockEntity(centerPos) instanceof TileEntityFob relocated)) {
+                return false;
+            }
+            centerTe = relocated;
+        }
+
+        Fob fob = new Fob(new DimBlockPos(level.dimension(), centerPos), owner.uuid, name.trim());
         fob.maxTickets = owner.getFobTicketLimit();
         fob.tickets = fob.maxTickets;
         registerFob(owner, fob);
 
-        StructureStamper.stampStructure(te.getLevel(), te.getBlockPos());
+        StructureStamper.stampStructure(level, centerPos);
 
-        te.ownerFaction = owner.uuid;
-        te.placer = placer.getUUID();
-        te.name = fob.name;
-        te.maxTickets = fob.maxTickets;
-        te.tickets = fob.tickets;
-        te.setChanged();
+        centerTe.ownerFaction = owner.uuid;
+        centerTe.placer = placer.getUUID();
+        centerTe.name = fob.name;
+        centerTe.maxTickets = fob.maxTickets;
+        centerTe.tickets = fob.tickets;
+        centerTe.setChanged();
 
         return true;
     }
@@ -182,12 +207,64 @@ public class FobManager {
             return;
         }
         removeFob(fob);
-        ServerLevel level = WarForgeMod.MC_SERVER == null ? null : WarForgeMod.MC_SERVER.getLevel(fob.pos.dim);
-        if (level != null) {
-            StructureStamper.clearStructure(level, fob.pos.toRegularPos());
-            if (level.getBlockState(fob.pos.toRegularPos()).getBlock() instanceof com.flansmod.warforge.common.blocks.BlockFob) {
-                level.removeBlock(fob.pos.toRegularPos(), false);
+        scheduleOrCleanup(fob.pos);
+    }
+
+    private void scheduleOrCleanup(DimBlockPos pos) {
+        if (pos == null || WarForgeMod.MC_SERVER == null) {
+            return;
+        }
+        ServerLevel level = WarForgeMod.MC_SERVER.getLevel(pos.dim);
+        DimChunkPos chunk = pos.toChunkPos();
+        if (level != null && level.hasChunk(chunk.x, chunk.z)) {
+            cleanupNow(level, pos);
+        } else if (!mPendingCleanup.contains(pos)) {
+            mPendingCleanup.add(pos);
+        }
+    }
+
+    private void cleanupNow(ServerLevel level, DimBlockPos pos) {
+        StructureStamper.clearStructure(level, pos.toRegularPos());
+        if (level.getBlockState(pos.toRegularPos()).getBlock() instanceof com.flansmod.warforge.common.blocks.BlockFob) {
+            level.removeBlock(pos.toRegularPos(), false);
+        }
+    }
+
+    public void processCleanupQueue() {
+        if (mPendingCleanup.isEmpty() || WarForgeMod.MC_SERVER == null) {
+            return;
+        }
+        Iterator<DimBlockPos> it = mPendingCleanup.iterator();
+        while (it.hasNext()) {
+            DimBlockPos pos = it.next();
+            ServerLevel level = WarForgeMod.MC_SERVER.getLevel(pos.dim);
+            if (level == null) {
+                it.remove();
+                continue;
             }
+            DimChunkPos chunk = pos.toChunkPos();
+            if (level.hasChunk(chunk.x, chunk.z)) {
+                cleanupNow(level, pos);
+                it.remove();
+            }
+        }
+    }
+
+    public void writeToNBT(CompoundTag tags) {
+        ListTag list = new ListTag();
+        for (DimBlockPos pos : mPendingCleanup) {
+            CompoundTag entry = new CompoundTag();
+            pos.writeToNBT(entry, "pos");
+            list.add(entry);
+        }
+        tags.put("fobCleanupQueue", list);
+    }
+
+    public void readFromNBT(CompoundTag tags) {
+        mPendingCleanup.clear();
+        ListTag list = tags.getList("fobCleanupQueue", Tag.TAG_COMPOUND);
+        for (int i = 0; i < list.size(); i++) {
+            mPendingCleanup.add(DimBlockPos.readFromNBT(list.getCompound(i), "pos"));
         }
     }
 

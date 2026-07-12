@@ -15,6 +15,7 @@ public final class WarForgeGuiFactories {
         FactionStatsGuiFactory.init();
         FactionUpgradeGuiFactory.init();
         FobGuiFactory.init();
+        OperationsGuiFactory.init();
         SiegeCampGuiFactory.init();
     }
 }

@@ -11,17 +11,12 @@ import brachy.modularui.value.sync.PanelSyncManager;
 import com.flansmod.warforge.Tags;
 import com.flansmod.warforge.client.GuiFactionMemberManager;
 import com.flansmod.warforge.common.WarForgeMod;
-import com.flansmod.warforge.common.util.DimBlockPos;
 import com.flansmod.warforge.server.Faction;
-import com.flansmod.warforge.server.fob.Fob;
 import com.mojang.authlib.GameProfile;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.Level;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jetbrains.annotations.NotNull;
@@ -149,18 +144,6 @@ public class FactionMemberManagerGuiFactory extends AbstractUIFactory<FactionMem
             buffer.writeByte(ally.kind);
         }
 
-        buffer.writeShort(guiData.fobs.size());
-        for (FactionMemberManagerGuiData.FobEntry fob : guiData.fobs) {
-            buffer.writeUtf(fob.pos.dim.location().toString());
-            buffer.writeInt(fob.pos.getX());
-            buffer.writeInt(fob.pos.getY());
-            buffer.writeInt(fob.pos.getZ());
-            buffer.writeUtf(fob.name);
-            buffer.writeInt(fob.tickets);
-            buffer.writeInt(fob.maxTickets);
-            buffer.writeBoolean(fob.canWarp);
-            buffer.writeBoolean(fob.canEstablish);
-        }
     }
 
     @Override
@@ -223,21 +206,6 @@ public class FactionMemberManagerGuiFactory extends AbstractUIFactory<FactionMem
             data.alliances.add(ally);
         }
 
-        int fobCount = buffer.readShort();
-        for (int i = 0; i < fobCount; i++) {
-            FactionMemberManagerGuiData.FobEntry fob = new FactionMemberManagerGuiData.FobEntry();
-            ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(buffer.readUtf()));
-            int x = buffer.readInt();
-            int y = buffer.readInt();
-            int z = buffer.readInt();
-            fob.pos = new DimBlockPos(dim, x, y, z);
-            fob.name = buffer.readUtf();
-            fob.tickets = buffer.readInt();
-            fob.maxTickets = buffer.readInt();
-            fob.canWarp = buffer.readBoolean();
-            fob.canEstablish = buffer.readBoolean();
-            data.fobs.add(fob);
-        }
         return data;
     }
 
@@ -326,20 +294,6 @@ public class FactionMemberManagerGuiFactory extends AbstractUIFactory<FactionMem
             }
         }
 
-        if (page == FactionMemberManagerGuiData.Page.FOBS) {
-            boolean canEstablish = data.viewerRole.ordinal() >= Faction.Role.OFFICER.ordinal();
-            boolean ownerInSiege = WarForgeMod.FACTIONS.isFactionInActiveSiege(faction.uuid);
-            for (Fob fob : WarForgeMod.FOBS.fobsOf(faction)) {
-                FactionMemberManagerGuiData.FobEntry entry = new FactionMemberManagerGuiData.FobEntry();
-                entry.pos = fob.pos;
-                entry.name = fob.name;
-                entry.tickets = fob.tickets;
-                entry.maxTickets = fob.maxTickets;
-                entry.canEstablish = canEstablish;
-                entry.canWarp = ownerInSiege && fob.tickets > 0;
-                data.fobs.add(entry);
-            }
-        }
         return data;
     }
 
