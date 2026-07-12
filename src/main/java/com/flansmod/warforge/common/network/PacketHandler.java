@@ -48,7 +48,6 @@ public class PacketHandler
 		register(id++, PacketRequestLeaderboardInfo.class, PacketRequestLeaderboardInfo::new);
 		register(id++, PacketDisbandFaction.class, PacketDisbandFaction::new);
 		register(id++, PacketRemoveClaim.class, PacketRemoveClaim::new);
-		register(id++, PacketPlaceFlag.class, PacketPlaceFlag::new);
 		register(id++, PacketTimeUpdates.class, PacketTimeUpdates::new);
 		register(id++, PacketSetFactionColour.class, PacketSetFactionColour::new);
 		register(id++, PacketClientNotification.class, PacketClientNotification::new);

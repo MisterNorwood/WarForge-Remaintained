@@ -22,9 +22,11 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -34,7 +36,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -42,6 +46,16 @@ public class CommandFactions {
     private static boolean isOp(CommandSourceStack src) {
         return src.hasPermission(2);
     }
+
+    private static final SuggestionProvider<CommandSourceStack> FACTION_NAME_SUGGESTIONS = (ctx, builder) -> {
+        List<String> names = new ArrayList<>();
+        for (Faction faction : WarForgeMod.FACTIONS.getAllFactions()) {
+            if (faction != null && faction.name != null && !faction.uuid.equals(Faction.nullUuid)) {
+                names.add(faction.name);
+            }
+        }
+        return SharedSuggestionProvider.suggest(names, builder);
+    };
 
     // Registration entrypoint, called from RegisterCommandsEvent.
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
@@ -67,6 +81,7 @@ public class CommandFactions {
                 .then(Commands.argument("player", EntityArgument.player())
                         .executes(ctx -> doInvite(ctx, false))
                         .then(Commands.argument("faction", StringArgumentType.string())
+                                .suggests(FACTION_NAME_SUGGESTIONS)
                                 .requires(CommandFactions::isOp)
                                 .executes(ctx -> doInvite(ctx, true)))));
 
@@ -74,12 +89,14 @@ public class CommandFactions {
         root.then(Commands.literal("accept")
                 .executes(ctx -> doAccept(ctx, false))
                 .then(Commands.argument("faction", StringArgumentType.string())
+                        .suggests(FACTION_NAME_SUGGESTIONS)
                         .executes(ctx -> doAccept(ctx, true))));
 
         // disband [factionName(op)]
         root.then(Commands.literal("disband")
                 .executes(CommandFactions::doDisbandSelf)
                 .then(Commands.argument("faction", StringArgumentType.string())
+                        .suggests(FACTION_NAME_SUGGESTIONS)
                         .requires(CommandFactions::isOp)
                         .executes(CommandFactions::doDisbandNamed)));
 
@@ -113,7 +130,11 @@ public class CommandFactions {
         root.then(Commands.literal("info")
                 .executes(ctx -> doInfo(ctx, false))
                 .then(Commands.argument("faction", StringArgumentType.string())
+                        .suggests(FACTION_NAME_SUGGESTIONS)
                         .executes(ctx -> doInfo(ctx, true))));
+
+        // list — all factions
+        root.then(Commands.literal("list").executes(CommandFactions::doList));
 
         // Leaderboards
         for (String alias : new String[]{"top"}) {
@@ -176,6 +197,7 @@ public class CommandFactions {
         root.then(Commands.literal("offlineprotection").requires(CommandFactions::isOp)
                 .executes(CommandFactions::doOfflineProtectionUsage)
                 .then(Commands.argument("faction", StringArgumentType.string())
+                        .suggests(FACTION_NAME_SUGGESTIONS)
                         .executes(CommandFactions::doOfflineProtectionUsage)
                         .then(Commands.literal("enable").executes(ctx -> doOfflineProtection(ctx, "enable")))
                         .then(Commands.literal("disable").executes(ctx -> doOfflineProtection(ctx, "disable")))
@@ -185,6 +207,7 @@ public class CommandFactions {
         root.then(Commands.literal("rename").requires(CommandFactions::isOp)
                 .executes(CommandFactions::doRenameUsage)
                 .then(Commands.argument("oldFactionName", StringArgumentType.string())
+                        .suggests(FACTION_NAME_SUGGESTIONS)
                         .executes(CommandFactions::doRenameUsage)
                         .then(Commands.argument("newFactionName", StringArgumentType.string())
                                 .executes(CommandFactions::doRename))));
@@ -199,9 +222,6 @@ public class CommandFactions {
                 .then(Commands.argument("message", StringArgumentType.greedyString()).executes(CommandFactions::doMsg)));
         root.then(Commands.literal("msg")
                 .then(Commands.argument("message", StringArgumentType.greedyString()).executes(CommandFactions::doMsg)));
-
-        root.then(Commands.literal("resetflagcooldowns").requires(CommandFactions::isOp)
-                .executes(ctx -> { WarForgeMod.FACTIONS.opResetFlagCooldowns(); return Command.SINGLE_SUCCESS; }));
 
         for (String alias : new String[]{"tpa", "tpaccept", "tp", "tprequest"}) {
             root.then(Commands.literal(alias).executes(ctx -> {
@@ -234,6 +254,7 @@ public class CommandFactions {
         src.sendSuccess(() -> Component.literal("/f leave"), false);
         src.sendSuccess(() -> Component.literal("/f time"), false);
         src.sendSuccess(() -> Component.literal("/f info <factionName>"), false);
+        src.sendSuccess(() -> Component.literal("/f list"), false);
         src.sendSuccess(() -> Component.literal("/f top"), false);
         src.sendSuccess(() -> Component.literal("/f wealth"), false);
         src.sendSuccess(() -> Component.literal("/f legacy"), false);
@@ -328,6 +349,10 @@ public class CommandFactions {
         if (faction == null) {
             faction = WarForgeMod.FACTIONS.getFactionOfPlayer(toRemoveID);
         }
+        if (faction == null) {
+            src.sendFailure(Component.literal("Could not find a faction for that player"));
+            return Command.SINGLE_SUCCESS;
+        }
 
         WarForgeMod.FACTIONS.requestRemovePlayerFromFaction(src, faction.uuid, toRemoveID);
         return Command.SINGLE_SUCCESS;
@@ -337,6 +362,10 @@ public class CommandFactions {
         CommandSourceStack src = ctx.getSource();
         if (src.getEntity() instanceof Player player) {
             Faction faction = WarForgeMod.FACTIONS.getFactionOfPlayer(player.getUUID());
+            if (faction == null) {
+                src.sendFailure(Component.literal("You aren't in a faction"));
+                return Command.SINGLE_SUCCESS;
+            }
             WarForgeMod.FACTIONS.requestRemovePlayerFromFaction(src, faction.uuid, player.getUUID());
         } else {
             src.sendFailure(Component.literal("This command is only for players"));
@@ -468,6 +497,27 @@ public class CommandFactions {
                         + "Wealth: " + f.wealth + "\n"
                         + "Legacy: " + f.legacy + "\n"), false);
             }
+        }
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int doList(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        List<Faction> factions = new ArrayList<>();
+        for (Faction faction : WarForgeMod.FACTIONS.getAllFactions()) {
+            if (faction != null && faction.name != null && !faction.uuid.equals(Faction.nullUuid)) {
+                factions.add(faction);
+            }
+        }
+        if (factions.isEmpty()) {
+            src.sendSuccess(() -> Component.literal("There are no factions yet"), false);
+            return Command.SINGLE_SUCCESS;
+        }
+        factions.sort((a, b) -> a.name.compareToIgnoreCase(b.name));
+        src.sendSuccess(() -> Component.literal("Factions (" + factions.size() + "):"), false);
+        for (Faction faction : factions) {
+            final Faction f = faction;
+            src.sendSuccess(() -> Component.literal("§7- §f" + f.name + " §7(" + f.members.size() + ")"), false);
         }
         return Command.SINGLE_SUCCESS;
     }

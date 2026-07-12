@@ -840,11 +840,6 @@ public class Faction {
             PlayerData data = new PlayerData();
             data.readFromNBT(memberTags);
             members.put(uuid, data);
-
-            // Fixup for old data
-            if (data.flagPosition.equals(DimBlockPos.ZERO)) {
-                data.flagPosition = citadelPos;
-            }
         }
 
         ListTag inviteList = tags.getList("pendingInvites", Tag.TAG_COMPOUND);
@@ -1089,30 +1084,15 @@ public class Faction {
 
     public static class PlayerData {
         public Faction.Role role = Faction.Role.MEMBER;
-        @Deprecated
-        public DimBlockPos flagPosition = DimBlockPos.ZERO;
-        //public boolean mHasMovedFlagToday = false;
-        @Deprecated
-        public long moveFlagCooldown = 0; // in ms
 
         public void readFromNBT(CompoundTag tags) {
             // Read and write role by string so enum order can change
             try { role = Faction.Role.valueOf(tags.getString("role")); }
             catch (IllegalArgumentException e) { role = Faction.Role.MEMBER; WarForgeMod.LOGGER.warn("Unknown role '{}', defaulting to MEMBER", tags.getString("role")); }
-            //mHasMovedFlagToday = tags.getBoolean("movedFlag");
-            moveFlagCooldown = tags.getLong("flagCooldown");
-            flagPosition = DimBlockPos.readFromNBT(tags, "flagPosition");
         }
 
         public void writeToNBT(CompoundTag tags) {
             tags.putString("role", role.name());
-            tags.putLong("flagCooldown", moveFlagCooldown);
-            flagPosition.writeToNBT(tags, "flagPosition");
-        }
-
-        @Deprecated
-        public void addCooldown() {
-            moveFlagCooldown = System.currentTimeMillis() + (long) (WarForgeConfig.FLAG_COOLDOWN * 60 * 1000);
         }
     }
 }

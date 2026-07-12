@@ -526,13 +526,6 @@ public class FactionStorage {
         return false;
     }
 
-    public long getPlayerCooldown(UUID playerID) {
-        Faction f = getFactionOfPlayer(playerID);
-        if (f == null) return 0L;
-        PlayerData d = f.members.get(playerID);
-        return d == null ? 0L : d.moveFlagCooldown;
-    }
-
     public HashMap<DimChunkPos, UUID> getClaims() {
         return mClaims;
     }
@@ -3238,15 +3231,6 @@ public class FactionStorage {
         }
 
         tags.put("conqueredChunks", conqueredChunksDataList);
-    }
-
-    public void opResetFlagCooldowns() {
-        for (HashMap.Entry<UUID, Faction> kvp : mFactions.entrySet()) {
-            for (HashMap.Entry<UUID, PlayerData> pDataKVP : kvp.getValue().members.entrySet()) {
-                //pDataKVP.getValue().mHasMovedFlagToday = false;
-                pDataKVP.getValue().moveFlagCooldown = 0;
-            }
-        }
     }
 
     public void requestNamePlateCacheEntry(ServerPlayer playerEntity, String name) {

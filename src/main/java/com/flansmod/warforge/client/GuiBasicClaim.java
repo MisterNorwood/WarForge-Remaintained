@@ -18,7 +18,6 @@ import com.flansmod.warforge.common.blocks.TileEntityBasicClaim;
 import com.flansmod.warforge.common.blocks.TileEntityYieldCollector;
 import com.flansmod.warforge.common.factories.FactionStatsGuiFactory;
 import com.flansmod.warforge.common.network.PacketMoveCitadel;
-import com.flansmod.warforge.common.network.PacketPlaceFlag;
 import com.flansmod.warforge.common.network.PacketRemoveClaim;
 
 import net.minecraft.ChatFormatting;
@@ -73,12 +72,6 @@ public final class GuiBasicClaim {
                 .name("basic_claim_actions")
                 .pos(CONTENT_LEFT + COLUMNS * SLOT_SIZE + 12, GRID_Y)
                 .coverChildren();
-        actions.child(actionButton("Place Flag", () -> {
-            PacketPlaceFlag packet = new PacketPlaceFlag();
-            packet.pos = claim.getClaimPos();
-            WarForgeMod.NETWORK.sendToServer(packet);
-            panel.closeIfOpen();
-        }));
         actions.child(actionButton("Info", () -> FactionStatsGuiFactory.INSTANCE.openClient(claim.getFaction())));
         actions.child(actionButton("Unclaim", () -> {
             PacketRemoveClaim packet = new PacketRemoveClaim();

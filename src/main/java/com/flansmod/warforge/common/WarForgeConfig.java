@@ -115,7 +115,6 @@ public class WarForgeConfig {
     public static int SIEGE_DIFF_PER_MEMBER = 1;
     public static boolean SIEGE_CAPTURE = false;
     public static int SIEGE_COOLDOWN_FAIL = 30; // in minutes;
-    public static float FLAG_COOLDOWN = 1f; // In minutes
     public static int MAX_SIEGES = 3;
     public static int ATTACKER_DESERTION_TIMER = 180; // in seconds
     public static int DEFENDER_DESERTION_TIMER = 300; // in seconds (5 mins by default)
@@ -391,7 +390,6 @@ public class WarForgeConfig {
     private static ForgeConfigSpec.DoubleValue SIEGE_INFO_RADIUS_V;
     private static ForgeConfigSpec.IntValue SIEGE_SWING_PER_DEFENDER_FLAG_V;
     private static ForgeConfigSpec.IntValue SIEGE_COOLDOWN_FAIL_V;
-    private static ForgeConfigSpec.DoubleValue FLAG_COOLDOWN_V;
     private static ForgeConfigSpec.IntValue SIEGE_SWING_PER_ATTACKER_FLAG_V;
     private static ForgeConfigSpec.IntValue SIEGE_DIFF_PER_MEMBER_V;
     private static ForgeConfigSpec.BooleanValue SIEGE_CAPTURE_V;
@@ -551,7 +549,6 @@ public class WarForgeConfig {
         SIEGE_INFO_RADIUS_V = cfg.comment("The range at which you see siege information. (Capped by the server setting)").defineInRange("Siege Info Radius", (double) SIEGE_INFO_RADIUS, 1d, 1000d);
         SIEGE_SWING_PER_DEFENDER_FLAG_V = cfg.comment("How much the siege swings per defender flag per day").defineInRange("Siege Swing Per Defender Flag", SIEGE_SWING_PER_DEFENDER_FLAG, 0, 1024);
         SIEGE_COOLDOWN_FAIL_V = cfg.comment("Cooldown between sieges, in minutes").defineInRange("Cooldown between sieges after failure", SIEGE_COOLDOWN_FAIL, 0, 100000);
-        FLAG_COOLDOWN_V = cfg.comment("Cooldown between flag moves, in minutes").defineInRange("Cooldown between Flag move", (double) FLAG_COOLDOWN, 0d, 100000d);
         SIEGE_SWING_PER_ATTACKER_FLAG_V = cfg.comment("How much the siege swings per attacker flag per day").defineInRange("Siege Swing Per Attacker Flag", SIEGE_SWING_PER_ATTACKER_FLAG, 0, 1024);
         SIEGE_DIFF_PER_MEMBER_V = cfg.comment("How much having a defender flag at a base reinforces the difficulty of the siege for the attackers").defineInRange("Siege Difficulty Reinforcement Per Defender Flag", SIEGE_DIFF_PER_MEMBER, 0, 1024);
         SIEGE_CAPTURE_V = cfg.comment("Does a successful siege convert the claim").define("Siege Captures", SIEGE_CAPTURE);
@@ -772,7 +769,6 @@ public class WarForgeConfig {
         SIEGE_INFO_RADIUS = SIEGE_INFO_RADIUS_V.get().floatValue();
         SIEGE_SWING_PER_DEFENDER_FLAG = SIEGE_SWING_PER_DEFENDER_FLAG_V.get();
         SIEGE_COOLDOWN_FAIL = SIEGE_COOLDOWN_FAIL_V.get();
-        FLAG_COOLDOWN = FLAG_COOLDOWN_V.get().floatValue();
         SIEGE_SWING_PER_ATTACKER_FLAG = SIEGE_SWING_PER_ATTACKER_FLAG_V.get();
         SIEGE_DIFF_PER_MEMBER = SIEGE_DIFF_PER_MEMBER_V.get();
         SIEGE_CAPTURE = SIEGE_CAPTURE_V.get();
