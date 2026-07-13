@@ -2,7 +2,7 @@ package com.flansmod.warforge.client;
 
 import brachy.modularui.api.drawable.IDrawable;
 import brachy.modularui.api.drawable.Text;
-import brachy.modularui.drawable.IngredientDrawable;
+import brachy.modularui.drawable.ItemDrawable;
 import brachy.modularui.screen.ModularPanel;
 import brachy.modularui.widgets.ButtonWidget;
 import brachy.modularui.widgets.ScrollingTextWidget;
@@ -28,7 +28,6 @@ import net.minecraft.world.item.ItemStack;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
 
 public final class GuiSiegeCamp {
     private static final int RADIUS = 2;
@@ -179,7 +178,7 @@ public final class GuiSiegeCamp {
                             }
                             richTooltip.addLine("Claim Type: " + formatClaimType(chunkInfo.claimType));
                             if (chunkInfo.mWarforgeVein != null) {
-                                richTooltip.addDrawableLine(new IngredientDrawable(
+                                richTooltip.addDrawableLine(new ItemDrawable(
                                         chunkInfo.mWarforgeVein.compIds.stream()
                                                 .map(ItemMatcher::toStack)
                                                 .filter(stack -> !stack.isEmpty())

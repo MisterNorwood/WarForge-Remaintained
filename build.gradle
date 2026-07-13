@@ -134,7 +134,7 @@ dependencies {
     // ModularUI (brachy84's modern Forge-1.20.1 port, 3.3.0) — consumed from CurseForge via CurseMaven.
     // fg.deobf so its SRG members + mixin refmap are remapped to named for the dev runtime.
     // (Reference source for API: ../ModularUI-Modern at tag v3.3.0.)
-    implementation fg.deobf("curse.maven:modularui-624243:8118122")
+    implementation fg.deobf("curse.maven:modularui-624243:8339410")
 
     compileOnly("curse.maven:superb-warfare-1218165:7292685") {
         exclude group: "org.spongepowered", module: "mixin"

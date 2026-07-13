@@ -2,7 +2,7 @@ package com.flansmod.warforge.client;
 
 import brachy.modularui.api.drawable.IDrawable;
 import brachy.modularui.api.drawable.Text;
-import brachy.modularui.drawable.IngredientDrawable;
+import brachy.modularui.drawable.ItemDrawable;
 import brachy.modularui.screen.ModularPanel;
 import brachy.modularui.screen.viewport.GuiContext;
 import brachy.modularui.theme.WidgetTheme;
@@ -224,7 +224,7 @@ public final class GuiClaimManager {
                             tooltip.addLine("Claim Type: " + formatClaimType(info.claimType));
                             tooltip.addLine("Chunk: [" + info.x + ", " + info.z + "]");
                             if (info.vein != null) {
-                                tooltip.addDrawableLine(new IngredientDrawable(
+                                tooltip.addDrawableLine(new ItemDrawable(
                                         info.vein.compIds.stream()
                                                 .map(ItemMatcher::toStack)
                                                 .filter(stack -> !stack.isEmpty())
