@@ -48,6 +48,7 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
 import net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock;
@@ -410,6 +411,21 @@ public class WarForgeMod {
 
         if (event.getEntity() instanceof ServerPlayer player) {
             FACTIONS.playerDied(player, event.getSource());
+            FACTIONS.removePlayerFromSiegePresence(player.getUUID());
+        }
+    }
+
+    @SubscribeEvent
+    public void playerRespawned(PlayerEvent.PlayerRespawnEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player && !player.level().isClientSide) {
+            FACTIONS.updateAttackerSiegePresence(player);
+        }
+    }
+
+    @SubscribeEvent
+    public void playerChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player && !player.level().isClientSide) {
+            FACTIONS.updateAttackerSiegePresence(player);
         }
     }
 
@@ -667,11 +683,21 @@ public class WarForgeMod {
         if (!WarForgeConfig.FACTION_PREFIX_IN_CHAT) {
             return;
         }
-        Faction faction = FACTIONS.getFactionOfPlayer(event.getPlayer().getUUID());
+        ServerPlayer player = event.getPlayer();
+        Faction faction = FACTIONS.getFactionOfPlayer(player.getUUID());
         if (faction == null) {
             return;
         }
-        event.setMessage(FactionDisplay.withChatPrefix(faction, event.getMessage()));
+        Component prefix = FactionDisplay.factionPrefix(faction);
+        if (prefix == null) {
+            return;
+        }
+        Component line = Component.empty()
+                .append(prefix)
+                .append(Component.literal("<").append(player.getDisplayName()).append("> "))
+                .append(event.getMessage());
+        event.setCanceled(true);
+        MC_SERVER.getPlayerList().broadcastSystemMessage(line, false);
     }
 
     @SubscribeEvent
@@ -691,6 +717,7 @@ public class WarForgeMod {
         }
 
         FACTIONS.onFactionMemberLoggedIn(player.getUUID());
+        FACTIONS.updateAttackerSiegePresence(player);
 
         PacketTimeUpdates packet = new PacketTimeUpdates();
 

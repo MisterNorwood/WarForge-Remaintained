@@ -45,6 +45,8 @@ public class PacketSiegeCampInfo extends PacketBase {
             byte oreQualOrd = 0;
             if (info.mOreQuality != null) { oreQualOrd = (byte) info.mOreQuality.ordinal(); }
             data.writeByte(oreQualOrd);
+
+            data.writeBoolean(info.conquered);
         }
 
         data.writeByte(momentum);
@@ -76,6 +78,7 @@ public class PacketSiegeCampInfo extends PacketBase {
             info.mWarforgeVein = possibleVein < 0 ? null : ClientProxy.VEIN_ENTRIES.get(possibleVein);
             info.claimType = Faction.ClaimType.fromSerialized(readUTF(data));
             info.mOreQuality = Quality.values()[data.readByte()];
+            info.conquered = data.readBoolean();
 
             mPossibleAttacks.add(info);
         }

@@ -22,6 +22,7 @@ public class SiegeCampAttackInfo
 	public Quality mOreQuality;
     public Faction.ClaimType claimType = Faction.ClaimType.NONE;
     public byte momentum;
+    public boolean conquered;
 
    	//Bruh
     public SiegeCampAttackInfo(SiegeCampAttackInfo info) {
@@ -34,7 +35,8 @@ public class SiegeCampAttackInfo
                 info.mWarforgeVein,
                 info.mOreQuality,
                 info.claimType,
-                info.momentum
+                info.momentum,
+                info.conquered
         );
     }
 }

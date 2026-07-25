@@ -101,8 +101,10 @@ public class MapDrawable implements IDrawable, Interactable {
             graphics.drawString(font, numberText, x + 10, y + 10, 0xFFFFFFFF, false); // index
         }
 
-        if (chunkState instanceof ClaimChunkRenderInfo claimInfo && (claimInfo.conquered || claimInfo.battleZone)) {
-            float alpha = claimInfo.conquered && claimInfo.battleZone ? 0.65f : 0.5f;
+        boolean conquered = chunkState.conquered;
+        boolean battleZone = chunkState instanceof ClaimChunkRenderInfo claimInfo && claimInfo.battleZone;
+        if (conquered || battleZone) {
+            float alpha = conquered && battleZone ? 0.65f : 0.5f;
             RenderSystem.setShaderColor(1f, 1f, 1f, alpha);
             GuiDraw.drawTexture(pose, conqueredOverlay, x, y, x + width, y + height, 0f, 0f, 1f, 1f, true);
             Color.resetGlColor();

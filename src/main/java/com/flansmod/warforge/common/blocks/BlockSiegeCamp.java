@@ -120,6 +120,7 @@ public class BlockSiegeCamp extends MultiBlockColumn implements EntityBlock {
             BlockEntity te = world.getBlockEntity(pos);
             if (te instanceof TileEntitySiegeCamp siegeCamp) {
                 FACTIONS.onNonCitadelClaimPlaced(siegeCamp, placer);
+                FACTIONS.clearConquered(new DimChunkPos(world.dimension(), pos));
                 siegeCamp.onPlacedBy(placer);
                 super.setPlacedBy(world, pos, state, placer, stack);
             }
@@ -197,6 +198,7 @@ public class BlockSiegeCamp extends MultiBlockColumn implements EntityBlock {
             info.mFactionName = claimedBy == null ? "" : claimedBy.name;
             info.mFactionColour = claimedBy == null ? 0 : claimedBy.colour;
             info.claimType = claimedBy == null ? Faction.ClaimType.NONE : claimedBy.getClaimType(chunk);
+            info.conquered = FACTIONS.conqueredChunks.containsKey(chunk);
             Pair<Vein, Quality> veinInfo = VEIN_HANDLER.getVein(chunk.dim, chunk.x, chunk.z,
                     WarForgeMod.MC_SERVER.overworld().getSeed());
             if (veinInfo != null) {

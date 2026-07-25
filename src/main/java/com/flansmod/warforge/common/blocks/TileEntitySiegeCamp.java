@@ -23,7 +23,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
-import static com.flansmod.warforge.common.WarForgeConfig.SIEGE_ATTACKER_RADIUS;
 import static com.flansmod.warforge.common.WarForgeConfig.SIEGE_DEFENDER_RADIUS;
 
 public class TileEntitySiegeCamp extends TileEntityClaim
@@ -215,8 +214,9 @@ public class TileEntitySiegeCamp extends TileEntityClaim
 
 			// --- ATTACKER HANDLING ---
 
-			// if there are no players in the radius
-			if (WarForgeMod.FACTIONS.getFaction(factionUUID).getOnlinePlayers(this::isAttackerInWarzone).size() < 1) {
+			// if there are no players in the presence zone
+			Siege activeSiege = WarForgeMod.FACTIONS.getSieges().get(siegeTarget.toChunkPos());
+			if (activeSiege == null || !activeSiege.hasPresentAttacker()) {
 				if (handleDesertion(true)) return; // cancel update if siege concludes
 			} else {
 				// stops at 0 and decrements gradually to stop attackers from popping into and out of warzone
@@ -350,10 +350,6 @@ public class TileEntitySiegeCamp extends TileEntityClaim
 
 	private void notifyAbandoned(boolean attackersDeserted) {
 		Siege.notifyAbandoned(getAttacking(), defenders, attackersDeserted);
-	}
-
-	private boolean isAttackerInWarzone(Player player) {
-		return isPlayerInRadius(player, SIEGE_ATTACKER_RADIUS);
 	}
 
 	private boolean isDefenderInWarzone(Player player) {

@@ -505,6 +505,7 @@ public class ProtectionsModule {
             return;
 
         if (event.getEntity() instanceof ServerPlayer player) {
+            WarForgeMod.FACTIONS.updateAttackerSiegePresence(player);
             handleWarzoneBoundary(player, event.getOldPos(), event.getNewPos());
             notifyConqueredEntry(player, event.getOldPos(), event.getNewPos());
             return;

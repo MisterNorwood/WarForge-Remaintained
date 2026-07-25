@@ -1010,6 +1010,28 @@ public class FactionStorage {
         return getActiveSiegeForFaction(factionId) != null;
     }
 
+    public void updateAttackerSiegePresence(ServerPlayer player) {
+        if (player == null || sieges.isEmpty()) {
+            return;
+        }
+        UUID playerId = player.getUUID();
+        Faction faction = getFactionOfPlayer(playerId);
+        UUID factionId = faction == null ? null : faction.uuid;
+        DimChunkPos chunk = new DimChunkPos(player.level().dimension(), player.blockPosition());
+        for (Siege siege : sieges.values()) {
+            boolean present = factionId != null
+                    && factionId.equals(siege.attackingFaction)
+                    && siege.isChunkInAttackerPresenceZone(chunk);
+            siege.setAttackerPresent(playerId, present);
+        }
+    }
+
+    public void removePlayerFromSiegePresence(UUID playerId) {
+        for (Siege siege : sieges.values()) {
+            siege.setAttackerPresent(playerId, false);
+        }
+    }
+
     public void update() {
         for (HashMap.Entry<UUID, Faction> entry : mFactions.entrySet()) {
             entry.getValue().update();
@@ -2002,6 +2024,7 @@ public class FactionStorage {
     }
 
     public void onFactionMemberLoggedOut(UUID playerID) {
+        removePlayerFromSiegePresence(playerID);
         Faction faction = getFactionOfPlayer(playerID);
         if (!isValidFaction(faction)) {
             return;

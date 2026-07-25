@@ -19,7 +19,12 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
+import net.minecraft.world.entity.player.Player;
+
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 public class Siege {
@@ -59,6 +64,7 @@ public class Siege {
      */
     private int mAttackProgress = 0;
     private int attackerAbsenceTicks = 0;
+    private final HashSet<UUID> presentAttackers = new HashSet<>();
 
     public Siege() {
         attackingCamps = new ArrayList<>(4);
@@ -168,48 +174,50 @@ public class Siege {
     }
 
     public boolean isCompleted() {
-        boolean endByAttack = GetAttackProgress() >= GetAttackSuccessThreshold();
-        boolean endByDef = GetDefenceProgress() >= 5;
-
-        // A non-null abandoned camp blocks completion; the attacker abandon countdown is now surfaced
-        // on the siege HUD instead of repeated chat messages here.
-        TileEntitySiegeCamp abandonedCamp = hasAbandonedSieges();
-
-        return endByDef || (abandonedCamp == null && endByAttack);
+        return GetAttackProgress() >= GetAttackSuccessThreshold() || GetDefenceProgress() >= 5;
     }
 
-    // ensures attackers are within warzone before siege completes
-    public TileEntitySiegeCamp hasAbandonedSieges() {
-        Faction attacking = WarForgeMod.FACTIONS.getFaction(attackingFaction);
-        ArrayList<TileEntitySiegeCamp> abandonedCamps = new ArrayList<>();
+    public Set<DimChunkPos> getDefenderSiegedIsland() {
+        if (defendingClaim == null) return Collections.emptySet();
+        return WarForgeMod.FACTIONS.collectFactionIsland(defendingFaction, defendingClaim.toChunkPos());
+    }
 
-        for (DimBlockPos siegeCampPos : attackingCamps) {
-            if (siegeCampPos == null) continue;
-            // YOU WILL GET INCOMPREHENSIBLE ERRORS IF YOU DO NOT FOLLOW THE BELOW CONVERSION TO REGULAR POS
-            BlockEntity siegeCamp = WarForgeMod.MC_SERVER.getLevel(siegeCampPos.dim).getBlockEntity(siegeCampPos.toRegularPos());
-            if (siegeCamp instanceof TileEntitySiegeCamp) {
-                int attackerAbandonTimer = ((TileEntitySiegeCamp) siegeCamp).getAttackerAbandonTickTimer();
-                if (attackerAbandonTimer > 0) {
-                    abandonedCamps.add((TileEntitySiegeCamp) siegeCamp);
-                }
+    public boolean isChunkInAttackerPresenceZone(DimChunkPos chunk) {
+        for (DimBlockPos camp : attackingCamps) {
+            if (camp != null && isPlayerInRadius(camp.toChunkPos(), chunk, WarForgeConfig.SIEGE_ATTACKER_RADIUS)) {
+                return true;
             }
         }
-
-        if (abandonedCamps.size() == 0) {
-            return null;
+        if (!defendingFaction.equals(WarForgeMod.FACTIONS.getClaim(chunk))) {
+            return false;
         }
+        return getDefenderSiegedIsland().contains(chunk);
+    }
 
-        int largestAbandonTimer = 0;
-        var largestAbandonTE = abandonedCamps.get(0);
-        for (var TE : abandonedCamps) {
-            int currTimer = TE.getAttackerAbandonTickTimer();
-            if (currTimer > largestAbandonTimer) {
-                largestAbandonTimer = currTimer;
-                largestAbandonTE = TE;
+    public boolean hasPresentAttacker() {
+        return !presentAttackers.isEmpty();
+    }
+
+    public void setAttackerPresent(UUID playerId, boolean present) {
+        if (present) {
+            presentAttackers.add(playerId);
+        } else {
+            presentAttackers.remove(playerId);
+        }
+    }
+
+    public void initAttackerPresence() {
+        presentAttackers.clear();
+        Faction attackers = WarForgeMod.FACTIONS.getFaction(attackingFaction);
+        if (attackers == null) {
+            return;
+        }
+        for (Player player : attackers.getOnlinePlayers(p -> p != null && !p.isRemoved())) {
+            DimChunkPos chunk = new DimChunkPos(player.level().dimension(), player.blockPosition());
+            if (isChunkInAttackerPresenceZone(chunk)) {
+                presentAttackers.add(player.getUUID());
             }
         }
-
-        return largestAbandonTE;
     }
 
     public boolean WasSuccessful() {
@@ -280,6 +288,7 @@ public class Siege {
         }
 
         calculateBasePower();
+        initAttackerPresence();
         defenders.isCurrentlyDefending = true;
         WarForgeMod.INSTANCE.messageAll(Component.literal(attackers.name + " started a siege against " + defenders.name), true);
         WarForgeMod.FACTIONS.sendSiegeStartNotifications(attackers, defenders, defendingClaim);
@@ -324,12 +333,7 @@ public class Siege {
         if (attackingCamps.isEmpty() || attackingCamps.get(0) == null) return false;
         int limitTicks = WarForgeConfig.ATTACKER_DESERTION_TIMER * 20;
         if (limitTicks <= 0) return false; // 0 disables the timer rather than failing instantly
-        Faction attackers = WarForgeMod.FACTIONS.getFaction(attackingFaction);
-        if (attackers == null) return false;
-        DimChunkPos anchor = attackingCamps.get(0).toChunkPos();
-        boolean present = !attackers.getOnlinePlayers(p -> p != null && !p.isRemoved()
-                && isPlayerInRadius(anchor, new DimChunkPos(p.level().dimension(), p.blockPosition()), WarForgeConfig.SIEGE_ATTACKER_RADIUS)).isEmpty();
-        if (present) {
+        if (hasPresentAttacker()) {
             if (attackerAbsenceTicks != 0) {
                 attackerAbsenceTicks = 0;
                 WarForgeMod.FACTIONS.sendSiegeInfoToNearby(defendingClaim.toChunkPos()); // clear HUD countdown

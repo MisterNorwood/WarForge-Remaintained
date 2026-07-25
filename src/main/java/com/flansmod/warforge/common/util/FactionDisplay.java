@@ -5,7 +5,6 @@ import com.flansmod.warforge.server.Faction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.TextColor;
-import net.minecraft.network.protocol.game.ClientboundPlayerInfoUpdatePacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraftforge.server.ServerLifecycleHooks;
@@ -31,15 +30,6 @@ public final class FactionDisplay {
                 .withStyle(style -> style.withColor(TextColor.fromRgb(faction.colour)));
     }
 
-    /** Returns {@code original} with the faction prefix prepended, or {@code original} unchanged if no faction. */
-    public static Component withChatPrefix(Faction faction, Component original) {
-        MutableComponent prefix = factionPrefix(faction);
-        if (prefix == null) {
-            return original;
-        }
-        return Component.literal("").append(prefix).append(original);
-    }
-
     /** The tab-list display name "[FactionName] PlayerName", or {@code null} to fall back to the vanilla name. */
     public static Component tabName(Faction faction, String playerName) {
         MutableComponent prefix = factionPrefix(faction);
@@ -62,10 +52,7 @@ public final class FactionDisplay {
         }
         ServerPlayer player = server.getPlayerList().getPlayer(playerId);
         if (player != null) {
-            server.getPlayerList().broadcastAll(
-                    new ClientboundPlayerInfoUpdatePacket(
-                            ClientboundPlayerInfoUpdatePacket.Action.UPDATE_DISPLAY_NAME,
-                            player));
+            player.refreshTabListName();
         }
     }
 

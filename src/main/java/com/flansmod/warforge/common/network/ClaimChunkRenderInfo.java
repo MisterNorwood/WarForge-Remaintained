@@ -6,7 +6,6 @@ import com.flansmod.warforge.server.Faction;
 public class ClaimChunkRenderInfo extends SiegeCampAttackInfoRender {
     public final Faction.ClaimType claimType;
     public final boolean forceLoaded;
-    public final boolean conquered;
     public final boolean battleZone;
 
     public ClaimChunkRenderInfo(SiegeCampAttackInfo info, Faction.ClaimType claimType, boolean forceLoaded, boolean conquered, boolean battleZone, ResourceLocation centerIcon, CenterMarkType centerIconType) {

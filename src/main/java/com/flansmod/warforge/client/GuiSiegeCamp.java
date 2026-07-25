@@ -45,7 +45,7 @@ public final class GuiSiegeCamp {
 
     public static ModularPanel buildPanel(SiegeCampGuiData data) {
         DimChunkPos centerChunk = data.siegeCampPos.toChunkPos();
-        String dimName = data.siegeCampPos.dim.location().toString();
+        String dimName = data.siegeCampPos.dim.location().getPath();
         int totalSize = 2 * RADIUS + 1;
         ChunkMapViewport viewport = ChunkMapViewport.create(
                 totalSize,
