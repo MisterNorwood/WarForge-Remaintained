@@ -123,6 +123,14 @@ These are the settings server owners usually touch first.
   - How far defenders can move before desertion logic matters.
 - `Enable Per-Siege timer`
   - Enables the newer per-siege timing system.
+- `Siege Defence Threshold`
+  - How many points the defenders must swing the siege in their favour to win (attackers win at the chunk's own difficulty threshold). Default 5.
+- `Siege Ends On Goal Reached`
+  - If on, a siege ends the instant a side reaches its point goal (e.g. via a kill), even mid-timer. If off, the outcome is only settled when the siege timer next elapses. Default on.
+- `Kill Detection Mode`
+  - `PRECISE` (default) counts only confirmed kills by an opposing player inside the battle zone. `SIMPLE` counts any participant death in the zone toward the siege, including fall/mob/environmental deaths.
+- `Siege Stall Escalation Threshold`
+  - Anti-stall: once the defenders' lead exceeds this many points, each consecutive siege-timer tick with no kills doubles the attackers' swing (reset by any kill). Only reachable when the Siege Defence Threshold is higher than this value. Default 10.
 - `SiegeMomentumMultipliers`
   - Time values per momentum level, written as `level=time`.
 - `Cooldown between sieges after failure`

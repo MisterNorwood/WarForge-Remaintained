@@ -51,6 +51,7 @@ public class ClientProxy extends CommonProxy
 	public void clientSetup(FMLClientSetupEvent event)
 	{
 		MinecraftForge.EVENT_BUS.register(new ClientTickHandler());
+		MinecraftForge.EVENT_BUS.register(new SiegeUiDebugCommand());
 		MinecraftForge.EVENT_BUS.register(new AnimatedEffectHandler());
 		MinecraftForge.EVENT_BUS.register(new ClaimFlagRenderer());
 		MinecraftForge.EVENT_BUS.register(new ClientMineTimePredictor());

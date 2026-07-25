@@ -27,6 +27,10 @@
 	"warforge.veins.gold": "%s золотая жила",
 	"warforge.veins.gold_diamond": "%s алмазно-золотая жила",
 	"warforge.veins.iron": "%s железо-угольная жила",
+	"warforge.veins.copper": "%s медная жила",
+	"warforge.veins.redstone_lapis": "%s красно-лазуритовая жила",
+	"warforge.veins.emerald": "%s изумрудная жила",
+	"warforge.veins.quartz": "%s кварцевая жила",
 
 	"warforge.info.too_many_siege_blocks": "Ваша фракция достигла лимита осад.",
 	"warforge.info.siege_count": "Текущее число осад Вашей фракции: %d.",

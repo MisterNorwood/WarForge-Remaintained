@@ -103,6 +103,11 @@ public class ClientTickHandler {
     public static boolean CLAIMS_DIRTY = false;
     public static boolean UI_DEBUG = false;
     public static boolean TIMER_DEBUG = false;
+    public static boolean DYNAMIC_SIEGE_OVERLAY = true;
+    public static boolean animateDebugSiege = false;
+    public static SiegeCampProgressInfo debugSiegeInfo = null;
+    private static int debugAnimTicks = 0;
+    private static int debugAnimDir = 1;
     public static boolean showVeinOverlay = true;
     private DimChunkPos playerChunkPos = new DimChunkPos(Level.OVERWORLD, 0, 0);
     private DimChunkPos lastClaimSyncChunk = new DimChunkPos(Level.OVERWORLD, Integer.MIN_VALUE, Integer.MIN_VALUE);
@@ -206,6 +211,8 @@ public class ClientTickHandler {
         WarForgeMod.NETWORK.handleClientPackets();
         ChunkMapTextureDaemon.flushTextureQueue();
         WarForgeMod.proxy.TickClient();
+
+        tickDebugSiege();
 
         // Use a more efficient approach for expired siege info removal
         ArrayList<DimBlockPos> expired = null;
@@ -356,7 +363,7 @@ public class ClientTickHandler {
         LocalPlayer player = mc.player;
 
         // Siege camp info
-        SiegeCampProgressInfo infoToRender = !UI_DEBUG ? getClosestSiegeCampInfo(player) : SiegeCampProgressInfo.getDebugInfo();
+        SiegeCampProgressInfo infoToRender = !UI_DEBUG ? getClosestSiegeCampInfo(player) : getOrCreateDebugSiege();
 
         if (infoToRender != null) {
             renderSiegeOverlay(mc, graphics, infoToRender, partialTicks);
@@ -446,6 +453,59 @@ public class ClientTickHandler {
         }
 
         return closestInfo;
+    }
+
+    public static SiegeCampProgressInfo getOrCreateDebugSiege() {
+        if (debugSiegeInfo == null) {
+            debugSiegeInfo = SiegeCampProgressInfo.getDebugInfo();
+            debugSiegeInfo.endTimestamp = System.currentTimeMillis() + 90000L;
+        }
+        return debugSiegeInfo;
+    }
+
+    private void tickDebugSiege() {
+        if (!UI_DEBUG || !animateDebugSiege) return;
+
+        SiegeCampProgressInfo dbg = getOrCreateDebugSiege();
+        int defence = Math.max(1, WarForgeConfig.SIEGE_DEFENCE_THRESHOLD);
+
+        if (++debugAnimTicks >= 8) {
+            debugAnimTicks = 0;
+            dbg.mPreviousProgress = dbg.progress;
+            dbg.progress += debugAnimDir;
+            if (dbg.progress >= dbg.completionPoint) {
+                dbg.progress = dbg.completionPoint;
+                debugAnimDir = -1;
+            } else if (dbg.progress <= -defence) {
+                dbg.progress = -defence;
+                debugAnimDir = 1;
+            }
+        }
+
+        if (dbg.endTimestamp - System.currentTimeMillis() < 0) {
+            dbg.endTimestamp = System.currentTimeMillis() + 90000L;
+        }
+    }
+
+    public static void applyDebugScenario(String scenario) {
+        SiegeCampProgressInfo dbg = SiegeCampProgressInfo.getDebugInfo();
+        dbg.endTimestamp = System.currentTimeMillis() + 90000L;
+        switch (scenario.toLowerCase(java.util.Locale.ROOT)) {
+            case "attacker" -> { dbg.completionPoint = 10; dbg.mPreviousProgress = 6; dbg.progress = 8; }
+            case "defender" -> { dbg.completionPoint = 10; dbg.mPreviousProgress = -1; dbg.progress = -3; }
+            case "even" -> { dbg.completionPoint = 10; dbg.mPreviousProgress = 0; dbg.progress = 0; }
+            case "blowout" -> { dbg.completionPoint = 20; dbg.mPreviousProgress = 18; dbg.progress = 19; }
+            case "wide" -> { dbg.completionPoint = 30; dbg.mPreviousProgress = 10; dbg.progress = 12; }
+            case "abandon" -> {
+                dbg.completionPoint = 10;
+                dbg.mPreviousProgress = 4;
+                dbg.progress = 5;
+                dbg.attackerAbandonSeconds = 30;
+                dbg.attackingFactionId = ClientClaimChunkCache.playerFactionId;
+            }
+            default -> { dbg.completionPoint = 10; dbg.mPreviousProgress = 4; dbg.progress = 6; }
+        }
+        debugSiegeInfo = dbg;
     }
 
     private void renderVeinData(Minecraft mc, GuiGraphics graphics, Pair<Vein, Quality> veinInfo, boolean hasData) {
@@ -611,6 +671,11 @@ public class ClientTickHandler {
     }
 
     private void renderSiegeOverlay(Minecraft mc, GuiGraphics graphics, SiegeCampProgressInfo infoToRender, float partialTicks) {
+        if (DYNAMIC_SIEGE_OVERLAY) {
+            SiegeOverlayRenderer.render(mc, graphics, infoToRender, partialTicks);
+            return;
+        }
+
         // Render Background and Bars
         var pos = WarForgeConfig.POS_SIEGE;
         int xText = ScreenSpaceUtil.getX(pos, 256);  // 256 = width of bar

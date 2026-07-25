@@ -61,7 +61,7 @@ public class WarForgeConfig {
     public static float RICH_QUAL_MULT = 2f;
 
     // Claims
-    public static boolean ENABLE_CITADEL_UPGRADES = false;
+    public static boolean ENABLE_CITADEL_UPGRADES = true;
     public static String[] CLAIM_DIM_WHITELIST = new String[]{"minecraft:overworld"};
     public static int CLAIM_STRENGTH_CITADEL = 15;
     public static int CLAIM_STRENGTH_REINFORCED = 10;
@@ -101,6 +101,9 @@ public class WarForgeConfig {
 
     // Sieges
     public static boolean SIEGE_ENABLE_NEW_TIMER = true;
+    public static int SIEGE_DEFENCE_THRESHOLD = 5;
+    public static boolean SIEGE_END_ON_GOAL_REACHED = true;
+    public static int SIEGE_STALL_ESCALATION_THRESHOLD = 10;
     public static byte SIEGE_MOMENTUM_MAX = 4;
     public static int SIEGE_MOMENTUM_DURATION = 60;  //Minutes
     public static Map<Byte, Integer> SIEGE_MOMENTUM_TIME = new HashMap<>();
@@ -129,7 +132,12 @@ public class WarForgeConfig {
     public static int VERTICAL_SIEGE_DIST = 40; // inclusive distance in blocks siege can be placed/started from/on a potential target claim
     public static int SIEGE_BATTLE_RADIUS = 2; // outer "War" zone radius: kills count, foes cannot break
     public static int SIEGE_SIEGED_RADIUS = 1; // inner "Sieged" zone radius: chunk protection disabled
-    public static boolean SIEGE_COUNT_ALL_ZONE_DEATHS = false;
+    public static SiegeKillDetectionMode SIEGE_KILL_DETECTION_MODE = SiegeKillDetectionMode.PRECISE;
+
+    public enum SiegeKillDetectionMode {
+        PRECISE,
+        SIMPLE
+    }
     public static int SIEGE_ATTACKER_RADIUS = 1; // number of chunks player can be away from siege chunk in both directions
     public static int SIEGE_DEFENDER_RADIUS = 15;
 
@@ -380,15 +388,18 @@ public class WarForgeConfig {
     private static ForgeConfigSpec.IntValue VERTICAL_SIEGE_DIST_V;
     private static ForgeConfigSpec.IntValue SIEGE_BATTLE_RADIUS_V;
     private static ForgeConfigSpec.IntValue SIEGE_SIEGED_RADIUS_V;
-    private static ForgeConfigSpec.BooleanValue SIEGE_COUNT_ALL_ZONE_DEATHS_V;
+    private static ForgeConfigSpec.EnumValue<SiegeKillDetectionMode> SIEGE_KILL_DETECTION_MODE_V;
     private static ForgeConfigSpec.IntValue SIEGE_ATTACKER_RADIUS_V;
     private static ForgeConfigSpec.IntValue SIEGE_DEFENDER_RADIUS_V;
     private static ForgeConfigSpec.IntValue SIEGE_SWING_PER_DEFENDER_DEATH_V;
     private static ForgeConfigSpec.IntValue SIEGE_SWING_PER_ATTACKER_DEATH_V;
+    private static ForgeConfigSpec.IntValue SIEGE_STALL_ESCALATION_THRESHOLD_V;
     private static ForgeConfigSpec.IntValue SIEGE_SWING_PER_DAY_ELAPSED_BASE_V;
     private static ForgeConfigSpec.IntValue SIEGE_SWING_PER_DAY_ELAPSED_NO_ATTACKER_LOGINS_V;
     private static ForgeConfigSpec.IntValue SIEGE_SWING_PER_DAY_ELAPSED_NO_DEFENDER_LOGINS_V;
     private static ForgeConfigSpec.DoubleValue SIEGE_DAY_LENGTH_V;
+    private static ForgeConfigSpec.IntValue SIEGE_DEFENCE_THRESHOLD_V;
+    private static ForgeConfigSpec.BooleanValue SIEGE_END_ON_GOAL_REACHED_V;
     private static ForgeConfigSpec.DoubleValue SIEGE_INFO_RADIUS_V;
     private static ForgeConfigSpec.IntValue SIEGE_SWING_PER_DEFENDER_FLAG_V;
     private static ForgeConfigSpec.IntValue SIEGE_COOLDOWN_FAIL_V;
@@ -511,7 +522,7 @@ public class WarForgeConfig {
         ENABLE_SIEGE_GRACE_PERIOD_V = cfg.comment("If enabled, freshly created factions cannot be sieged for a grace period. If a graced faction starts a siege of its own, it forfeits its grace instantly.").define("Enable New Faction Siege Grace", ENABLE_SIEGE_GRACE_PERIOD);
         SIEGE_GRACE_PERIOD_HOURS_V = cfg.comment("How many hours a newly created faction stays unsiegeable. Disabling the feature above removes grace from all existing factions immediately.").defineInRange("New Faction Siege Grace Hours", SIEGE_GRACE_PERIOD_HOURS, 0, 8760);
         CITADEL_MOVE_NUM_DAYS_V = cfg.comment("How many days a faction has to wait to move their citadel again").defineInRange("Days Between Citadel Moves", CITADEL_MOVE_NUM_DAYS, 0, 1024);
-        ENABLE_CITADEL_UPGRADES_V = cfg.comment("Applies claim limits that require upgrading to extend your faction's claim limit").define("Enable Citadel Upgrade System", false);
+        ENABLE_CITADEL_UPGRADES_V = cfg.comment("Applies claim limits that require upgrading to extend your faction's claim limit").define("Enable Citadel Upgrade System", ENABLE_CITADEL_UPGRADES);
         ENABLE_ISOLATED_CLAIMS_V = cfg.comment("If true, forces all newly placed claim blocks, excluding siege blocks and citadels, to be directly adjacent to a pre-existing claim.").define("Enabled Isolated Claims", ENABLE_ISOLATED_CLAIMS);
         BLOCK_FOREIGN_FLUID_INFLOW_V = cfg.comment("If true, liquids cannot flow from a chunk into a differently-claimed chunk (stops lavacast/water griefing across claim borders).").define("Block Foreign Fluid Inflow", BLOCK_FOREIGN_FLUID_INFLOW);
         BLOCK_FOREIGN_PISTON_PUSH_V = cfg.comment("If true, pistons cannot push or pull blocks across a claim border into/out of a differently-claimed chunk.").define("Block Foreign Piston Push", BLOCK_FOREIGN_PISTON_PUSH);
@@ -540,15 +551,18 @@ public class WarForgeConfig {
         VERTICAL_SIEGE_DIST_V = cfg.comment("The number of blocks up or down a siege block can be placed from a potential target, inclusively. Sieges may also only be started on targets within this vertical radius.").defineInRange("Maximum Vertical Siege Radius [Inclusive]", VERTICAL_SIEGE_DIST, 0, Integer.MAX_VALUE);
         SIEGE_BATTLE_RADIUS_V = cfg.comment("Outer 'War' zone: chunks (square radius) from each active siege camp where kills count toward the siege and foes cannot break/place blocks (WarFriend/WarFoe profiles). Should be >= the Sieged radius.").defineInRange("Battle Square Chunk Radius From Siege", SIEGE_BATTLE_RADIUS, 0, Integer.MAX_VALUE);
         SIEGE_SIEGED_RADIUS_V = cfg.comment("Inner 'Sieged' zone: chunks (square radius) from each active siege camp where chunk protection is fully disabled - anyone may breach (SiegedFriend/SiegedFoe profiles). Kills also count here. Typically smaller than the War radius.").defineInRange("Sieged Square Chunk Radius From Siege", SIEGE_SIEGED_RADIUS, 0, Integer.MAX_VALUE);
-        SIEGE_COUNT_ALL_ZONE_DEATHS_V = cfg.comment("If true, ANY death of a participant inside the War/Sieged zone counts toward the siege goal (environmental, mob, fall, etc.), not only kills confirmed to be dealt by an opposing player.").define("Count All Zone Deaths", SIEGE_COUNT_ALL_ZONE_DEATHS);
+        SIEGE_KILL_DETECTION_MODE_V = cfg.comment("How siege kills are detected. PRECISE (default): only a confirmed kill by an opposing player inside the War/Sieged zone counts (an attacker must kill a defender, or a defender an attacker). SIMPLE: any participant death inside the zone counts toward the siege, including environmental/mob/fall deaths - e.g. a defender dying to fall damage awards the attackers a point.").defineEnum("Kill Detection Mode", SIEGE_KILL_DETECTION_MODE);
         SIEGE_ATTACKER_RADIUS_V = cfg.comment("The number of chunks in any direction from the siege block that an attacker can be in to prevent siege abandon.").defineInRange("Attacker Square Chunk Radius From Siege", SIEGE_ATTACKER_RADIUS, 0, Integer.MAX_VALUE);
         SIEGE_DEFENDER_RADIUS_V = cfg.comment("The number of chunks in any direction from the siege block that a defender can be in to prevent siege abandon.").defineInRange("Defender Square Chunk Radius From Siege", SIEGE_DEFENDER_RADIUS, 0, Integer.MAX_VALUE);
         SIEGE_SWING_PER_DEFENDER_DEATH_V = cfg.comment("How much a siege progress swings when a defender dies in the siege").defineInRange("Siege Swing Per Defender Death", SIEGE_SWING_PER_DEFENDER_DEATH, 0, 1024);
+        SIEGE_STALL_ESCALATION_THRESHOLD_V = cfg.comment("Anti-stall: once the defenders' lead exceeds this many points, each consecutive siege-timer tick with no kills doubles the attackers' swing (reset by any kill). Only reachable when Siege Defence Threshold is higher than this. Set very high to effectively disable.").defineInRange("Siege Stall Escalation Threshold", SIEGE_STALL_ESCALATION_THRESHOLD, 0, 1024);
         SIEGE_SWING_PER_ATTACKER_DEATH_V = cfg.comment("How much a siege progress swings when an attacker dies in the siege").defineInRange("Siege Swing Per Attacker Death", SIEGE_SWING_PER_ATTACKER_DEATH, 0, 1024);
         SIEGE_SWING_PER_DAY_ELAPSED_BASE_V = cfg.comment("How much a siege progress swings each day (see below). This happens regardless of logins").defineInRange("Siege Swing Per Day", SIEGE_SWING_PER_DAY_ELAPSED_BASE, 0, 1024);
         SIEGE_SWING_PER_DAY_ELAPSED_NO_ATTACKER_LOGINS_V = cfg.comment("How much a siege progress swings when no attackers have logged on for a day (see below)").defineInRange("Siege Swing Per Day Without Attacker Logins", SIEGE_SWING_PER_DAY_ELAPSED_NO_ATTACKER_LOGINS, 0, 1024);
         SIEGE_SWING_PER_DAY_ELAPSED_NO_DEFENDER_LOGINS_V = cfg.comment("How much a siege progress swings when no defenders have logged on for a day (see below)").defineInRange("Siege Swing Per Day Without Defender Logins", SIEGE_SWING_PER_DAY_ELAPSED_NO_DEFENDER_LOGINS, 0, 1024);
         SIEGE_DAY_LENGTH_V = cfg.comment("The length of a day for siege login purposes, in real-world hours.").defineInRange("Siege Day Length", (double) SIEGE_DAY_LENGTH, 0.0001d, 100000d);
+        SIEGE_DEFENCE_THRESHOLD_V = cfg.comment("How many points the defenders must swing the siege in their favour to repel it (attackers win at their own difficulty threshold).").defineInRange("Siege Defence Threshold", SIEGE_DEFENCE_THRESHOLD, 1, 1024);
+        SIEGE_END_ON_GOAL_REACHED_V = cfg.comment("If true, a siege concludes the instant a side reaches its point goal (e.g. via a kill), even mid-timer. If false, reaching the goal does not end the siege early; it only concludes when the siege timer next elapses.").define("Siege Ends On Goal Reached", SIEGE_END_ON_GOAL_REACHED);
         SIEGE_INFO_RADIUS_V = cfg.comment("The range at which you see siege information. (Capped by the server setting)").defineInRange("Siege Info Radius", (double) SIEGE_INFO_RADIUS, 1d, 1000d);
         SIEGE_SWING_PER_DEFENDER_FLAG_V = cfg.comment("How much the siege swings per defender flag per day").defineInRange("Siege Swing Per Defender Flag", SIEGE_SWING_PER_DEFENDER_FLAG, 0, 1024);
         SIEGE_COOLDOWN_FAIL_V = cfg.comment("Cooldown between sieges, in minutes").defineInRange("Cooldown between sieges after failure", SIEGE_COOLDOWN_FAIL, 0, 100000);
@@ -761,7 +775,8 @@ public class WarForgeConfig {
         VERTICAL_SIEGE_DIST = VERTICAL_SIEGE_DIST_V.get();
         SIEGE_BATTLE_RADIUS = SIEGE_BATTLE_RADIUS_V.get();
         SIEGE_SIEGED_RADIUS = SIEGE_SIEGED_RADIUS_V.get();
-        SIEGE_COUNT_ALL_ZONE_DEATHS = SIEGE_COUNT_ALL_ZONE_DEATHS_V.get();
+        SIEGE_KILL_DETECTION_MODE = SIEGE_KILL_DETECTION_MODE_V.get();
+        SIEGE_STALL_ESCALATION_THRESHOLD = SIEGE_STALL_ESCALATION_THRESHOLD_V.get();
         SIEGE_ATTACKER_RADIUS = SIEGE_ATTACKER_RADIUS_V.get();
         SIEGE_DEFENDER_RADIUS = SIEGE_DEFENDER_RADIUS_V.get();
         SIEGE_SWING_PER_DEFENDER_DEATH = SIEGE_SWING_PER_DEFENDER_DEATH_V.get();
@@ -770,6 +785,8 @@ public class WarForgeConfig {
         SIEGE_SWING_PER_DAY_ELAPSED_NO_ATTACKER_LOGINS = SIEGE_SWING_PER_DAY_ELAPSED_NO_ATTACKER_LOGINS_V.get();
         SIEGE_SWING_PER_DAY_ELAPSED_NO_DEFENDER_LOGINS = SIEGE_SWING_PER_DAY_ELAPSED_NO_DEFENDER_LOGINS_V.get();
         SIEGE_DAY_LENGTH = SIEGE_DAY_LENGTH_V.get().floatValue();
+        SIEGE_DEFENCE_THRESHOLD = SIEGE_DEFENCE_THRESHOLD_V.get();
+        SIEGE_END_ON_GOAL_REACHED = SIEGE_END_ON_GOAL_REACHED_V.get();
         SIEGE_INFO_RADIUS = SIEGE_INFO_RADIUS_V.get().floatValue();
         SIEGE_SWING_PER_DEFENDER_FLAG = SIEGE_SWING_PER_DEFENDER_FLAG_V.get();
         SIEGE_COOLDOWN_FAIL = SIEGE_COOLDOWN_FAIL_V.get();
@@ -868,6 +885,7 @@ public class WarForgeConfig {
         var compoundNBT = new CompoundTag();
         compoundNBT.putBoolean("enableUpgrades", ENABLE_CITADEL_UPGRADES);
         compoundNBT.putBoolean("newSiegeTimer", SIEGE_ENABLE_NEW_TIMER);
+        compoundNBT.putInt("defenceThreshold", SIEGE_DEFENCE_THRESHOLD);
         compoundNBT.putInt("maxMomentum", SIEGE_MOMENTUM_MAX);
         compoundNBT.putInt("timeMomentum", SIEGE_MOMENTUM_DURATION);
         compoundNBT.putString("momentumMap", SIEGE_MOMENTUM_TIME.toString());

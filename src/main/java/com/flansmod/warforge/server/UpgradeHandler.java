@@ -22,6 +22,11 @@ import java.util.Map;
 
 public class UpgradeHandler {
     public static final String STUB = """
+            # WarForge citadel progression. Each faction starts at level 0 and spends the listed
+            # materials at its citadel to reach the next level, unlocking more claims, force-loaded
+            # chunks, insurance slots and FOBs. Requirements use vanilla items and Forge tags so the
+            # tree works on a plain install; edit freely to fit your pack.
+
             [[levels]]
             level = 0
             claim_limit = 5
@@ -29,39 +34,49 @@ public class UpgradeHandler {
             loaded_chunks = 4
             fob_ticket_limit = 5
             fob_ticket_regen = 1
-            max_fobs = 3
+            max_fobs = 1
             extra_claim_cost = []
             requirements = []
 
             [[levels]]
             level = 1
-            claim_limit = 10
+            claim_limit = 8
             insurance_slots = 9
-            loaded_chunks = 8
+            loaded_chunks = 6
             fob_ticket_limit = 5
             fob_ticket_regen = 1
-            max_fobs = 3
-            extra_claim_cost = [
-                { type = "item", id = "minecraft:emerald", count = 1 },
-            ]
+            max_fobs = 2
+            extra_claim_cost = []
             requirements = [
-                { type = "ore", id = "forge:ingots/iron", count = 64 },
-                { type = "item", id = "minecraft:diamond", count = 1 },
+                { type = "ore", id = "forge:ingots/iron", count = 32 },
+                { type = "ore", id = "forge:ingots/copper", count = 16 },
             ]
 
             [[levels]]
             level = 2
-            claim_limit = 15
+            claim_limit = 12
             insurance_slots = 18
-            loaded_chunks = 16
+            loaded_chunks = 8
+            fob_ticket_limit = 5
+            fob_ticket_regen = 1
+            max_fobs = 2
+            extra_claim_cost = []
+            requirements = [
+                { type = "ore", id = "forge:ingots/gold", count = 32 },
+                { type = "ore", id = "forge:gems/diamond", count = 8 },
+            ]
+
+            [[levels]]
+            level = 3
+            claim_limit = 16
+            insurance_slots = 27
+            loaded_chunks = 12
             fob_ticket_limit = 5
             fob_ticket_regen = 1
             max_fobs = 3
-            extra_claim_cost = [
-                { type = "item", id = "minecraft:emerald", count = 2 },
-                { type = "ore", id = "forge:ingots/gold", count = 4 },
-            ]
+            extra_claim_cost = []
             requirements = [
+                { type = "ore", id = "forge:gems/diamond", count = 16 },
                 { type = "item", id = "minecraft:netherite_ingot", count = 1 },
             ]
             """;

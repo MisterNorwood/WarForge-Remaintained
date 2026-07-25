@@ -32,6 +32,10 @@
 	"warforge.veins.gold": "%s Gold Vein",
 	"warforge.veins.gold_diamond": "%s Gold-Diamond Vein",
 	"warforge.veins.iron": "%s Coal-Iron Vein",
+	"warforge.veins.copper": "%s Copper Vein",
+	"warforge.veins.redstone_lapis": "%s Redstone-Lapis Vein",
+	"warforge.veins.emerald": "%s Emerald Vein",
+	"warforge.veins.quartz": "%s Quartz Vein",
 
 	"warforge.info.too_many_siege_blocks": "Your faction has reached the maximum number of sieges.",
 	"warforge.info.siege_count": "Your faction's current number of sieges: %d.",

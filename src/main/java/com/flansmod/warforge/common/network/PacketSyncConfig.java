@@ -55,6 +55,8 @@ public class PacketSyncConfig extends PacketBase {
                 + "citadel upgrade system, per server requirements");
 
         // Integers
+        int defenceThreshold = compound.getInt("defenceThreshold");
+        WarForgeConfig.SIEGE_DEFENCE_THRESHOLD = defenceThreshold > 0 ? defenceThreshold : WarForgeConfig.SIEGE_DEFENCE_THRESHOLD;
         WarForgeConfig.SIEGE_MOMENTUM_MAX = (byte) compound.getInt("maxMomentum");
         WarForgeConfig.SIEGE_MOMENTUM_DURATION = compound.getInt("timeMomentum");
 

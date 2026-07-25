@@ -92,13 +92,90 @@ public class VeinConfigHandler {
             "#..."
     ));
 
+    // Default vein set written on a fresh install: a handful of simple, vanilla-friendly overworld
+    // (plus one nether) ore veins whose weights leave roughly half of all chunks empty. Each vein has
+    // an explicit id so the file is not rewritten (which would strip the comment block above).
+    public static final List<String> DEFAULT_VEINS_TOML = Collections.unmodifiableList(Arrays.asList(
+            "iteration = 0",
+            "megachunk_length = 32",
+            "",
+            "[[veins]]",
+            "id = 0",
+            "key = \"warforge.veins.iron\"",
+            "wealth = 1",
+            "dims = [ { id = \"minecraft:overworld\", weight = 0.15 } ]",
+            "components = [",
+            "    { item = \"minecraft:coal_ore\", yield = 3.0 },",
+            "    { item = \"minecraft:iron_ore\", yield = 2.0 },",
+            "]",
+            "",
+            "[[veins]]",
+            "id = 1",
+            "key = \"warforge.veins.copper\"",
+            "wealth = 1",
+            "dims = [ { id = \"minecraft:overworld\", weight = 0.12 } ]",
+            "components = [",
+            "    { item = \"minecraft:copper_ore\", yield = 3.0 },",
+            "]",
+            "",
+            "[[veins]]",
+            "id = 2",
+            "key = \"warforge.veins.redstone_lapis\"",
+            "wealth = 1",
+            "dims = [ { id = \"minecraft:overworld\", weight = 0.10 } ]",
+            "components = [",
+            "    { item = \"minecraft:redstone_ore\", yield = 2.0 },",
+            "    { item = \"minecraft:lapis_ore\", yield = 1.5 },",
+            "]",
+            "",
+            "[[veins]]",
+            "id = 3",
+            "key = \"warforge.veins.gold\"",
+            "wealth = 2",
+            "dims = [ { id = \"minecraft:overworld\", weight = 0.08 } ]",
+            "components = [",
+            "    { item = \"minecraft:gold_ore\", yield = 1.5 },",
+            "]",
+            "",
+            "[[veins]]",
+            "id = 4",
+            "key = \"warforge.veins.gold_diamond\"",
+            "wealth = 4",
+            "dims = [ { id = \"minecraft:overworld\", weight = 0.04 } ]",
+            "components = [",
+            "    { item = \"minecraft:gold_ore\", yield = 1.0 },",
+            "    { item = \"minecraft:diamond_ore\", yield = 0.5 },",
+            "]",
+            "",
+            "[[veins]]",
+            "id = 5",
+            "key = \"warforge.veins.emerald\"",
+            "wealth = 3",
+            "dims = [ { id = \"minecraft:overworld\", weight = 0.03 } ]",
+            "components = [",
+            "    { item = \"minecraft:emerald_ore\", yield = 0.75 },",
+            "]",
+            "",
+            "[[veins]]",
+            "id = 6",
+            "key = \"warforge.veins.quartz\"",
+            "wealth = 1",
+            "dims = [ { id = \"minecraft:the_nether\", weight = 0.25 } ]",
+            "components = [",
+            "    { item = \"minecraft:nether_quartz_ore\", yield = 4.0 },",
+            "]"
+    ));
+
     public static void writeStubIfEmpty() throws IOException {
         migrateLegacyConfigIfNeeded();
         if (Files.notExists(CONFIG_PATH) || Files.size(CONFIG_PATH) == 0) {
             Files.createDirectories(CONFIG_PATH.getParent());
+            List<String> stub = new ArrayList<>(EXAMPLE_TOML);
+            stub.add("");
+            stub.addAll(DEFAULT_VEINS_TOML);
             Files.write(
                     CONFIG_PATH,
-                    EXAMPLE_TOML,
+                    stub,
                     StandardOpenOption.CREATE,
                     StandardOpenOption.TRUNCATE_EXISTING,
                     StandardOpenOption.WRITE

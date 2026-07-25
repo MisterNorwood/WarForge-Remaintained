@@ -9,7 +9,7 @@ This guide covers placing a camp, starting and fighting a siege, what attackers 
 - One siege targets **one defending chunk**.
 - The **attacker** places a Siege Camp adjacent to the target and starts the siege.
 - A siege has an integer **attack progress** that swings up (toward the attacker) and down (toward the defender).
-- The attacker wins when progress reaches the chunk's **difficulty threshold**; the defender wins when progress drops to **-5**.
+- The attacker wins when progress reaches the chunk's **difficulty threshold**; the defender wins when progress drops to the negative **defence threshold** (default **-5**, set by `Siege Defence Threshold`).
 - Progress is driven by **PVP kills inside the battle zone** and by a **timer** that ticks progress toward the attacker.
 - Winning captures (or clears) the chunk; the camp is consumed either way.
 
@@ -84,9 +84,11 @@ A few server toggles shape this flow:
 Progress is a single signed number:
 
 - **Attacker wins** when attack progress reaches the chunk's **difficulty threshold**.
-- **Defender wins** when attack progress falls to **-5**.
+- **Defender wins** when attack progress falls to **-(defence threshold)** — the defenders must swing the siege that many points in their favour (default **5**, set by `Siege Defence Threshold`).
 
-The threshold is the chunk's **base difficulty** plus **extra difficulty**:
+By default a side wins **the instant** its goal is reached, so a single kill can end a siege mid-timer. Turn `Siege Ends On Goal Reached` off to instead settle the outcome only when the **siege timer next elapses**: reaching the goal early no longer ends the siege, so a lead can still be contested until the tick.
+
+The attacker threshold is the chunk's **base difficulty** plus **extra difficulty**:
 
 - **Base difficulty** = the defending claim's defence strength (Basic 5, Reinforced 10, Citadel 15).
 - **Extra difficulty** comes from the defenders' strength around the chunk:
@@ -95,6 +97,10 @@ The threshold is the chunk's **base difficulty** plus **extra difficulty**:
   - plus contributions from any special claim-strength tiles the defender has nearby.
 
 So a Reinforced or Citadel chunk surrounded by defender support claims and defended by online players is far harder to take than an isolated basic claim.
+
+### The on-screen siege bar
+
+While you're near an active siege a status bar appears (position set by `Siege status position`). It shows both factions in their own colours — **defender** (shield) on the left, **attacker** (axe) on the right — with a point track running from the defender's win threshold on the left, through the centre, to the attacker's win threshold on the right. A marker shows the current standing, notches mark each point, and the readouts show **"N to defend" / "N to win"** and the time until the next timer tick. On very long sieges, when there are too many points to show individually, the track collapses to a compact **counter** (e.g. `12 / 30`).
 
 ### What pushes progress
 
@@ -105,12 +111,16 @@ So a Reinforced or Citadel chunk surrounded by defender support claims and defen
 
 Kills only count when they happen inside the siege's battle zone (see below).
 
+**Kill detection mode** (`Kill Detection Mode`, default `PRECISE`) controls how strict this is. In `PRECISE` mode an opposing player must land the kill in the zone for it to count. In `SIMPLE` mode **any** participant death inside the zone counts toward the siege — including fall damage, mobs and other environmental deaths — so a defender who dies to fall damage hands the attackers a point.
+
 **The siege timer** (enabled by default):
 
 - Each siege has a countdown. When it elapses, progress ticks **+1** toward the attacker and the timer resets.
 - The timer length depends on your faction's **siege momentum** — see below. Higher momentum means a shorter timer, so progress accrues faster.
 
-This means an attacker who keeps a presence and wins fights will steadily advance even if the defenders log off; conversely, defenders who win the fights can push progress to -5 and break the siege.
+This means an attacker who keeps a presence and wins fights will steadily advance even if the defenders log off; conversely, defenders who win the fights can push progress to the defence threshold and break the siege.
+
+**Anti-stall escalation** (`Siege Stall Escalation Threshold`, default 10): on long sieges (a high `Siege Defence Threshold`), if the defenders build a big lead and then stop fighting, the timer punishes the stall. Once the defenders' lead passes the escalation threshold, each consecutive timer tick **with no kills** doubles the attacker's swing (1 → 2 → 4 → 8 …). A kill by either side resets it to the base swing. This stops defenders from parking on a lead and running out the clock; it never triggers on short/default sieges, where the defence threshold is at or below the escalation threshold and the lead can't reach it.
 
 ### Presence and desertion
 
@@ -206,6 +216,10 @@ All in `config/warforge.cfg`, category **Sieges** (full list in the [Configurati
 | `Attacker / Defender Desertion Timer` | 180 s / 300 s | Time before an absent side loses/wins. |
 | `Attacker / Defender Conquered Chunk Grace Period` | 1 h / 2 h | Grace period after an attacker / defender win. |
 | `Siege Swing Per Defender/Attacker Death` | 1 / 1 | Progress per kill. |
+| `Siege Defence Threshold` | 5 | Points the defenders must swing to win (attacker wins at the chunk difficulty). |
+| `Siege Ends On Goal Reached` | on | End the instant a goal is reached, vs only at the next timer tick. |
+| `Kill Detection Mode` | PRECISE | `PRECISE` = confirmed PVP kills only; `SIMPLE` = any death in the zone counts. |
+| `Siege Stall Escalation Threshold` | 10 | Defender-lead point past which kill-less ticks double the attacker swing. |
 | `Enable Per-Siege timer` | on | Use the per-siege countdown timer. |
 | `Siege Captures` | off | Whether an attacker win converts the chunk into their claim. |
 | `Siege momentum duration` | 60 min | How long momentum lasts. |

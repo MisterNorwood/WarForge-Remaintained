@@ -64,6 +64,7 @@ public class Siege {
      */
     private int mAttackProgress = 0;
     private int attackerAbsenceTicks = 0;
+    private int mStallMultiplier = 1;
     private final HashSet<UUID> presentAttackers = new HashSet<>();
 
     public Siege() {
@@ -140,7 +141,7 @@ public class Siege {
         }
     }
 
-    // Attack progress starts at 0 and can be moved to -5 or mAttackSuccessThreshold
+    // Attack progress starts at 0 and can be moved to -GetDefenceThreshold() or mAttackSuccessThreshold
     public int GetAttackProgress() {
         return mAttackProgress;
     }
@@ -173,8 +174,12 @@ public class Siege {
         return mBaseDifficulty + mExtraDifficulty;
     }
 
+    public int GetDefenceThreshold() {
+        return Math.max(1, WarForgeConfig.SIEGE_DEFENCE_THRESHOLD);
+    }
+
     public boolean isCompleted() {
-        return GetAttackProgress() >= GetAttackSuccessThreshold() || GetDefenceProgress() >= 5;
+        return GetAttackProgress() >= GetAttackSuccessThreshold() || GetDefenceProgress() >= GetDefenceThreshold();
     }
 
     public Set<DimChunkPos> getDefenderSiegedIsland() {
@@ -300,9 +305,16 @@ public class Siege {
         siegeEndTimeStamp = System.currentTimeMillis() + timeRemainingMillis;
     }
 
-    public void updateSiegeTimer() {
+    public boolean updateSiegeTimer() {
         if (timeRemainingMillis <= 0) {
-            mAttackProgress += WarForgeConfig.SIEGE_SWING_PER_DAY_ELAPSED_BASE;
+            int tickSwing = WarForgeConfig.SIEGE_SWING_PER_DAY_ELAPSED_BASE;
+            if (GetDefenceProgress() > WarForgeConfig.SIEGE_STALL_ESCALATION_THRESHOLD) {
+                tickSwing *= mStallMultiplier;
+                mStallMultiplier = Math.min(mStallMultiplier * 2, 1024);
+            } else {
+                mStallMultiplier = 1;
+            }
+            mAttackProgress += tickSwing;
 
             long momentumTime = WarForgeConfig.SIEGE_MOMENTUM_TIME
                     .get(WarForgeMod.FACTIONS.getFaction(attackingFaction).getSiegeMomentum()) * 1000L;
@@ -313,6 +325,7 @@ public class Siege {
             WarForgeMod.FOBS.onSiegeTimerReset(this);
 
             WarForgeMod.FACTIONS.sendSiegeInfoToNearby(defendingClaim.toChunkPos());
+            return true;
         } else {
             timeRemainingMillis -= 50L;
 
@@ -320,6 +333,7 @@ public class Siege {
             if (Math.abs(actualRemaining - timeRemainingMillis) > 1000L) {
                 timeRemainingMillis = actualRemaining;
             }
+            return false;
         }
     }
 
@@ -487,8 +501,8 @@ public class Siege {
     }
 
     // Advances siege progress from a participant death inside the kill zone. killer may be null
-    // (environmental/mob death). With SIEGE_COUNT_ALL_ZONE_DEATHS off this only counts kills where an
-    // opposing player landed the blow; with it on, any attacker/defender death in the zone counts.
+    // (environmental/mob death). In PRECISE mode this only counts kills where an opposing player landed
+    // the blow; in SIMPLE mode any attacker/defender death in the zone counts.
     public void onParticipantDeath(ServerPlayer killer, ServerPlayer killed) {
         Faction attackers = WarForgeMod.FACTIONS.getFaction(attackingFaction);
         Faction defenders = WarForgeMod.FACTIONS.getFaction(defendingFaction);
@@ -502,7 +516,7 @@ public class Siege {
         boolean attackValid = false; // a defender died -> attackers gain progress
         boolean defendValid = false; // an attacker died -> defenders gain progress
 
-        if (WarForgeConfig.SIEGE_COUNT_ALL_ZONE_DEATHS) {
+        if (WarForgeConfig.SIEGE_KILL_DETECTION_MODE == WarForgeConfig.SiegeKillDetectionMode.SIMPLE) {
             // Any participant death inside the zone counts, regardless of the damage source.
             if (isPlayerInKillZone(killed)) {
                 if (killedFaction == defenders) attackValid = true;
@@ -521,6 +535,8 @@ public class Siege {
         }
 
         if (!attackValid && !defendValid) return; // no more logic needs to be done for invalid kill
+
+        mStallMultiplier = 1;
 
         // update progress appropriately; either valid attack, or def by this point, so state of one bool implies the state of the other
         mAttackProgress += attackValid ? WarForgeConfig.SIEGE_SWING_PER_DEFENDER_DEATH : -WarForgeConfig.SIEGE_SWING_PER_ATTACKER_DEATH;

@@ -1093,13 +1093,15 @@ public class FactionStorage {
         pruneInvalidSieges();
         for (HashMap.Entry<DimChunkPos, Siege> kvp : sieges.entrySet()) {
             Siege siege = kvp.getValue();
-            siege.updateSiegeTimer();
+            boolean timerElapsed = siege.updateSiegeTimer();
             // Camp-less declared sieges have no camp TE to enforce attacker presence; do it here.
             if (siege.tickCamplessPresence()) {
                 Siege.notifyAbandoned(getFaction(siege.attackingFaction), getFaction(siege.defendingFaction), true);
-                siege.setAttackProgress(-5); // attacker abandoned -> defenders hold
+                siege.setAttackProgress(-siege.GetDefenceThreshold()); // attacker abandoned -> defenders hold
+                finishedSiegeQueue.add(kvp.getKey());
+                continue;
             }
-            if (siege.isCompleted())
+            if ((WarForgeConfig.SIEGE_END_ON_GOAL_REACHED || timerElapsed) && siege.isCompleted())
                 finishedSiegeQueue.add(kvp.getKey());
         }
         processCompleteSieges();
@@ -1126,7 +1128,7 @@ public class FactionStorage {
         if (!sieges.isEmpty()) {
             for (HashMap.Entry<DimChunkPos, Siege> kvp : sieges.entrySet()) {
                 kvp.getValue().onParticipantDeath(killer, playerWhoDied);
-                if (kvp.getValue().isCompleted())
+                if (WarForgeConfig.SIEGE_END_ON_GOAL_REACHED && kvp.getValue().isCompleted())
                     finishedSiegeQueue.add(kvp.getKey());
             }
             processCompleteSieges();
