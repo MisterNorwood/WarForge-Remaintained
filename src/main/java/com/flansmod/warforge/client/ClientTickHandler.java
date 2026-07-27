@@ -631,13 +631,12 @@ public class ClientTickHandler {
                 continue;
             }
 
-            // janky work around for weird default minecraft items which sometimes decide to append .name to the key
-            // without updating the translation key the item itself returns
-            String translationKey = currStack.getItem().getDescriptionId();
-            if (!I18n.exists(translationKey) && I18n.exists(translationKey + ".name")) { translationKey += ".name"; }
-
-            // if we got an item stack, translate it and display information about it
-            StringBuilder compInfo = new StringBuilder(I18n.get(translationKey));
+            // Use the item stack's own display name rather than formatting its raw description id: some
+            // items (e.g. GregTech's material items) share one translation per shape (like "%s Ore") that
+            // needs the material name substituted in, which only getHoverName()/getName() do correctly.
+            // Naively I18n.get()-ing the description id with no args throws on those and shows
+            // "Format error: ..." instead of the item's name.
+            StringBuilder compInfo = new StringBuilder(currStack.getHoverName().getString());
             parseCompInfo(compInfo, currComp, veinInfo, dim);
             result.add(compInfo.toString());
         }
