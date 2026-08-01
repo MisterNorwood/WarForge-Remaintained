@@ -221,9 +221,6 @@ public class WarForgeConfig {
     public static ProtectionConfig CLAIM_FRIEND = new ProtectionConfig();
     public static ProtectionConfig CLAIM_ALLY = new ProtectionConfig();
     public static ProtectionConfig CLAIM_FOE = new ProtectionConfig();
-    // Deprecated: superseded by the Sieged*/War* zone profiles below. Kept so existing configs still load.
-    public static ProtectionConfig SIEGECAMP_SIEGER = new ProtectionConfig();
-    public static ProtectionConfig SIEGECAMP_OTHER = new ProtectionConfig();
     public static ProtectionConfig CLAIM_DEFENDED = new ProtectionConfig();
     // Inner "Sieged" zone (protection disabled, kills count) and outer "War" zone (kills count, foes
     // cannot break) around an active siege. Friend = member of the defending (besieged) faction.
@@ -284,15 +281,6 @@ public class WarForgeConfig {
         CLAIM_ALLY.PLACE_BLOCKS = false;
 
         UNCLAIMED.EXPLOSION_DAMAGE = true;
-
-        SIEGECAMP_SIEGER.BREAK_BLOCKS = false;
-        SIEGECAMP_SIEGER.PLACE_BLOCKS = false;
-        SIEGECAMP_SIEGER.INTERACT = true;
-        SIEGECAMP_SIEGER.USE_ITEM = true;
-        SIEGECAMP_SIEGER.BLOCK_REMOVAL = true;
-        SIEGECAMP_SIEGER.EXPLOSION_DAMAGE = true;
-        SIEGECAMP_SIEGER.BLOCK_BREAK_WHITELIST_IDS = new String[]{"minecraft:torch", "warforge:siegecampblock", "gregtech:machine"};
-        SIEGECAMP_SIEGER.BLOCK_PLACE_WHITELIST_IDS = new String[]{"minecraft:torch", "minecraft:web", "minecraft:tnt", "minecraft:end_crystal"};
 
         //WarForgeMod.VEIN_MAP.defaultReturnValue(null);
 
@@ -487,8 +475,6 @@ public class WarForgeConfig {
         CLAIM_FRIEND.define(cfg, "ClaimFriend", "Claims of their Faction");
         CLAIM_ALLY.define(cfg, "ClaimAlly", "Claims of allied Factions (only applies when the owning faction enables ally interaction)");
         CLAIM_FOE.define(cfg, "ClaimFoe", "Claims of other Factions");
-        SIEGECAMP_SIEGER.define(cfg, "Sieger", "[Deprecated] Sieges they started");
-        SIEGECAMP_OTHER.define(cfg, "SiegeOther", "[Deprecated] Other sieges, defending or neutral");
         CLAIM_DEFENDED.define(cfg, "ClaimDefended", "Claims of a faction under siege that are outside the War/Sieged zones");
         SIEGED_FRIEND.define(cfg, "SiegedFriend", "Inner sieged zone, member of the defending faction");
         SIEGED_FOE.define(cfg, "SiegedFoe", "Inner sieged zone, attacker or other faction (chunk protection disabled)");
@@ -704,8 +690,6 @@ public class WarForgeConfig {
         CLAIM_FRIEND.bake();
         CLAIM_ALLY.bake();
         CLAIM_FOE.bake();
-        SIEGECAMP_SIEGER.bake();
-        SIEGECAMP_OTHER.bake();
         CLAIM_DEFENDED.bake();
         SIEGED_FRIEND.bake();
         SIEGED_FOE.bake();

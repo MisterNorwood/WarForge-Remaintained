@@ -228,6 +228,6 @@ All in `config/warforge.cfg`, category **Sieges** (full list in the [Configurati
 | `UI Siege Declaration Max Range` | 4 | Max chunks between the launch chunk and the target. |
 | `UI Siege Requires Attacker Presence` | on | Camp-less sieges still need an attacker near the launch chunk. |
 
-Sieges interact heavily with the protection config sections (`Sieger`, `ClaimDefended`, etc.), which control exactly what each side can break, place, and interact with inside the battle zone. Restart the server after changing any of these.
+Sieges interact heavily with the protection config sections (`SiegedFriend`, `SiegedFoe`, `WarFriend`, `WarFoe`, `ClaimDefended`, etc.), which control exactly what each side can break, place, and interact with inside the battle zone. Restart the server after changing any of these.
 
 See also: [Factions, Citadels and Upgrades](factions.md), [Alliances](alliances.md), [Command Reference](commands.md), and [The Vein System](veins.md).

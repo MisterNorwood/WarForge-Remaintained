@@ -180,8 +180,6 @@ public class WarForgeMod {
             WarForgeConfig.CITADEL_FOE.findBlocks();
             WarForgeConfig.CLAIM_FRIEND.findBlocks();
             WarForgeConfig.CLAIM_FOE.findBlocks();
-            WarForgeConfig.SIEGECAMP_SIEGER.findBlocks();
-            WarForgeConfig.SIEGECAMP_OTHER.findBlocks();
             WarForgeConfig.CLAIM_DEFENDED.findBlocks();
             WarForgeConfig.SIEGED_FRIEND.findBlocks();
             WarForgeConfig.SIEGED_FOE.findBlocks();

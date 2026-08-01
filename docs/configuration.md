@@ -79,7 +79,7 @@ The important categories and sections are:
 - `Client`
 - `Alliances`
 - `Debug`
-- Protection sections:
+- Protection sections (one config category each — see [Protection Sections](#protection-sections) for what counts as each):
   - `Unclaimed`
   - `SafeZone`
   - `WarZone`
@@ -88,9 +88,11 @@ The important categories and sections are:
   - `ClaimFriend`
   - `ClaimAlly`
   - `ClaimFoe`
-  - `Sieger`
-  - `SiegeOther`
   - `ClaimDefended`
+  - `SiegedFriend`
+  - `SiegedFoe`
+  - `WarFriend`
+  - `WarFoe`
 
 ### High-Impact Settings
 
@@ -179,20 +181,92 @@ These mostly affect local presentation. Server owners should still document expe
 
 ### Protection Sections
 
-The protection sections are the most important part of `warforge.cfg` if you want to tune what players can do in each territory type.
+The protection sections are the most important part of the config if you want to tune what players can do in each territory type. Every claim, siege zone, and unclaimed chunk resolves to exactly **one** protection profile per viewing player, and that profile decides what that player may break, place, interact with, and so on in that chunk.
 
-Each protection section can control:
+Each section is its own config category, and every key inside it is prefixed with the section name, for example `ClaimFoe - Break Blocks` or `SiegedFoe - Interact`.
 
-- Breaking blocks
-- Placing blocks
-- Interacting
-- Using items
-- Explosion damage
-- Mob spawning and entry
-- PVP and other damage
-- Mount and dismount behavior
-- Action whitelists
-- Action blacklists
+### Which Territory Type Applies (Profile Selection)
+
+WarForge picks a profile per player, per chunk, by checking the following in order and using the **first** match. Throughout, "friend" means a member of the faction that owns (or is defending) the chunk, and "foe" means everyone else.
+
+| Section | Applies to | Notes |
+|---|---|---|
+| `SafeZone` | Any chunk claimed by the admin **safe-zone** system faction | Admin-designated protected area (e.g. spawn). |
+| `WarZone` | Any chunk claimed by the admin **war-zone** system faction | Admin-designated free-combat area. |
+| `SiegedFriend` | The **inner "Sieged" zone** of an active siege, viewed by a member of the **besieged (defending)** faction | Sieged radius = `Sieged Square Chunk Radius From Siege`. Chunk protection is disabled here. |
+| `SiegedFoe` | The inner "Sieged" zone, viewed by an **attacker or any other non-defender** | This is where a base is physically breached. |
+| `WarFriend` | The **outer "War" zone** of an active siege (inside the battle radius but outside the Sieged zone), viewed by a **defender** | War radius = `Battle Square Chunk Radius From Siege`. |
+| `WarFoe` | The outer "War" zone, viewed by an **attacker or other non-defender** | Kills count here, but foes cannot break/place by default. |
+| `ClaimDefended` | A defending faction's **own claims outside the War/Sieged zones**, viewed by its own members, while that faction is under siege | Lets defenders keep modifying the rest of their base mid-siege. |
+| `CitadelFriend` | The owning faction's **citadel chunk**, viewed by a member | |
+| `CitadelFoe` | The citadel chunk, viewed by a **non-member** | |
+| `ClaimFriend` | Any normal claim, viewed by a **member** of the owning faction | Also applies to a faction's own **siege-camp** chunk, even inside a siege zone, so attackers keep control of their camp. |
+| `ClaimAlly` | A claim viewed by a member of an **allied** faction | Only applies when the owning faction has **enabled ally interaction**; otherwise allies fall through to `ClaimFoe`. See [Alliances](alliances.md). |
+| `ClaimFoe` | A claim viewed by any **other foreign player** | Non-members who are not allies (or allies when ally interaction is off). |
+| `Unclaimed` | Any chunk with **no claim and no active siege zone** | The wilderness default. |
+
+A few consequences are worth calling out:
+
+- Siege zones **override** normal claim ownership while a siege is active. A defender's own chunk that falls inside the War/Sieged radius uses `SiegedFriend`/`WarFriend`, not `ClaimFriend`.
+- The inner **Sieged** zone takes priority over the outer **War** zone where they overlap.
+- "Friend/foe" in a siege is decided purely by **who is defending**, not by who started the siege — the attacker is always a "foe" of the besieged faction.
+
+### Removed: Sieger and SiegeOther
+
+Older versions had two extra siege-zone profiles, `Sieger` and `SiegeOther`. They have been **removed** — the config no longer defines them:
+
+- `Sieger` applied to the faction that **started** the siege (the attackers) inside the battle zone.
+- `SiegeOther` applied to **everyone else** in a siege — defenders and neutral third parties.
+
+That single "who started it" split has been replaced by the **defender-vs-everyone-else** model above (`SiegedFriend`/`SiegedFoe` for the inner zone, `WarFriend`/`WarFoe` for the outer zone). If you are upgrading from an older config, any `Sieger` or `SiegeOther` sections left in the file are simply ignored and can be deleted; tune the `Sieged*`/`War*` sections instead.
+
+### Settings in Each Protection Section
+
+Every protection section exposes the same set of keys. The booleans below default to `true` unless a section overrides them (for example `SafeZone` denies almost everything, while the `Sieged*` profiles allow almost everything).
+
+**Action toggles**
+
+- `<Section> - Break Blocks` — whether players may break blocks.
+- `<Section> - Place Blocks` — whether players may place blocks.
+- `<Section> - Interact` — whether players may interact with blocks and entities (buttons, levers, containers, etc.).
+- `<Section> - Use Items` — whether players may use items (right-click item actions).
+- `<Section> - Block Removal` — whether blocks can be removed **at all**, including indirectly by explosions, mobs, and similar. Setting this false is a hard "nothing removes blocks here" switch that applies even when `Break Blocks` is true.
+- `<Section> - Explosion Damage` — whether explosions may damage blocks here.
+
+**Combat and damage**
+
+- `<Section> - Take Dmg From Mob` — whether players can take damage from mobs here.
+- `<Section> - Take Dmg From Player` — whether players can take damage from other players. This is the PVP switch for the zone.
+- `<Section> - Take Any Other Dmg` — whether players can take damage from any other source (fall, fire, drowning, etc.).
+- `<Section> - Deal Damage` — whether players can deal damage here.
+
+**Mobs and mounts**
+
+- `<Section> - Allow Mob Spawns` — whether mobs may spawn in the zone.
+- `<Section> - Allow Mob Entry` — whether mobs may enter the zone from outside.
+- `<Section> - Allow Mount Entity` — whether players may mount entities (horses, boats, vehicles).
+- `<Section> - Allow Dismount Entity` — whether players may dismount entities.
+
+**Whitelists and blacklists**
+
+Each of break, place, interact, and item-use has a whitelist and a blacklist (block ids, or item ids for the "Use" lists):
+
+- `<Section> - Break Whitelist` / `<Section> - Break Blacklist`
+- `<Section> - Place Whitelist` / `<Section> - Place Blacklist`
+- `<Section> - Interact Whitelist` / `<Section> - Interact Blacklist`
+- `<Section> - Use Whitelist` / `<Section> - Use Blacklist`
+
+These follow the whitelist/blacklist rule described just below: a whitelist re-allows specific ids when the matching action is denied, and a blacklist re-denies specific ids when the action is otherwise allowed.
+
+**MineTime (soft break protection)**
+
+Instead of hard-cancelling a break the profile would deny, MineTime can **slow it down** instead. It has its own keys within the section:
+
+- `<Section> - MineTime Enabled` — if true, a break this profile would normally deny is slowed rather than cancelled. Whitelisted per-block entries below still apply even when this is false. Default off, so behaviour matches a hard cancel out of the box.
+- `<Section> - MineTime Default Mode` — `MULTIPLIER` (break time = natural time × value) or `FIXED` (break time = value in seconds).
+- `<Section> - MineTime Default Value` — the multiplier or the fixed seconds, depending on the mode.
+- `<Section> - MineTime Whitelist` — blocks MineTime always slows in this profile (even when disabled above), with an optional per-entry override. Each entry is a pattern, optionally followed by `=` and a value spec. Patterns can be an exact id (`gregtech:steam_macerator`), a `*` glob (`gregtech:*`, `minecraft:*_ore`), or a block tag (`#forge:ores`). Value specs: `x10` or `10` = 10× time, `30s` = a fixed 30 seconds; omit the spec to use the default mode/value. For example, `gregtech:*=x20` slows every GregTech block to 20× break time.
+- `<Section> - MineTime Blacklist` — blocks excluded from MineTime in this profile (they keep full, uncancellable protection when the system is enabled). Same pattern syntax, no value spec. Whitelist entries win over the blacklist.
 
 ### Key Rule: Whitelist vs Blacklist
 
@@ -208,30 +282,31 @@ So:
 
 ### Example: Tight Siege Battle Area
 
-This is a practical example if you want siege zones to allow combat and interaction, but still prevent normal block griefing apart from exceptions like `gregtech:machine`.
+This is a practical example if you want the outer battle zone to allow combat and interaction, but still prevent normal block griefing apart from exceptions like `gregtech:machine`. `WarFoe` is the profile an attacker (or any non-defender) sees in the outer War zone, so it is the one to edit for this behaviour.
 
 ```properties
 Sieges {
     I:"Battle Square Chunk Radius From Siege"=2
+    I:"Sieged Square Chunk Radius From Siege"=1
     I:"Attacker Square Chunk Radius From Siege"=1
     I:"Defender Square Chunk Radius From Siege"=15
 }
 
-Sieger {
-    B:"Sieger - Break Blocks"=false
-    B:"Sieger - Place Blocks"=false
-    B:"Sieger - Interact"=true
-    B:"Sieger - Use Items"=true
-    B:"Sieger - Block Removal"=true
-    B:"Sieger - Explosion Damage"=true
+WarFoe {
+    B:"WarFoe - Break Blocks"=false
+    B:"WarFoe - Place Blocks"=false
+    B:"WarFoe - Interact"=true
+    B:"WarFoe - Use Items"=true
+    B:"WarFoe - Block Removal"=true
+    B:"WarFoe - Explosion Damage"=true
 
-    S:"Sieger - Break Whitelist" <
+    S:"WarFoe - Break Whitelist" <
         minecraft:torch
         warforge:siegecampblock
         gregtech:machine
     >
 
-    S:"Sieger - Place Whitelist" <
+    S:"WarFoe - Place Whitelist" <
         minecraft:torch
         minecraft:web
         minecraft:tnt
@@ -240,12 +315,14 @@ Sieger {
 }
 ```
 
-That matches the current default intent fairly closely:
+That gives the outer War zone a "fight, don't strip-mine" feel:
 
 - Normal breaking is blocked
 - Specific utility targets can still be broken
 - Interaction and item usage are allowed
 - Explosions still work
+
+The inner **Sieged** zone (`SiegedFoe`) is where the base is actually breached; leave its defaults permissive so attackers can break in once they reach it.
 
 ### Example: Insurance Blacklist with Wildcards
 
@@ -813,7 +890,7 @@ For safe config changes:
 - Back up `veins.toml` before relying on auto-generated ids (omitted `id`) heavily.
 - Prefer exact item ids unless you truly want tag-based matching.
 - Use `mm:ss` for siege momentum times, because that is what the shipped defaults use.
-- Document any custom protection overrides for your players and staff, especially `Sieger`, `SiegeOther`, and `ClaimDefended`.
+- Document any custom protection overrides for your players and staff, especially the siege profiles (`SiegedFriend`, `SiegedFoe`, `WarFriend`, `WarFoe`) and `ClaimDefended`. The old `Sieger` and `SiegeOther` sections have been removed; delete them from any upgraded config.
 
 ### Quick Reference
 
