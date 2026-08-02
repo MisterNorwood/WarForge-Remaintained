@@ -124,10 +124,17 @@ This means an attacker who keeps a presence and wins fights will steadily advanc
 
 ### Presence and desertion
 
-Both sides must keep someone in the fight:
+Both sides must keep someone in the fight. "Someone" is literal — **a single online member of the faction is enough** to hold the line; it need not be an officer, and it need not be the player who placed the camp.
 
-- If **no attacker** is within the attacker radius of the camp, an attacker-desertion timer runs. If it fills (default ~180 s), the siege **fails** (attacker loss).
-- If **no defender** is within the defender radius, a defender-desertion timer runs. If it fills (default ~300 s), the siege **passes** (attacker win).
+An attacker counts as **present** while standing in either:
+
+- a chunk within the **attacker radius** (`Attacker Square Chunk Radius From Siege`, default 1) of **any** of the siege's camps, or
+- a chunk of the **defender's besieged claim-island** — pushing into the territory you're sieging also holds the line.
+
+With that in mind:
+
+- If **no attacker** is present anywhere in that zone, an attacker-desertion timer runs. If it fills (default ~180 s), the siege **fails** (attacker loss).
+- If **no defender** is within the **defender radius** (`Defender Square Chunk Radius From Siege`, default 15) of a camp, a defender-desertion timer runs. If it fills (default ~300 s), the siege **passes** (attacker win).
 
 Players popping in and out don't instantly reset these timers — they drain gradually, to prevent abuse. There is also **live-quit** handling: if the defenders who were present all go offline mid-siege, an offline timer (default 15 minutes) runs out and the attacker wins.
 

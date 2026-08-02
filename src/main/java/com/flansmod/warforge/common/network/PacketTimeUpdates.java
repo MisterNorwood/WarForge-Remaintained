@@ -11,12 +11,14 @@ public class PacketTimeUpdates extends PacketBase
 {
 	public long msTimeOfNextSiegeDay = 0L;
 	public long msTimeOfNextYieldDay = 0L;
+	public long msServerNow = 0L;
 
 	@Override
 	public void encodeInto(FriendlyByteBuf data)
 	{
 		data.writeLong(msTimeOfNextSiegeDay);
 		data.writeLong(msTimeOfNextYieldDay);
+		data.writeLong(msServerNow);
 	}
 
 	@Override
@@ -24,6 +26,7 @@ public class PacketTimeUpdates extends PacketBase
 	{
 		msTimeOfNextSiegeDay = data.readLong();
 		msTimeOfNextYieldDay = data.readLong();
+		msServerNow = data.readLong();
 	}
 
 	@Override
@@ -36,8 +39,9 @@ public class PacketTimeUpdates extends PacketBase
 	@OnlyIn(Dist.CLIENT)
 	public void handleClientSide(Player clientPlayer)
 	{
-		ClientTickHandler.nextSiegeDayMs = msTimeOfNextSiegeDay;
-		ClientTickHandler.nextYieldDayMs = msTimeOfNextYieldDay;
+		long clientNow = System.currentTimeMillis();
+		ClientTickHandler.nextSiegeDayMs = clientNow + (msTimeOfNextSiegeDay - msServerNow);
+		ClientTickHandler.nextYieldDayMs = clientNow + (msTimeOfNextYieldDay - msServerNow);
 	}
 
 }

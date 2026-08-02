@@ -21,11 +21,11 @@ public class TimeHelper {
     }
 
     public static long getYieldDayLengthMs() {
-        return (long) (
-                WarForgeConfig.YIELD_DAY_LENGTH // In hours
-                        * 60f // In minutes
-                        * 60f // In seconds
-                        * 1000f); // In milliseconds
+        return WarForgeConfig.YIELD_DAY_LENGTH * 1000L;
+    }
+
+    public static long getCitadelMoveCooldownMs() {
+        return WarForgeConfig.CITADEL_MOVE_COOLDOWN_SECONDS * 1000L;
     }
 
     public static long getCooldownIntoTicks(float cooldown) {
@@ -115,14 +115,14 @@ public class TimeHelper {
     }
 
     public long getTimeToNextSiegeAdvanceMs() {
-        long elapsedMS = System.currentTimeMillis() - WarForgeMod.timestampOfFirstDay;
+        long elapsedMS = WarForgeMod.getGameTime() - WarForgeMod.timestampOfFirstDay;
         long todayElapsedMS = elapsedMS % getSiegeDayLengthMS();
 
         return getSiegeDayLengthMS() - todayElapsedMS;
     }
 
     public long getTimeToNextYieldMs() {
-        long elapsedMS = System.currentTimeMillis() - WarForgeMod.timestampOfFirstDay;
+        long elapsedMS = WarForgeMod.getGameTime() - WarForgeMod.timestampOfFirstDay;
         long todayElapsedMS = elapsedMS % getYieldDayLengthMs();
 
         return getYieldDayLengthMs() - todayElapsedMS;

@@ -2,6 +2,9 @@ package com.flansmod.warforge.common.blocks;
 
 import com.flansmod.warforge.common.Content;
 import com.flansmod.warforge.common.WarForgeConfig;
+import com.flansmod.warforge.common.WarForgeMod;
+import com.flansmod.warforge.common.util.DimBlockPos;
+import com.flansmod.warforge.common.util.DimChunkPos;
 import com.flansmod.warforge.server.Faction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -16,6 +19,8 @@ import net.minecraft.world.item.ShieldItem;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 import static com.flansmod.warforge.common.blocks.BlockDummy.MODEL;
@@ -61,6 +66,39 @@ public class TileEntityCitadel extends TileEntityYieldCollector implements IClai
     @Override
     protected float getYieldMultiplier() {
         return 2.0f;
+    }
+
+    public void processFactionYields(Faction faction) {
+        if (level == null || level.isClientSide || faction == null) {
+            return;
+        }
+
+        Set<DimChunkPos> collectorCovered = null;
+        if (!faction.islandCollectors.isEmpty()) {
+            collectorCovered = new HashSet<>();
+            for (DimBlockPos collectorPos : faction.islandCollectors) {
+                collectorCovered.addAll(WarForgeMod.FACTIONS.collectFactionIsland(faction.uuid, collectorPos.toChunkPos()));
+            }
+        }
+
+        for (DimBlockPos claimPos : faction.claims.keySet()) {
+            if (collectorCovered != null && collectorCovered.contains(claimPos.toChunkPos())) {
+                continue;
+            }
+            processYieldForClaim(faction.claims, claimPos, false);
+        }
+    }
+
+    @Override
+    public void onLoad() {
+        if (level != null && !level.isClientSide) {
+            Faction faction = WarForgeMod.FACTIONS.getFaction(factionUUID);
+            if (faction != null) {
+                processFactionYields(faction);
+            } else if (!factionUUID.equals(Faction.nullUuid)) {
+                WarForgeMod.LOGGER.error("Loaded Citadel with invalid faction");
+            }
+        }
     }
 
     @Override

@@ -23,4 +23,9 @@ public class RenderTileEntityClaim implements BlockEntityRenderer<TileEntityClai
     public boolean shouldRenderOffScreen(TileEntityClaim te) {
         return true;
     }
+
+    @Override
+    public int getViewDistance() {
+        return Integer.MAX_VALUE;
+    }
 }

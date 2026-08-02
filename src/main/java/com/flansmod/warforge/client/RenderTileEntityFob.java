@@ -23,4 +23,9 @@ public class RenderTileEntityFob implements BlockEntityRenderer<TileEntityFob> {
     public boolean shouldRenderOffScreen(TileEntityFob te) {
         return true;
     }
+
+    @Override
+    public int getViewDistance() {
+        return Integer.MAX_VALUE;
+    }
 }

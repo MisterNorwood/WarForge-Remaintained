@@ -45,6 +45,10 @@ public abstract class TileEntityYieldCollector extends TileEntityClaim implement
 	}
 
 	protected void processYieldForClaim(HashMap<DimBlockPos, Integer> claims, DimBlockPos claimPos) {
+		processYieldForClaim(claims, claimPos, true);
+	}
+
+	protected void processYieldForClaim(HashMap<DimBlockPos, Integer> claims, DimBlockPos claimPos, boolean warnOnFull) {
 		if(level.isClientSide) { return; }  // we don't process on the client
 		if (VEIN_HANDLER == null || !VEIN_HANDLER.hasFinishedInit) { return; }
 
@@ -112,7 +116,7 @@ public abstract class TileEntityYieldCollector extends TileEntityClaim implement
 
 		// try to add the items (THIS WILL CONSUME THE ITEMSTACKS, SO MAKE SURE THEY ARE COPIES)
 		for (ItemStack currCompStack : yieldComps) {
-			if(!InventoryHelper.addItemStackToInventory(this, currCompStack, false)) {
+			if(!InventoryHelper.addItemStackToInventory(this, currCompStack, false) && warnOnFull) {
 				WarForgeMod.LOGGER.atError().log("Failed to add <" + currCompStack.toString() + "> to yield " +
 						"collector at " + this.getBlockPos());
 			}

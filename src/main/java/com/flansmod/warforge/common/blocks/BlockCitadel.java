@@ -1,5 +1,6 @@
 package com.flansmod.warforge.common.blocks;
 
+import com.flansmod.warforge.common.WarForgeConfig;
 import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.common.factories.CitadelGuiFactory;
 import com.flansmod.warforge.common.util.DimBlockPos;
@@ -81,6 +82,14 @@ public class BlockCitadel extends MultiBlockColumn implements EntityBlock, IMult
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         Level world = context.getLevel();
         BlockPos pos = context.getClickedPos();
+
+        if (pos.getY() < WarForgeConfig.CITADEL_MIN_Y) {
+            if (!world.isClientSide && context.getPlayer() != null) {
+                context.getPlayer().sendSystemMessage(Component.literal("Citadels must be placed at or above Y " +
+                        WarForgeConfig.CITADEL_MIN_Y));
+            }
+            return null;
+        }
 
         if (!world.isClientSide) {
             if (WarForgeMod.FACTIONS.isChunkContested(new DimChunkPos(world.dimension(), pos)))

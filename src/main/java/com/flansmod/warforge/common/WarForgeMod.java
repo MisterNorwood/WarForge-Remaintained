@@ -122,6 +122,11 @@ public class WarForgeMod {
     public static long serverTick = 0L;
     public static long currTickTimestamp = 0L;
     public static long serverStopTimestamp = 0L;
+    public static long gameTimeMs = 0L;
+
+    public static long getGameTime() {
+        return WarForgeConfig.TICK_BASED_TIMERS ? gameTimeMs : System.currentTimeMillis();
+    }
 
     public static boolean showBorders = true;
     public static TimeHelper timeHelper = new TimeHelper();
@@ -334,7 +339,7 @@ public class WarForgeMod {
 
     public void updateServer() {
         previousUpdateTimestamp = currTickTimestamp;
-        currTickTimestamp = System.currentTimeMillis();
+        currTickTimestamp = getGameTime();
         if (previousUpdateTimestamp == 0L) previousUpdateTimestamp = currTickTimestamp;
 
         FACTIONS.updateConqueredChunks(currTickTimestamp);
@@ -352,6 +357,8 @@ public class WarForgeMod {
                 messageAll(Component.literal("Battle takes its toll, all sieges have advanced."), true);
                 FACTIONS.advanceSiegeDay();
                 shouldUpdate = true;
+            } else if (siegeDayNumber < numberOfSiegeDaysTicked) {
+                numberOfSiegeDaysTicked = siegeDayNumber;
             }
         } else {
             FACTIONS.updateSiegeTimers();
@@ -365,16 +372,19 @@ public class WarForgeMod {
             messageAll(Component.literal("All passive yields have been awarded."), true);
             FACTIONS.advanceYieldDay();
             shouldUpdate = true;
+        } else if (yieldDayNumber < numberOfYieldDaysTicked) {
+            numberOfYieldDaysTicked = yieldDayNumber;
         }
 
         if (shouldUpdate) {
             PacketTimeUpdates packet = new PacketTimeUpdates();
+            packet.msServerNow = getGameTime();
 
             if (!WarForgeConfig.SIEGE_ENABLE_NEW_TIMER) {
-                packet.msTimeOfNextSiegeDay = System.currentTimeMillis() + timeHelper.getTimeToNextSiegeAdvanceMs();
+                packet.msTimeOfNextSiegeDay = getGameTime() + timeHelper.getTimeToNextSiegeAdvanceMs();
             }
 
-            packet.msTimeOfNextYieldDay = System.currentTimeMillis() + timeHelper.getTimeToNextYieldMs();
+            packet.msTimeOfNextYieldDay = getGameTime() + timeHelper.getTimeToNextYieldMs();
 
             NETWORK.sendToAll(packet);
         }
@@ -718,9 +728,9 @@ public class WarForgeMod {
         FACTIONS.updateAttackerSiegePresence(player);
 
         PacketTimeUpdates packet = new PacketTimeUpdates();
-
-        packet.msTimeOfNextSiegeDay = System.currentTimeMillis() + timeHelper.getTimeToNextSiegeAdvanceMs();
-        packet.msTimeOfNextYieldDay = System.currentTimeMillis() + timeHelper.getTimeToNextYieldMs();
+        packet.msServerNow = getGameTime();
+        packet.msTimeOfNextSiegeDay = getGameTime() + timeHelper.getTimeToNextSiegeAdvanceMs();
+        packet.msTimeOfNextYieldDay = getGameTime() + timeHelper.getTimeToNextYieldMs();
 
         NETWORK.sendTo(packet, player);
         FACTIONS.sendClaimChunks(player, new DimChunkPos(player.level().dimension(), player.blockPosition()), WarForgeConfig.CLAIM_MANAGER_RADIUS);
@@ -779,6 +789,7 @@ public class WarForgeMod {
         numberOfSiegeDaysTicked = tags.getLong("num-days-elapsed");
         numberOfYieldDaysTicked = tags.getLong("num-yields-awarded");
         serverStopTimestamp = tags.getLong("shutdown-timestamp");
+        gameTimeMs = tags.getLong("game-time-ms");
     }
 
     private void WriteToNBT(CompoundTag tags) {
@@ -791,6 +802,7 @@ public class WarForgeMod {
         tags.putLong("num-days-elapsed", numberOfSiegeDaysTicked);
         tags.putLong("num-yields-awarded", numberOfYieldDaysTicked);
         tags.putLong("shutdown-timestamp", serverStopTimestamp);
+        tags.putLong("game-time-ms", gameTimeMs);
     }
 
     @SubscribeEvent
@@ -825,7 +837,7 @@ public class WarForgeMod {
             throw new RuntimeException("Failed to load data from warforgefactions.dat", e);
         }
 
-        currTickTimestamp = System.currentTimeMillis();
+        currTickTimestamp = getGameTime();
     }
 
     @SubscribeEvent

@@ -92,9 +92,7 @@ public class Faction {
     // New-faction siege grace: unsiegeable while now < this. 0 = none (never granted, expired, or
     // forfeited by the faction starting a siege of its own).
     public long siegeGraceUntil = 0L;
-    public int citadelMoveCooldown = 0;
     public boolean isCurrentlyDefending = false;
-    //Only for new system
     public long citadelMoveTimeStamp = 0;
     private byte siegeMomentum = 0;
     @Getter
@@ -134,7 +132,7 @@ public class Faction {
             siegeMomentum++;
             increased = true;
         }
-        momentumExpireryTimestamp = System.currentTimeMillis() + (long) WarForgeConfig.SIEGE_MOMENTUM_DURATION * 60 * 1000;
+        momentumExpireryTimestamp = WarForgeMod.getGameTime() + (long) WarForgeConfig.SIEGE_MOMENTUM_DURATION * 60 * 1000;
         if (increased) {
             long nextSiegeMillis = WarForgeConfig.SIEGE_MOMENTUM_TIME.getOrDefault(siegeMomentum, 0) * 1000;
             String formattedTime = new Time(nextSiegeMillis)
@@ -167,7 +165,7 @@ public class Faction {
     }
 
     public byte getSiegeMomentum() {
-        if (System.currentTimeMillis() > momentumExpireryTimestamp)
+        if (WarForgeMod.getGameTime() > momentumExpireryTimestamp)
             return 0;
         else
             return siegeMomentum;
@@ -206,9 +204,6 @@ public class Faction {
             legacy += WarForgeConfig.LEGACY_PER_DAY;
         }
         loggedInToday = false;
-        if (citadelMoveCooldown > 0) {
-            citadelMoveCooldown--;
-        }
     }
 
     public FactionDisplayInfo createInfo() {
@@ -366,7 +361,7 @@ public class Faction {
         if (expiry == null) {
             return false;
         }
-        if (expiry <= System.currentTimeMillis()) {
+        if (expiry <= WarForgeMod.getGameTime()) {
             truces.remove(factionID);
             return false;
         }
@@ -375,7 +370,7 @@ public class Faction {
 
     public long getTruceRemainingMs(UUID factionID) {
         Long expiry = truces.get(factionID);
-        return expiry == null ? 0L : Math.max(0L, expiry - System.currentTimeMillis());
+        return expiry == null ? 0L : Math.max(0L, expiry - WarForgeMod.getGameTime());
     }
 
     public boolean canPlaceClaim() {
@@ -654,24 +649,10 @@ public class Faction {
     public void awardYields() {
         for (HashMap.Entry<DimBlockPos, Integer> kvp : claims.entrySet()) {
             DimBlockPos pos = kvp.getKey();
-            ServerLevel world = WarForgeMod.MC_SERVER.getLevel(pos.dim);
-            if (world == null) {
+            if (WarForgeMod.MC_SERVER.getLevel(pos.dim) == null) {
                 continue;
             }
             kvp.setValue(kvp.getValue() + 1);  // increment number of yields
-
-            // If It's loaded and the handler is ready, try to process yields
-            if (world.isLoaded(pos.toRegularPos()) && VEIN_HANDLER != null && VEIN_HANDLER.hasFinishedInit) {
-                BlockEntity te = world.getBlockEntity(pos.toRegularPos());
-                if (te instanceof TileEntityYieldCollector) {
-                    ((TileEntityYieldCollector) te).processYield(claims);
-                }
-            }
-        }
-
-        // Hidden claims do not have local inventories. Island collectors gather pending yields.
-        if (islandCollectors.isEmpty()) {
-            return;
         }
 
         ArrayList<DimBlockPos> staleCollectors = null;
@@ -695,6 +676,14 @@ public class Faction {
         if (staleCollectors != null) {
             islandCollectors.removeAll(staleCollectors);
             WarForgeMod.CHUNK_LOADING_MANAGER.refreshFactionChunks(this);
+        }
+
+        ServerLevel citadelWorld = WarForgeMod.MC_SERVER.getLevel(citadelPos.dim);
+        if (citadelWorld != null && citadelWorld.isLoaded(citadelPos.toRegularPos())) {
+            BlockEntity citadelTe = citadelWorld.getBlockEntity(citadelPos.toRegularPos());
+            if (citadelTe instanceof TileEntityCitadel citadel) {
+                citadel.processFactionYields(this);
+            }
         }
     }
 
@@ -823,7 +812,6 @@ public class Faction {
         offlineRaidProtectionUntil = tags.getLong("offlineRaidProtectionUntil");
         offlineRaidProtectionDisabled = tags.getBoolean("offlineRaidProtectionDisabled");
         siegeGraceUntil = tags.getLong("siegeGraceUntil");
-        citadelMoveCooldown = tags.getInt("citadelMoveCooldown");
         citadelMoveTimeStamp = tags.getLong("citadelMoveTimestamp");
         lastSiegeTimestamp = tags.getLong("lastSiegeTimestamp");
         siegeMomentum = tags.getByte("siegeMomentum");
@@ -936,7 +924,6 @@ public class Faction {
         tags.putLong("offlineRaidProtectionUntil", offlineRaidProtectionUntil);
         tags.putBoolean("offlineRaidProtectionDisabled", offlineRaidProtectionDisabled);
         tags.putLong("siegeGraceUntil", siegeGraceUntil);
-        tags.putInt("citadelMoveCooldown", citadelMoveCooldown);
         tags.putLong("citadelMoveTimestamp", citadelMoveTimeStamp);
         tags.putLong("lastSiegeTimestamp", lastSiegeTimestamp);
 

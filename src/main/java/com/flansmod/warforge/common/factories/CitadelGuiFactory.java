@@ -28,12 +28,9 @@ public class CitadelGuiFactory extends AbstractUIFactory<PosGuiData> {
     private static final IUIHolder<PosGuiData> HOLDER = new IUIHolder<PosGuiData>() {
         @Override
         public ModularPanel buildUI(PosGuiData guiData, PanelSyncManager syncManager, UISettings settings) {
-            if (guiData.isClient()) {
-                BlockEntity be = guiData.getBlockEntity();
-                if (be instanceof TileEntityCitadel citadel) {
-                    return ModularCitadelGui.buildUI(guiData, syncManager, settings, citadel);
-                }
-                return ModularPanel.defaultPanel("citadel_modular", 350, 214).topRel(0.5f);
+            BlockEntity be = guiData.getBlockEntity();
+            if (be instanceof TileEntityCitadel citadel) {
+                return ModularCitadelGui.buildUI(guiData, syncManager, settings, citadel);
             }
             return ModularPanel.defaultPanel("citadel_modular", 350, 214).topRel(0.5f);
         }

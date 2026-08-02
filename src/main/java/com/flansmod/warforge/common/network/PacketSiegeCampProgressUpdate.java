@@ -13,10 +13,12 @@ import net.minecraft.world.level.Level;
 public class PacketSiegeCampProgressUpdate extends PacketBase
 {
 	public SiegeCampProgressInfo info;
+	public long msServerNow = 0L;
 
 	@Override
 	public void encodeInto(FriendlyByteBuf data)
 	{
+		msServerNow = WarForgeMod.getGameTime();
 		// Attack
 		data.writeUtf(info.attackingPos.dim.location().toString());
 		data.writeInt(info.attackingPos.getX());
@@ -46,6 +48,7 @@ public class PacketSiegeCampProgressUpdate extends PacketBase
 		data.writeLong(info.timeProgress);
 		data.writeLong(info.endTimestamp);
 		data.writeBoolean(info.finished);
+		data.writeLong(msServerNow);
 	}
 
 	@Override
@@ -84,6 +87,7 @@ public class PacketSiegeCampProgressUpdate extends PacketBase
 		info.timeProgress = data.readLong();
         info.endTimestamp = data.readLong();
 		info.finished = data.readBoolean();
+		msServerNow = data.readLong();
 	}
 
 	@Override
@@ -95,6 +99,9 @@ public class PacketSiegeCampProgressUpdate extends PacketBase
 	@Override
 	public void handleClientSide(Player clientPlayer)
 	{
+		if (info != null && info.endTimestamp != Long.MAX_VALUE) {
+			info.endTimestamp = System.currentTimeMillis() + (info.endTimestamp - msServerNow);
+		}
 		WarForgeMod.proxy.UpdateSiegeInfo(info);
 	}
 }

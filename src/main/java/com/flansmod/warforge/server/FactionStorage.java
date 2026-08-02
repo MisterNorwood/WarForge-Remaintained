@@ -426,7 +426,7 @@ public class FactionStorage {
         // Apply a mutual truce so neither side can instantly retaliate.
         long truceMs = (long) WarForgeConfig.ALLIANCE_TRUCE_DURATION_MINUTES * 60_000L;
         if (truceMs > 0) {
-            long expiry = System.currentTimeMillis() + truceMs;
+            long expiry = WarForgeMod.getGameTime() + truceMs;
             faction.truces.put(allyFactionId, expiry);
             if (ally != null) {
                 ally.truces.put(faction.uuid, expiry);
@@ -1476,7 +1476,7 @@ public class FactionStorage {
         faction.legacy = 0;
         faction.recalculateWealth(); // wealth of the citadel chunk's vein (if any)
         if (WarForgeConfig.ENABLE_SIEGE_GRACE_PERIOD && WarForgeConfig.SIEGE_GRACE_PERIOD_HOURS > 0) {
-            faction.siegeGraceUntil = System.currentTimeMillis() + TimeUnit.HOURS.toMillis(WarForgeConfig.SIEGE_GRACE_PERIOD_HOURS);
+            faction.siegeGraceUntil = WarForgeMod.getGameTime() + TimeUnit.HOURS.toMillis(WarForgeConfig.SIEGE_GRACE_PERIOD_HOURS);
         }
 
         mFactions.put(proposedID, faction);
@@ -2037,7 +2037,7 @@ public class FactionStorage {
             sendFactionPresenceNotification(faction, playerID, profile.getName(), false);
         }
         if (faction.onlinePlayerCount == 0 && WarForgeConfig.ENABLE_OFFLINE_RAID_PROTECTION && !faction.offlineRaidProtectionDisabled) {
-            faction.offlineRaidProtectionUntil = System.currentTimeMillis() + TimeUnit.HOURS.toMillis(WarForgeConfig.OFFLINE_RAID_PROTECTION_HOURS);
+            faction.offlineRaidProtectionUntil = WarForgeMod.getGameTime() + TimeUnit.HOURS.toMillis(WarForgeConfig.OFFLINE_RAID_PROTECTION_HOURS);
         }
     }
 
@@ -2045,7 +2045,7 @@ public class FactionStorage {
         if (!WarForgeConfig.ENABLE_OFFLINE_RAID_PROTECTION || faction == null || faction.offlineRaidProtectionDisabled) {
             return false;
         }
-        return faction.onlinePlayerCount <= 0 && System.currentTimeMillis() < faction.offlineRaidProtectionUntil;
+        return faction.onlinePlayerCount <= 0 && WarForgeMod.getGameTime() < faction.offlineRaidProtectionUntil;
     }
 
     // New-faction grace: a freshly created faction is unsiegeable until its grace window expires. Disabling
@@ -2055,7 +2055,7 @@ public class FactionStorage {
         if (!WarForgeConfig.ENABLE_SIEGE_GRACE_PERIOD || faction == null) {
             return false;
         }
-        return System.currentTimeMillis() < faction.siegeGraceUntil;
+        return WarForgeMod.getGameTime() < faction.siegeGraceUntil;
     }
 
     // runs on the server only
@@ -2065,7 +2065,7 @@ public class FactionStorage {
             factionOfficer.sendSystemMessage(Component.literal("You are not in a faction"));
             return;
         }
-        long currentTimeStamp = System.currentTimeMillis();
+        long currentTimeStamp = WarForgeMod.getGameTime();
 
         // for some reason, server tick is in number of ticks and last siege timestamp is in ms, while siege cooldown is in mins (according to description), though through calculations looks like hours? it should be in ms
         if (attacking.getSiegeMomentum() == 0 && attacking.lastSiegeTimestamp + WarForgeConfig.SIEGE_COOLDOWN_FAIL > currentTimeStamp) {
@@ -2134,12 +2134,12 @@ public class FactionStorage {
         }
 
         if (isOfflineRaidProtected(defending)) {
-            factionOfficer.sendSystemMessage(Component.literal("That faction is offline and protected until " + TimeHelper.formatTime(defending.offlineRaidProtectionUntil - System.currentTimeMillis())));
+            factionOfficer.sendSystemMessage(Component.literal("That faction is offline and protected until " + TimeHelper.formatTime(defending.offlineRaidProtectionUntil - WarForgeMod.getGameTime())));
             return;
         }
 
         if (isSiegeGraceProtected(defending)) {
-            factionOfficer.sendSystemMessage(Component.literal("That faction is too new to be sieged. Grace expires in " + TimeHelper.formatTime(defending.siegeGraceUntil - System.currentTimeMillis())));
+            factionOfficer.sendSystemMessage(Component.literal("That faction is too new to be sieged. Grace expires in " + TimeHelper.formatTime(defending.siegeGraceUntil - WarForgeMod.getGameTime())));
             return;
         }
 
@@ -2199,7 +2199,7 @@ public class FactionStorage {
             officer.sendSystemMessage(Component.literal("You are not in a faction"));
             return;
         }
-        long currentTimeStamp = System.currentTimeMillis();
+        long currentTimeStamp = WarForgeMod.getGameTime();
         if (attacking.getSiegeMomentum() == 0 && attacking.lastSiegeTimestamp + WarForgeConfig.SIEGE_COOLDOWN_FAIL > currentTimeStamp) {
             officer.sendSystemMessage(Component.literal("Your faction is on cooldown on starting a new siege"));
             officer.sendSystemMessage(Component.literal("Cooldown remaining:" + TimeHelper.formatTime(attacking.lastSiegeTimestamp + WarForgeConfig.SIEGE_COOLDOWN_FAIL - currentTimeStamp)));
@@ -2243,12 +2243,12 @@ public class FactionStorage {
             return;
         }
         if (isOfflineRaidProtected(defending)) {
-            officer.sendSystemMessage(Component.literal("That faction is offline and protected until " + TimeHelper.formatTime(defending.offlineRaidProtectionUntil - System.currentTimeMillis())));
+            officer.sendSystemMessage(Component.literal("That faction is offline and protected until " + TimeHelper.formatTime(defending.offlineRaidProtectionUntil - WarForgeMod.getGameTime())));
             return;
         }
 
         if (isSiegeGraceProtected(defending)) {
-            officer.sendSystemMessage(Component.literal("That faction is too new to be sieged. Grace expires in " + TimeHelper.formatTime(defending.siegeGraceUntil - System.currentTimeMillis())));
+            officer.sendSystemMessage(Component.literal("That faction is too new to be sieged. Grace expires in " + TimeHelper.formatTime(defending.siegeGraceUntil - WarForgeMod.getGameTime())));
             return;
         }
 
@@ -3014,10 +3014,16 @@ public class FactionStorage {
             return false;
         }
 
+        if (pos.getY() < WarForgeConfig.CITADEL_MIN_Y) {
+            player.sendSystemMessage(Component.literal("Citadels must be placed at or above Y " + WarForgeConfig.CITADEL_MIN_Y));
+            return false;
+        }
+
         DimChunkPos oldChunk = faction.citadelPos.toChunkPos();
         boolean movingAcrossChunks = !targetChunk.equals(oldChunk);
-        if (movingAcrossChunks && faction.citadelMoveTimeStamp > 0L && faction.citadelMoveCooldown > 0) {
-            player.sendSystemMessage(Component.literal("You can move the citadel across chunks again in " + faction.citadelMoveCooldown + " day(s)"));
+        long citadelMoveReadyAt = faction.citadelMoveTimeStamp + TimeHelper.getCitadelMoveCooldownMs();
+        if (movingAcrossChunks && faction.citadelMoveTimeStamp > 0L && WarForgeMod.getGameTime() < citadelMoveReadyAt) {
+            player.sendSystemMessage(Component.literal("You can move the citadel across chunks again in " + TimeHelper.formatTime(citadelMoveReadyAt - WarForgeMod.getGameTime())));
             return false;
         }
 
@@ -3072,8 +3078,7 @@ public class FactionStorage {
         faction.claimTypes.put(pos, Faction.ClaimType.CITADEL);
         newCitadel.onServerSetFaction(faction);
         if (movingAcrossChunks) {
-            faction.citadelMoveCooldown = WarForgeConfig.CITADEL_MOVE_NUM_DAYS;
-            faction.citadelMoveTimeStamp = System.currentTimeMillis();
+            faction.citadelMoveTimeStamp = WarForgeMod.getGameTime();
         }
 
         INSTANCE.messageAll(Component.literal(faction.name + " moved their citadel"), true);

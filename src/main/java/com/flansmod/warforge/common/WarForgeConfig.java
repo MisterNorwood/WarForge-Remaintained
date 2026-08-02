@@ -54,7 +54,8 @@ public class WarForgeConfig {
     public static float HUD_VERT_CUTOFF_PERCENT = 0.40f;
 
     // Yields/ Vein
-    public static float YIELD_DAY_LENGTH = 1.0f; // In real-world hours
+    public static int YIELD_DAY_LENGTH = 3600; // In real-world seconds
+    public static boolean TICK_BASED_TIMERS = true;
     public static long VEIN_MEMBER_DISPLAY_TIME_MS = 1000;
     public static float POOR_QUAL_MULT = 0.5f;
     public static float FAIR_QUAL_MULT = 1f;
@@ -169,7 +170,8 @@ public class WarForgeConfig {
     public static String[] FACTION_NAME_BANLIST = new String[]{"admin", "mod", "staff"};
     public static boolean BLOCK_ENDER_CHEST = false;
     public static boolean SHOW_YIELD_TIMERS = true;
-    public static int CITADEL_MOVE_NUM_DAYS = 7;
+    public static int CITADEL_MOVE_COOLDOWN_SECONDS = 25200; // In real-world seconds
+    public static int CITADEL_MIN_Y = 63;
 
     // Display
     public static boolean FACTION_PREFIX_IN_CHAT = true;
@@ -348,7 +350,8 @@ public class WarForgeConfig {
     private static ForgeConfigSpec.IntValue OFFLINE_RAID_PROTECTION_HOURS_V;
     private static ForgeConfigSpec.BooleanValue ENABLE_SIEGE_GRACE_PERIOD_V;
     private static ForgeConfigSpec.IntValue SIEGE_GRACE_PERIOD_HOURS_V;
-    private static ForgeConfigSpec.IntValue CITADEL_MOVE_NUM_DAYS_V;
+    private static ForgeConfigSpec.IntValue CITADEL_MOVE_COOLDOWN_SECONDS_V;
+    private static ForgeConfigSpec.IntValue CITADEL_MIN_Y_V;
     private static ForgeConfigSpec.BooleanValue ENABLE_CITADEL_UPGRADES_V;
     private static ForgeConfigSpec.BooleanValue ENABLE_ISOLATED_CLAIMS_V;
     private static ForgeConfigSpec.BooleanValue BLOCK_FOREIGN_FLUID_INFLOW_V;
@@ -406,7 +409,8 @@ public class WarForgeConfig {
     private static ForgeConfigSpec.ConfigValue<List<? extends String>> VAULT_BLOCK_IDS_V;
 
     // Yields
-    private static ForgeConfigSpec.DoubleValue YIELD_DAY_LENGTH_V;
+    private static ForgeConfigSpec.IntValue YIELD_DAY_LENGTH_V;
+    private static ForgeConfigSpec.BooleanValue TICK_BASED_TIMERS_V;
     private static ForgeConfigSpec.DoubleValue POOR_QUAL_MULT_V;
     private static ForgeConfigSpec.DoubleValue FAIR_QUAL_MULT_V;
     private static ForgeConfigSpec.DoubleValue RICH_QUAL_MULT_V;
@@ -507,7 +511,8 @@ public class WarForgeConfig {
         OFFLINE_RAID_PROTECTION_HOURS_V = cfg.comment("How many hours a faction remains protected from new sieges after the last member goes offline.").defineInRange("Offline Raid Protection Hours", OFFLINE_RAID_PROTECTION_HOURS, 0, 168);
         ENABLE_SIEGE_GRACE_PERIOD_V = cfg.comment("If enabled, freshly created factions cannot be sieged for a grace period. If a graced faction starts a siege of its own, it forfeits its grace instantly.").define("Enable New Faction Siege Grace", ENABLE_SIEGE_GRACE_PERIOD);
         SIEGE_GRACE_PERIOD_HOURS_V = cfg.comment("How many hours a newly created faction stays unsiegeable. Disabling the feature above removes grace from all existing factions immediately.").defineInRange("New Faction Siege Grace Hours", SIEGE_GRACE_PERIOD_HOURS, 0, 8760);
-        CITADEL_MOVE_NUM_DAYS_V = cfg.comment("How many days a faction has to wait to move their citadel again").defineInRange("Days Between Citadel Moves", CITADEL_MOVE_NUM_DAYS, 0, 1024);
+        CITADEL_MOVE_COOLDOWN_SECONDS_V = cfg.comment("How many real-world seconds a faction has to wait before moving their citadel across chunks again.").defineInRange("Citadel Move Cooldown Seconds", CITADEL_MOVE_COOLDOWN_SECONDS, 0, Integer.MAX_VALUE);
+        CITADEL_MIN_Y_V = cfg.comment("The minimum Y level a citadel can be placed or moved to. Placement below this is rejected. Defaults to sea level (63). Set at or below the world floor to disable.").defineInRange("Citadel Minimum Y", CITADEL_MIN_Y, -2048, 2048);
         ENABLE_CITADEL_UPGRADES_V = cfg.comment("Applies claim limits that require upgrading to extend your faction's claim limit").define("Enable Citadel Upgrade System", ENABLE_CITADEL_UPGRADES);
         ENABLE_ISOLATED_CLAIMS_V = cfg.comment("If true, forces all newly placed claim blocks, excluding siege blocks and citadels, to be directly adjacent to a pre-existing claim.").define("Enabled Isolated Claims", ENABLE_ISOLATED_CLAIMS);
         BLOCK_FOREIGN_FLUID_INFLOW_V = cfg.comment("If true, liquids cannot flow from a chunk into a differently-claimed chunk (stops lavacast/water griefing across claim borders).").define("Block Foreign Fluid Inflow", BLOCK_FOREIGN_FLUID_INFLOW);
@@ -582,7 +587,8 @@ public class WarForgeConfig {
         // Yield parameters
         cfg.push(CATEGORY_YIELDS);
         String qualityText = "The global multiplier for %s quality veins which all veins fall back to if they do not have an override.";
-        YIELD_DAY_LENGTH_V = cfg.comment("The length of time between yields, in real-world hours.").defineInRange("Yield Day Length", (double) YIELD_DAY_LENGTH, 0.0001d, 100000d);
+        YIELD_DAY_LENGTH_V = cfg.comment("The length of time between yields, in real-world seconds.").defineInRange("Yield Day Length", YIELD_DAY_LENGTH, 1, Integer.MAX_VALUE);
+        TICK_BASED_TIMERS_V = cfg.comment("If true, all WarForge timers (yields, sieges, cooldowns, protections, truces, momentum) advance on server ticks (game time that pauses while the server is stopped or not ticking) instead of real-world wall-clock time. Do not change this on an existing world; stored timestamps are not converted.").define("Tick-Based Timers", TICK_BASED_TIMERS);
         POOR_QUAL_MULT_V = cfg.comment(String.format(qualityText, Quality.POOR)).defineInRange("Global Poor Quality Multiplier", (double) POOR_QUAL_MULT, 0d, 512d);
         FAIR_QUAL_MULT_V = cfg.comment(String.format(qualityText, Quality.FAIR)).defineInRange("Global Fair Quality Multiplier", (double) FAIR_QUAL_MULT, 0d, 512d);
         RICH_QUAL_MULT_V = cfg.comment(String.format(qualityText, Quality.RICH)).defineInRange("Global Rich Quality Multiplier", (double) RICH_QUAL_MULT, 0d, 512d);
@@ -731,7 +737,8 @@ public class WarForgeConfig {
         OFFLINE_RAID_PROTECTION_HOURS = OFFLINE_RAID_PROTECTION_HOURS_V.get();
         ENABLE_SIEGE_GRACE_PERIOD = ENABLE_SIEGE_GRACE_PERIOD_V.get();
         SIEGE_GRACE_PERIOD_HOURS = SIEGE_GRACE_PERIOD_HOURS_V.get();
-        CITADEL_MOVE_NUM_DAYS = CITADEL_MOVE_NUM_DAYS_V.get();
+        CITADEL_MOVE_COOLDOWN_SECONDS = CITADEL_MOVE_COOLDOWN_SECONDS_V.get();
+        CITADEL_MIN_Y = CITADEL_MIN_Y_V.get();
         ENABLE_CITADEL_UPGRADES = ENABLE_CITADEL_UPGRADES_V.get();
         ENABLE_ISOLATED_CLAIMS = ENABLE_ISOLATED_CLAIMS_V.get();
         BLOCK_FOREIGN_FLUID_INFLOW = BLOCK_FOREIGN_FLUID_INFLOW_V.get();
@@ -802,7 +809,8 @@ public class WarForgeConfig {
         VAULT_BLOCK_IDS = toStringArray(VAULT_BLOCK_IDS_V.get());
 
         // Yields
-        YIELD_DAY_LENGTH = YIELD_DAY_LENGTH_V.get().floatValue();
+        YIELD_DAY_LENGTH = YIELD_DAY_LENGTH_V.get();
+        TICK_BASED_TIMERS = TICK_BASED_TIMERS_V.get();
         POOR_QUAL_MULT = POOR_QUAL_MULT_V.get().floatValue();
         FAIR_QUAL_MULT = FAIR_QUAL_MULT_V.get().floatValue();
         RICH_QUAL_MULT = RICH_QUAL_MULT_V.get().floatValue();

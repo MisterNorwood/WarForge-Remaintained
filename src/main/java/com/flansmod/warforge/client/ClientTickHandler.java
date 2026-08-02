@@ -99,7 +99,6 @@ public class ClientTickHandler {
     private static final ResourceLocation siegeprogress = new ResourceLocation(Tags.MODID, "gui/siegeprogressslim.png");
     public static long nextSiegeDayMs = 0L;
     public static long nextYieldDayMs = 0L;
-    public static long timerSiegeEndStamp = 0L;
     public static boolean CLAIMS_DIRTY = false;
     public static boolean UI_DEBUG = false;
     public static boolean TIMER_DEBUG = false;
@@ -516,7 +515,7 @@ public class ClientTickHandler {
         // even though intelliJ thinks veinInfo is never null, it definitely should be able to be
         // we render either the item, or some waiting icon
         ItemStack currMemberItemStack = null;
-        boolean hasItemToRender = veinInfo != null && veinInfo.getLeft() != null && veinInfo.getLeft().compIds.size() > 0;
+        boolean hasItemToRender = veinInfo != null && veinInfo.getLeft() != null && !veinInfo.getLeft().compIds.isEmpty();
         if (hasItemToRender) {
             // initialize render info
             if (lastRenderStartTimeMs == -1) {
@@ -869,7 +868,7 @@ public class ClientTickHandler {
         // surface, not the full world column (-64..320 in 1.20.1). Sample the four edge rows and scan
         // only [surfMin-margin, surfMax+margin]. This misses enclosed caves/overhangs entirely below
         // the lowest perimeter surface (invisible from outside anyway) but slashes the scan; the faint
-        // corner walls below still span minY..128 unconditionally.
+        // corner walls below still span minY..maxY (build limit) unconditionally.
         int scanMin = minY;
         int scanMax = maxY;
         int originX = pos.getMinBlockX();
@@ -918,16 +917,16 @@ public class ClientTickHandler {
             if (renderWest) {
                 buffer.vertex(matrix, (float) (0 + alignment), (float) minY, (float) alignment).color(color).uv(64f, 0.5f).endVertex();
                 buffer.vertex(matrix, (float) (2 + alignment), (float) minY, (float) alignment).color(color).uv(64f, 0f).endVertex();
-                buffer.vertex(matrix, (float) (2 + alignment), 128, (float) alignment).color(color).uv(0f, 0f).endVertex();
-                buffer.vertex(matrix, (float) (0 + alignment), 128, (float) alignment).color(color).uv(0f, 0.5f).endVertex();
+                buffer.vertex(matrix, (float) (2 + alignment), (float) maxY, (float) alignment).color(color).uv(0f, 0f).endVertex();
+                buffer.vertex(matrix, (float) (0 + alignment), (float) maxY, (float) alignment).color(color).uv(0f, 0.5f).endVertex();
             }
 
             // A smidge of semi-translucent wall from [14,0,0] to [16,256,0] offset by 0.25
             if (renderEast) {
                 buffer.vertex(matrix, (float) (16 - alignment), (float) minY, (float) alignment).color(color).uv(64f, 0.5f).endVertex();
                 buffer.vertex(matrix, (float) (14 - alignment), (float) minY, (float) alignment).color(color).uv(64f, 0f).endVertex();
-                buffer.vertex(matrix, (float) (14 - alignment), 128, (float) alignment).color(color).uv(0f, 0f).endVertex();
-                buffer.vertex(matrix, (float) (16 - alignment), 128, (float) alignment).color(color).uv(0f, 0.5f).endVertex();
+                buffer.vertex(matrix, (float) (14 - alignment), (float) maxY, (float) alignment).color(color).uv(0f, 0f).endVertex();
+                buffer.vertex(matrix, (float) (16 - alignment), (float) maxY, (float) alignment).color(color).uv(0f, 0.5f).endVertex();
             }
         }
 
@@ -936,15 +935,15 @@ public class ClientTickHandler {
             if (renderWest) {
                 buffer.vertex(matrix, (float) (0 + alignment), (float) minY, (float) (16d - alignment)).color(color).uv(64f, 0.5f).endVertex();
                 buffer.vertex(matrix, (float) (2 + alignment), (float) minY, (float) (16d - alignment)).color(color).uv(64f, 0f).endVertex();
-                buffer.vertex(matrix, (float) (2 + alignment), 128, (float) (16d - alignment)).color(color).uv(0f, 0f).endVertex();
-                buffer.vertex(matrix, (float) (0 + alignment), 128, (float) (16d - alignment)).color(color).uv(0f, 0.5f).endVertex();
+                buffer.vertex(matrix, (float) (2 + alignment), (float) maxY, (float) (16d - alignment)).color(color).uv(0f, 0f).endVertex();
+                buffer.vertex(matrix, (float) (0 + alignment), (float) maxY, (float) (16d - alignment)).color(color).uv(0f, 0.5f).endVertex();
             }
 
             if (renderEast) {
                 buffer.vertex(matrix, (float) (16 - alignment), (float) minY, (float) (16d - alignment)).color(color).uv(64f, 0.5f).endVertex();
                 buffer.vertex(matrix, (float) (14 - alignment), (float) minY, (float) (16d - alignment)).color(color).uv(64f, 0f).endVertex();
-                buffer.vertex(matrix, (float) (14 - alignment), 128, (float) (16d - alignment)).color(color).uv(0f, 0f).endVertex();
-                buffer.vertex(matrix, (float) (16 - alignment), 128, (float) (16d - alignment)).color(color).uv(0f, 0.5f).endVertex();
+                buffer.vertex(matrix, (float) (14 - alignment), (float) maxY, (float) (16d - alignment)).color(color).uv(0f, 0f).endVertex();
+                buffer.vertex(matrix, (float) (16 - alignment), (float) maxY, (float) (16d - alignment)).color(color).uv(0f, 0.5f).endVertex();
             }
         }
 
@@ -953,15 +952,15 @@ public class ClientTickHandler {
             if (renderNorth) {
                 buffer.vertex(matrix, (float) alignment, (float) minY, (float) (0 + alignment)).color(color).uv(64f, 0.5f).endVertex();
                 buffer.vertex(matrix, (float) alignment, (float) minY, (float) (2 + alignment)).color(color).uv(64f, 0f).endVertex();
-                buffer.vertex(matrix, (float) alignment, 128, (float) (2 + alignment)).color(color).uv(0f, 0f).endVertex();
-                buffer.vertex(matrix, (float) alignment, 128, (float) (0 + alignment)).color(color).uv(0f, 0.5f).endVertex();
+                buffer.vertex(matrix, (float) alignment, (float) maxY, (float) (2 + alignment)).color(color).uv(0f, 0f).endVertex();
+                buffer.vertex(matrix, (float) alignment, (float) maxY, (float) (0 + alignment)).color(color).uv(0f, 0.5f).endVertex();
             }
 
             if (renderSouth) {
                 buffer.vertex(matrix, (float) alignment, (float) minY, (float) (16 - alignment)).color(color).uv(64f, 0.5f).endVertex();
                 buffer.vertex(matrix, (float) alignment, (float) minY, (float) (14 - alignment)).color(color).uv(64f, 0f).endVertex();
-                buffer.vertex(matrix, (float) alignment, 128, (float) (14 - alignment)).color(color).uv(0f, 0f).endVertex();
-                buffer.vertex(matrix, (float) alignment, 128, (float) (16 - alignment)).color(color).uv(0f, 0.5f).endVertex();
+                buffer.vertex(matrix, (float) alignment, (float) maxY, (float) (14 - alignment)).color(color).uv(0f, 0f).endVertex();
+                buffer.vertex(matrix, (float) alignment, (float) maxY, (float) (16 - alignment)).color(color).uv(0f, 0.5f).endVertex();
             }
         }
 
@@ -970,15 +969,15 @@ public class ClientTickHandler {
             if (renderNorth) {
                 buffer.vertex(matrix, (float) (16d - alignment), (float) minY, (float) (0 + alignment)).color(color).uv(64f, 0.5f).endVertex();
                 buffer.vertex(matrix, (float) (16d - alignment), (float) minY, (float) (2 + alignment)).color(color).uv(64f, 0f).endVertex();
-                buffer.vertex(matrix, (float) (16d - alignment), 128, (float) (2 + alignment)).color(color).uv(0f, 0f).endVertex();
-                buffer.vertex(matrix, (float) (16d - alignment), 128, (float) (0 + alignment)).color(color).uv(0f, 0.5f).endVertex();
+                buffer.vertex(matrix, (float) (16d - alignment), (float) maxY, (float) (2 + alignment)).color(color).uv(0f, 0f).endVertex();
+                buffer.vertex(matrix, (float) (16d - alignment), (float) maxY, (float) (0 + alignment)).color(color).uv(0f, 0.5f).endVertex();
             }
 
             if (renderSouth) {
                 buffer.vertex(matrix, (float) (16d - alignment), (float) minY, (float) (16 - alignment)).color(color).uv(64f, 0.5f).endVertex();
                 buffer.vertex(matrix, (float) (16d - alignment), (float) minY, (float) (14 - alignment)).color(color).uv(64f, 0f).endVertex();
-                buffer.vertex(matrix, (float) (16d - alignment), 128, (float) (14 - alignment)).color(color).uv(0f, 0f).endVertex();
-                buffer.vertex(matrix, (float) (16d - alignment), 128, (float) (16 - alignment)).color(color).uv(0f, 0.5f).endVertex();
+                buffer.vertex(matrix, (float) (16d - alignment), (float) maxY, (float) (14 - alignment)).color(color).uv(0f, 0f).endVertex();
+                buffer.vertex(matrix, (float) (16d - alignment), (float) maxY, (float) (16 - alignment)).color(color).uv(0f, 0.5f).endVertex();
             }
         }
 

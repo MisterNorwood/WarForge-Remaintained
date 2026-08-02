@@ -28,12 +28,9 @@ public class BasicClaimGuiFactory extends AbstractUIFactory<PosGuiData> {
     private static final IUIHolder<PosGuiData> HOLDER = new IUIHolder<PosGuiData>() {
         @Override
         public ModularPanel buildUI(PosGuiData guiData, PanelSyncManager syncManager, UISettings settings) {
-            if (guiData.isClient()) {
-                BlockEntity be = guiData.getBlockEntity();
-                if (be instanceof TileEntityBasicClaim claim) {
-                    return GuiBasicClaim.buildUI(guiData, syncManager, settings, claim);
-                }
-                return ModularPanel.defaultPanel("basic_claim", 200, 182).topRel(0.5f);
+            BlockEntity be = guiData.getBlockEntity();
+            if (be instanceof TileEntityBasicClaim claim) {
+                return GuiBasicClaim.buildUI(guiData, syncManager, settings, claim);
             }
             return ModularPanel.defaultPanel("basic_claim", 200, 182).topRel(0.5f);
         }
