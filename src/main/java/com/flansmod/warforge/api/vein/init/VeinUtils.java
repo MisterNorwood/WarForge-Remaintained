@@ -48,13 +48,29 @@ public class VeinUtils {
     public final short megachunkLength;
     public final short megachunkArea;
 
+    public final double gradientCenterX;
+    public final double gradientCenterZ;
+    public final double gradientRadius;
+    public final double gradientFrequency;
+    public final boolean gradientEnabled;
+
     public boolean hasFinishedInit;
 
     protected VeinUtils(short iterationId, short megachunkLength) {
+        this(iterationId, megachunkLength, 0.0, 0.0, 0.0, 1.0);
+    }
+
+    protected VeinUtils(short iterationId, short megachunkLength, double gradientCenterX, double gradientCenterZ, double gradientRadius, double gradientFrequency) {
         this.iterationId = iterationId;
         this.megachunkLength = megachunkLength;
         this.megachunkArea = (short) (megachunkLength * megachunkLength);
         ID_TO_VEINS.defaultReturnValue(null);
+
+        this.gradientCenterX = gradientCenterX;
+        this.gradientCenterZ = gradientCenterZ;
+        this.gradientRadius = gradientRadius;
+        this.gradientFrequency = gradientFrequency;
+        this.gradientEnabled = gradientRadius > 0.0;
 
         DIM_VEIN_WEIGHT_MAP = new Object2ObjectOpenHashMap<>();
         MEGA_CHUNK_OCCURRENCE_DATA = new Object2ObjectOpenHashMap<>();
@@ -143,6 +159,32 @@ public class VeinUtils {
         //hash %= 10000;  we hash it later, for now we just want the raw value
 
         return new int[]{hash, quality};
+    }
+
+    public double gradientDensity(int chunkX, int chunkZ) {
+        if (!gradientEnabled) { return 1.0; }
+        double blockX = chunkX * 16.0 + 8.0;
+        double blockZ = chunkZ * 16.0 + 8.0;
+        double dist = Math.max(Math.abs(blockX - gradientCenterX), Math.abs(blockZ - gradientCenterZ));
+        double t = dist / gradientRadius;
+        if (t >= 1.0) { return 0.0; }
+        return 1.0 - Math.pow(t, gradientFrequency);
+    }
+
+    public int gradientGateHash(int chunkX, int chunkZ, long seed) {
+        int hash = (int) ((seed ^ 0x9E3779B97F4A7C15L) * 0x27D4EB2F165667C5L);
+        hash = (int) ((hash + chunkX) * 0x85EBCA6B);
+        hash = (int) ((hash + chunkZ) * 0xC2B2AE35);
+        hash ^= (hash >>> 15);
+        return (hash << 1) >>> 1;
+    }
+
+    public boolean gradientGatesOut(int chunkX, int chunkZ, long seed) {
+        double density = gradientDensity(chunkX, chunkZ);
+        if (density >= 1.0) { return false; }
+        if (density <= 0.0) { return true; }
+        double roll = gradientGateHash(chunkX, chunkZ, seed) / 2147483648.0;
+        return roll >= density;
     }
 
     public long produceMegachunkKey(int chunkX, int chunkZ) {
@@ -386,6 +428,8 @@ public class VeinUtils {
     public Pair<Vein, Quality> generateVeinInfo(ResourceKey<Level> dim, long megachunkKey, int chunkX, int chunkZ, long seed) {
         if (!DIM_VEIN_WEIGHT_MAP.containsKey(dim)) { return null; }  // if we cannot generate any chunks for this dim, return null
         ensureMegachunkPopulated(dim, megachunkKey);
+
+        if (gradientEnabled && gradientGatesOut(chunkX, chunkZ, seed)) { return null; }
 
         int[] chunkHash = generateChunkHash(chunkX, chunkZ, seed);
         Object2ShortAVLTreeMap<VeinKey> currDimWeights = DIM_VEIN_WEIGHT_MAP.get(dim);

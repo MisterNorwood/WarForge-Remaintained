@@ -53,6 +53,14 @@ public class VeinConfigHandler {
             "# There must be a global megachunk_length which is the side length [4, 180] of the regions in which the weight minimums are respected.",
             "# There is no guarantee of veins occurring at least once, but they are guaranteed floor(megachunk_length^2 * weight)",
             "#",
+            "# An OPTIONAL global distance gradient thins veins out the farther a chunk is from a center point (all coordinates in blocks):",
+            "# - gradient_radius: square (Chebyshev) radius in blocks. The falloff fills [0, radius], reaching zero density at the edge, and",
+            "#       chunks at or beyond it receive no veins. This is a hard cap that pairs with a square world border (radius = border_size / 2).",
+            "#       A value <= 0 (the default) disables the gradient entirely, leaving vein density uniform everywhere.",
+            "# - gradient_frequency: curve shape of the falloff (default 1.0). 1.0 is linear; > 1.0 keeps the center dense with a sharp dropoff",
+            "#       near the edge; < 1.0 drops off quickly near the center then flattens out. Ignored when the gradient is disabled.",
+            "# - gradient_center_x / gradient_center_z: block coordinates of the gradient center (both default 0).",
+            "#",
             "# Example vein definition format (TOML). Each vein is an entry in the [[veins]] array of tables:",
             "# - id: An auto-generated unique identifier [0, 8191] which allows for vein properties to change;",
             "#       OMIT this key entirely to have one assigned automatically.",
@@ -75,6 +83,10 @@ public class VeinConfigHandler {
             "#",
             "# iteration = 0",
             "# megachunk_length = 32",
+            "# gradient_center_x = 0",
+            "# gradient_center_z = 0",
+            "# gradient_radius = 0",
+            "# gradient_frequency = 1.0",
             "#",
             "# [[veins]]",
             "# key = \"warforge.veins.iron_mix\"",
@@ -98,6 +110,10 @@ public class VeinConfigHandler {
     public static final List<String> DEFAULT_VEINS_TOML = Collections.unmodifiableList(Arrays.asList(
             "iteration = 0",
             "megachunk_length = 32",
+            "gradient_center_x = 0",
+            "gradient_center_z = 0",
+            "gradient_radius = 0",
+            "gradient_frequency = 1.0",
             "",
             "[[veins]]",
             "id = 0",
@@ -295,7 +311,24 @@ public class VeinConfigHandler {
                 megachunkLength = 32;
             }
 
-            VEIN_HANDLER = new VeinUtils(iterationId, megachunkLength);
+            Number gradientCenterXRaw = globalVeinData.get("gradient_center_x");
+            double gradientCenterX = gradientCenterXRaw != null ? gradientCenterXRaw.doubleValue() : 0.0;
+
+            Number gradientCenterZRaw = globalVeinData.get("gradient_center_z");
+            double gradientCenterZ = gradientCenterZRaw != null ? gradientCenterZRaw.doubleValue() : 0.0;
+
+            Number gradientRadiusRaw = globalVeinData.get("gradient_radius");
+            double gradientRadius = gradientRadiusRaw != null ? gradientRadiusRaw.doubleValue() : 0.0;
+            if (gradientRadius < 0.0) { gradientRadius = 0.0; }
+
+            Number gradientFrequencyRaw = globalVeinData.get("gradient_frequency");
+            double gradientFrequency = gradientFrequencyRaw != null ? gradientFrequencyRaw.doubleValue() : 1.0;
+            if (gradientFrequency < 0.0) {
+                WarForgeMod.LOGGER.atError().log("Invalid gradient_frequency provided; defaulting to 1.0");
+                gradientFrequency = 1.0;
+            }
+
+            VEIN_HANDLER = new VeinUtils(iterationId, megachunkLength, gradientCenterX, gradientCenterZ, gradientRadius, gradientFrequency);
             rawVeins = globalVeinData.get("veins");
         } catch (Exception e) {
             WarForgeMod.LOGGER.error("Failed to parse veins: ", e);
