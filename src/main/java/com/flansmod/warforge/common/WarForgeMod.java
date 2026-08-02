@@ -124,9 +124,17 @@ public class WarForgeMod {
     public static long serverStopTimestamp = 0L;
     public static long gameTimeMs = 0L;
 
-    public static long getGameTime() {
-        return WarForgeConfig.TICK_BASED_TIMERS ? gameTimeMs : System.currentTimeMillis();
+    private static long getTime(boolean tickBased) {
+        return tickBased ? gameTimeMs : System.currentTimeMillis();
     }
+
+    public static long yieldClock() { return getTime(WarForgeConfig.TICK_YIELDS); }
+    public static long siegeClock() { return getTime(WarForgeConfig.TICK_SIEGES); }
+    public static long momentumClock() { return getTime(WarForgeConfig.TICK_MOMENTUM); }
+    public static long offlineProtectionClock() { return getTime(WarForgeConfig.TICK_OFFLINE_PROTECTION); }
+    public static long graceClock() { return getTime(WarForgeConfig.TICK_SIEGE_GRACE); }
+    public static long citadelMoveClock() { return getTime(WarForgeConfig.TICK_CITADEL_MOVE); }
+    public static long truceClock() { return getTime(WarForgeConfig.TICK_TRUCES); }
 
     public static boolean showBorders = true;
     public static TimeHelper timeHelper = new TimeHelper();
@@ -339,7 +347,7 @@ public class WarForgeMod {
 
     public void updateServer() {
         previousUpdateTimestamp = currTickTimestamp;
-        currTickTimestamp = getGameTime();
+        currTickTimestamp = siegeClock();
         if (previousUpdateTimestamp == 0L) previousUpdateTimestamp = currTickTimestamp;
 
         FACTIONS.updateConqueredChunks(currTickTimestamp);
@@ -365,7 +373,7 @@ public class WarForgeMod {
         }
 
         long yieldDayLength = TimeHelper.getYieldDayLengthMs();
-        long yieldDayNumber = (currTickTimestamp - timestampOfFirstDay) / yieldDayLength;
+        long yieldDayNumber = (yieldClock() - timestampOfFirstDay) / yieldDayLength;
 
         if (yieldDayNumber > numberOfYieldDaysTicked) {
             numberOfYieldDaysTicked = yieldDayNumber;
@@ -378,13 +386,12 @@ public class WarForgeMod {
 
         if (shouldUpdate) {
             PacketTimeUpdates packet = new PacketTimeUpdates();
-            packet.msServerNow = getGameTime();
 
             if (!WarForgeConfig.SIEGE_ENABLE_NEW_TIMER) {
-                packet.msTimeOfNextSiegeDay = getGameTime() + timeHelper.getTimeToNextSiegeAdvanceMs();
+                packet.msUntilNextSiegeDay = timeHelper.getTimeToNextSiegeAdvanceMs();
             }
 
-            packet.msTimeOfNextYieldDay = getGameTime() + timeHelper.getTimeToNextYieldMs();
+            packet.msUntilNextYieldDay = timeHelper.getTimeToNextYieldMs();
 
             NETWORK.sendToAll(packet);
         }
@@ -728,9 +735,8 @@ public class WarForgeMod {
         FACTIONS.updateAttackerSiegePresence(player);
 
         PacketTimeUpdates packet = new PacketTimeUpdates();
-        packet.msServerNow = getGameTime();
-        packet.msTimeOfNextSiegeDay = getGameTime() + timeHelper.getTimeToNextSiegeAdvanceMs();
-        packet.msTimeOfNextYieldDay = getGameTime() + timeHelper.getTimeToNextYieldMs();
+        packet.msUntilNextSiegeDay = timeHelper.getTimeToNextSiegeAdvanceMs();
+        packet.msUntilNextYieldDay = timeHelper.getTimeToNextYieldMs();
 
         NETWORK.sendTo(packet, player);
         FACTIONS.sendClaimChunks(player, new DimChunkPos(player.level().dimension(), player.blockPosition()), WarForgeConfig.CLAIM_MANAGER_RADIUS);
@@ -837,7 +843,7 @@ public class WarForgeMod {
             throw new RuntimeException("Failed to load data from warforgefactions.dat", e);
         }
 
-        currTickTimestamp = getGameTime();
+        currTickTimestamp = siegeClock();
     }
 
     @SubscribeEvent

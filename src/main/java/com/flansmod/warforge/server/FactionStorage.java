@@ -426,7 +426,7 @@ public class FactionStorage {
         // Apply a mutual truce so neither side can instantly retaliate.
         long truceMs = (long) WarForgeConfig.ALLIANCE_TRUCE_DURATION_MINUTES * 60_000L;
         if (truceMs > 0) {
-            long expiry = WarForgeMod.getGameTime() + truceMs;
+            long expiry = WarForgeMod.truceClock() + truceMs;
             faction.truces.put(allyFactionId, expiry);
             if (ally != null) {
                 ally.truces.put(faction.uuid, expiry);
@@ -1476,7 +1476,7 @@ public class FactionStorage {
         faction.legacy = 0;
         faction.recalculateWealth(); // wealth of the citadel chunk's vein (if any)
         if (WarForgeConfig.ENABLE_SIEGE_GRACE_PERIOD && WarForgeConfig.SIEGE_GRACE_PERIOD_HOURS > 0) {
-            faction.siegeGraceUntil = WarForgeMod.getGameTime() + TimeUnit.HOURS.toMillis(WarForgeConfig.SIEGE_GRACE_PERIOD_HOURS);
+            faction.siegeGraceUntil = WarForgeMod.graceClock() + TimeUnit.HOURS.toMillis(WarForgeConfig.SIEGE_GRACE_PERIOD_HOURS);
         }
 
         mFactions.put(proposedID, faction);
@@ -1618,11 +1618,41 @@ public class FactionStorage {
             player.sendSystemMessage(Component.literal("This faction has already chosen its flag"));
             return false;
         }
-        if (!WarForgeMod.FLAG_REGISTRY.isAvailable(flagId)) {
+        if (!WarForgeMod.FLAG_REGISTRY.isAvailable(flagId, player.getUUID())) {
             player.sendSystemMessage(Component.literal("That flag is not available"));
             return false;
         }
 
+        applyFactionFlag(faction, flagId);
+        WarForgeMod.syncClaimToPlayer(player, faction.citadelPos.toRegularPos());
+        faction.messageAll(Component.literal("Your faction selected its flag: " + flagId));
+        return true;
+    }
+
+    public boolean adminSetFactionFlag(CommandSourceStack src, UUID factionID, String flagId) {
+        Faction faction = getFaction(factionID);
+        if (faction == null) {
+            src.sendFailure(Component.literal("That faction doesn't exist"));
+            return false;
+        }
+        String newFlagId = flagId == null ? "" : flagId;
+        if (!newFlagId.isEmpty() && !WarForgeMod.FLAG_REGISTRY.isAvailable(newFlagId)) {
+            src.sendFailure(Component.literal("That flag is not available: " + newFlagId));
+            return false;
+        }
+
+        applyFactionFlag(faction, newFlagId);
+        if (newFlagId.isEmpty()) {
+            src.sendSuccess(() -> Component.literal("Reset " + faction.name + "'s flag"), true);
+            faction.messageAll(Component.literal("Your faction's flag was reset by an admin"));
+        } else {
+            src.sendSuccess(() -> Component.literal("Set " + faction.name + "'s flag to " + newFlagId), true);
+            faction.messageAll(Component.literal("Your faction's flag was changed to " + newFlagId + " by an admin"));
+        }
+        return true;
+    }
+
+    private void applyFactionFlag(Faction faction, String flagId) {
         faction.flagId = flagId;
         for (DimBlockPos claimPos : collectFactionClaimPositions(faction)) {
             ServerLevel level = MC_SERVER.getLevel(claimPos.dim);
@@ -1631,12 +1661,9 @@ public class FactionStorage {
                 claim.updateFactionFlag(flagId);
             }
         }
-        WarForgeMod.syncClaimToPlayer(player, faction.citadelPos.toRegularPos());
         for (ServerPlayer online : MC_SERVER.getPlayerList().getPlayers()) {
             sendClaimChunks(online, new DimChunkPos(online.level().dimension(), online.blockPosition()), WarForgeConfig.CLAIM_MANAGER_RADIUS);
         }
-        faction.messageAll(Component.literal("Your faction selected its flag: " + flagId));
-        return true;
     }
 
     public boolean requestRemovePlayerFromFaction(CommandSourceStack remover, UUID factionID, UUID toRemove) {
@@ -2037,7 +2064,7 @@ public class FactionStorage {
             sendFactionPresenceNotification(faction, playerID, profile.getName(), false);
         }
         if (faction.onlinePlayerCount == 0 && WarForgeConfig.ENABLE_OFFLINE_RAID_PROTECTION && !faction.offlineRaidProtectionDisabled) {
-            faction.offlineRaidProtectionUntil = WarForgeMod.getGameTime() + TimeUnit.HOURS.toMillis(WarForgeConfig.OFFLINE_RAID_PROTECTION_HOURS);
+            faction.offlineRaidProtectionUntil = WarForgeMod.offlineProtectionClock() + TimeUnit.HOURS.toMillis(WarForgeConfig.OFFLINE_RAID_PROTECTION_HOURS);
         }
     }
 
@@ -2045,7 +2072,7 @@ public class FactionStorage {
         if (!WarForgeConfig.ENABLE_OFFLINE_RAID_PROTECTION || faction == null || faction.offlineRaidProtectionDisabled) {
             return false;
         }
-        return faction.onlinePlayerCount <= 0 && WarForgeMod.getGameTime() < faction.offlineRaidProtectionUntil;
+        return faction.onlinePlayerCount <= 0 && WarForgeMod.offlineProtectionClock() < faction.offlineRaidProtectionUntil;
     }
 
     // New-faction grace: a freshly created faction is unsiegeable until its grace window expires. Disabling
@@ -2055,7 +2082,7 @@ public class FactionStorage {
         if (!WarForgeConfig.ENABLE_SIEGE_GRACE_PERIOD || faction == null) {
             return false;
         }
-        return WarForgeMod.getGameTime() < faction.siegeGraceUntil;
+        return WarForgeMod.graceClock() < faction.siegeGraceUntil;
     }
 
     // runs on the server only
@@ -2065,7 +2092,7 @@ public class FactionStorage {
             factionOfficer.sendSystemMessage(Component.literal("You are not in a faction"));
             return;
         }
-        long currentTimeStamp = WarForgeMod.getGameTime();
+        long currentTimeStamp = WarForgeMod.siegeClock();
 
         // for some reason, server tick is in number of ticks and last siege timestamp is in ms, while siege cooldown is in mins (according to description), though through calculations looks like hours? it should be in ms
         if (attacking.getSiegeMomentum() == 0 && attacking.lastSiegeTimestamp + WarForgeConfig.SIEGE_COOLDOWN_FAIL > currentTimeStamp) {
@@ -2134,12 +2161,12 @@ public class FactionStorage {
         }
 
         if (isOfflineRaidProtected(defending)) {
-            factionOfficer.sendSystemMessage(Component.literal("That faction is offline and protected until " + TimeHelper.formatTime(defending.offlineRaidProtectionUntil - WarForgeMod.getGameTime())));
+            factionOfficer.sendSystemMessage(Component.literal("That faction is offline and protected until " + TimeHelper.formatTime(defending.offlineRaidProtectionUntil - WarForgeMod.offlineProtectionClock())));
             return;
         }
 
         if (isSiegeGraceProtected(defending)) {
-            factionOfficer.sendSystemMessage(Component.literal("That faction is too new to be sieged. Grace expires in " + TimeHelper.formatTime(defending.siegeGraceUntil - WarForgeMod.getGameTime())));
+            factionOfficer.sendSystemMessage(Component.literal("That faction is too new to be sieged. Grace expires in " + TimeHelper.formatTime(defending.siegeGraceUntil - WarForgeMod.graceClock())));
             return;
         }
 
@@ -2199,7 +2226,7 @@ public class FactionStorage {
             officer.sendSystemMessage(Component.literal("You are not in a faction"));
             return;
         }
-        long currentTimeStamp = WarForgeMod.getGameTime();
+        long currentTimeStamp = WarForgeMod.siegeClock();
         if (attacking.getSiegeMomentum() == 0 && attacking.lastSiegeTimestamp + WarForgeConfig.SIEGE_COOLDOWN_FAIL > currentTimeStamp) {
             officer.sendSystemMessage(Component.literal("Your faction is on cooldown on starting a new siege"));
             officer.sendSystemMessage(Component.literal("Cooldown remaining:" + TimeHelper.formatTime(attacking.lastSiegeTimestamp + WarForgeConfig.SIEGE_COOLDOWN_FAIL - currentTimeStamp)));
@@ -2243,12 +2270,12 @@ public class FactionStorage {
             return;
         }
         if (isOfflineRaidProtected(defending)) {
-            officer.sendSystemMessage(Component.literal("That faction is offline and protected until " + TimeHelper.formatTime(defending.offlineRaidProtectionUntil - WarForgeMod.getGameTime())));
+            officer.sendSystemMessage(Component.literal("That faction is offline and protected until " + TimeHelper.formatTime(defending.offlineRaidProtectionUntil - WarForgeMod.offlineProtectionClock())));
             return;
         }
 
         if (isSiegeGraceProtected(defending)) {
-            officer.sendSystemMessage(Component.literal("That faction is too new to be sieged. Grace expires in " + TimeHelper.formatTime(defending.siegeGraceUntil - WarForgeMod.getGameTime())));
+            officer.sendSystemMessage(Component.literal("That faction is too new to be sieged. Grace expires in " + TimeHelper.formatTime(defending.siegeGraceUntil - WarForgeMod.graceClock())));
             return;
         }
 
@@ -3022,8 +3049,8 @@ public class FactionStorage {
         DimChunkPos oldChunk = faction.citadelPos.toChunkPos();
         boolean movingAcrossChunks = !targetChunk.equals(oldChunk);
         long citadelMoveReadyAt = faction.citadelMoveTimeStamp + TimeHelper.getCitadelMoveCooldownMs();
-        if (movingAcrossChunks && faction.citadelMoveTimeStamp > 0L && WarForgeMod.getGameTime() < citadelMoveReadyAt) {
-            player.sendSystemMessage(Component.literal("You can move the citadel across chunks again in " + TimeHelper.formatTime(citadelMoveReadyAt - WarForgeMod.getGameTime())));
+        if (movingAcrossChunks && faction.citadelMoveTimeStamp > 0L && WarForgeMod.citadelMoveClock() < citadelMoveReadyAt) {
+            player.sendSystemMessage(Component.literal("You can move the citadel across chunks again in " + TimeHelper.formatTime(citadelMoveReadyAt - WarForgeMod.citadelMoveClock())));
             return false;
         }
 
@@ -3078,7 +3105,7 @@ public class FactionStorage {
         faction.claimTypes.put(pos, Faction.ClaimType.CITADEL);
         newCitadel.onServerSetFaction(faction);
         if (movingAcrossChunks) {
-            faction.citadelMoveTimeStamp = WarForgeMod.getGameTime();
+            faction.citadelMoveTimeStamp = WarForgeMod.citadelMoveClock();
         }
 
         INSTANCE.messageAll(Component.literal(faction.name + " moved their citadel"), true);

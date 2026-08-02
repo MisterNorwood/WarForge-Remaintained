@@ -55,7 +55,13 @@ public class WarForgeConfig {
 
     // Yields/ Vein
     public static int YIELD_DAY_LENGTH = 3600; // In real-world seconds
-    public static boolean TICK_BASED_TIMERS = true;
+    public static boolean TICK_YIELDS = false;
+    public static boolean TICK_SIEGES = false;
+    public static boolean TICK_MOMENTUM = false;
+    public static boolean TICK_OFFLINE_PROTECTION = false;
+    public static boolean TICK_SIEGE_GRACE = false;
+    public static boolean TICK_CITADEL_MOVE = false;
+    public static boolean TICK_TRUCES = false;
     public static long VEIN_MEMBER_DISPLAY_TIME_MS = 1000;
     public static float POOR_QUAL_MULT = 0.5f;
     public static float FAIR_QUAL_MULT = 1f;
@@ -99,6 +105,8 @@ public class WarForgeConfig {
             "green", "cyan", "light_blue", "blue", "purple", "magenta", "pink", "brown"
     };
     public static String[] CUSTOM_FLAG_ALLOWLIST = new String[]{"*"};
+    public static String[] FLAG_WHITELIST = new String[]{};
+    private static final Map<String, Set<UUID>> FLAG_WHITELIST_MAP = new HashMap<>();
 
     // Sieges
     public static boolean SIEGE_ENABLE_NEW_TIMER = true;
@@ -359,6 +367,7 @@ public class WarForgeConfig {
     private static ForgeConfigSpec.ConfigValue<List<? extends String>> INSURANCE_BLACKLIST_IDS_V;
     private static ForgeConfigSpec.ConfigValue<List<? extends String>> DEFAULT_FLAG_IDS_V;
     private static ForgeConfigSpec.ConfigValue<List<? extends String>> CUSTOM_FLAG_ALLOWLIST_V;
+    private static ForgeConfigSpec.ConfigValue<List<? extends String>> FLAG_WHITELIST_V;
 
     // Sieges
     private static ForgeConfigSpec.IntValue ATTACK_STRENGTH_SIEGE_CAMP_V;
@@ -410,7 +419,13 @@ public class WarForgeConfig {
 
     // Yields
     private static ForgeConfigSpec.IntValue YIELD_DAY_LENGTH_V;
-    private static ForgeConfigSpec.BooleanValue TICK_BASED_TIMERS_V;
+    private static ForgeConfigSpec.BooleanValue TICK_YIELDS_V;
+    private static ForgeConfigSpec.BooleanValue TICK_SIEGES_V;
+    private static ForgeConfigSpec.BooleanValue TICK_MOMENTUM_V;
+    private static ForgeConfigSpec.BooleanValue TICK_OFFLINE_PROTECTION_V;
+    private static ForgeConfigSpec.BooleanValue TICK_SIEGE_GRACE_V;
+    private static ForgeConfigSpec.BooleanValue TICK_CITADEL_MOVE_V;
+    private static ForgeConfigSpec.BooleanValue TICK_TRUCES_V;
     private static ForgeConfigSpec.DoubleValue POOR_QUAL_MULT_V;
     private static ForgeConfigSpec.DoubleValue FAIR_QUAL_MULT_V;
     private static ForgeConfigSpec.DoubleValue RICH_QUAL_MULT_V;
@@ -520,6 +535,7 @@ public class WarForgeConfig {
         INSURANCE_BLACKLIST_IDS_V = cfg.comment("Registry-id patterns blocked from the faction insurance stash. Supports '*' wildcards, for example 'minecraft:*shulker_box' or 'appliedenergistics2:*cell*'.").defineList("Insurance Blacklist", asList(INSURANCE_BLACKLIST_IDS), o -> o instanceof String);
         DEFAULT_FLAG_IDS_V = cfg.comment("Default built-in flags that can be chosen by factions. Each id is rendered client-side as a solid colour square/rectangle. Use a vanilla dye colour name (e.g. red, light_blue) or a 6-digit hex colour (e.g. ff8800).").defineList("Available Default Flags", asList(DEFAULT_FLAG_IDS), o -> o instanceof String);
         CUSTOM_FLAG_ALLOWLIST_V = cfg.comment("Custom server-side flags allowed from resources/warforge/flags. Use '*' to allow all validated custom flags or list exact ids without extension.").defineList("Available Custom Flags", asList(CUSTOM_FLAG_ALLOWLIST), o -> o instanceof String);
+        FLAG_WHITELIST_V = cfg.comment("Restrict specific flags to specific players so factions can have exclusive flags. Each entry is 'flagId=uuid1,uuid2' where flagId matches the ids used elsewhere (e.g. 'default:red' or 'custom:myflag') and each uuid is a player's UUID. A flag listed here can only be selected by the listed players; flags not listed stay available to everyone. Multiple UUIDs per flag are supported and duplicates are ignored.").defineList("Flag Whitelist", asList(FLAG_WHITELIST), o -> o instanceof String);
         cfg.pop();
 
         // Siege Camp Settings
@@ -588,7 +604,14 @@ public class WarForgeConfig {
         cfg.push(CATEGORY_YIELDS);
         String qualityText = "The global multiplier for %s quality veins which all veins fall back to if they do not have an override.";
         YIELD_DAY_LENGTH_V = cfg.comment("The length of time between yields, in real-world seconds.").defineInRange("Yield Day Length", YIELD_DAY_LENGTH, 1, Integer.MAX_VALUE);
-        TICK_BASED_TIMERS_V = cfg.comment("If true, all WarForge timers (yields, sieges, cooldowns, protections, truces, momentum) advance on server ticks (game time that pauses while the server is stopped or not ticking) instead of real-world wall-clock time. Do not change this on an existing world; stored timestamps are not converted.").define("Tick-Based Timers", TICK_BASED_TIMERS);
+        String tickComment = "If true, this timer advances on server ticks (game time that pauses while the server is stopped or not ticking) instead of real-world wall-clock time. Each timer is independent. Do not change on an existing world that has active factions; stored timestamps are not converted.";
+        TICK_YIELDS_V = cfg.comment("Passive yield cycle. " + tickComment).define("Tick-Based Yield Timer", TICK_YIELDS);
+        TICK_SIEGES_V = cfg.comment("Siege day advance, siege end-timer countdown, siege start cooldown, and conquered-chunk revert. " + tickComment).define("Tick-Based Siege Timers", TICK_SIEGES);
+        TICK_MOMENTUM_V = cfg.comment("Siege momentum expiry. " + tickComment).define("Tick-Based Siege Momentum", TICK_MOMENTUM);
+        TICK_OFFLINE_PROTECTION_V = cfg.comment("Offline raid protection window. " + tickComment).define("Tick-Based Offline Raid Protection", TICK_OFFLINE_PROTECTION);
+        TICK_SIEGE_GRACE_V = cfg.comment("New-faction siege grace period. " + tickComment).define("Tick-Based Siege Grace", TICK_SIEGE_GRACE);
+        TICK_CITADEL_MOVE_V = cfg.comment("Citadel move cooldown. " + tickComment).define("Tick-Based Citadel Move Cooldown", TICK_CITADEL_MOVE);
+        TICK_TRUCES_V = cfg.comment("Truce durations. " + tickComment).define("Tick-Based Truces", TICK_TRUCES);
         POOR_QUAL_MULT_V = cfg.comment(String.format(qualityText, Quality.POOR)).defineInRange("Global Poor Quality Multiplier", (double) POOR_QUAL_MULT, 0d, 512d);
         FAIR_QUAL_MULT_V = cfg.comment(String.format(qualityText, Quality.FAIR)).defineInRange("Global Fair Quality Multiplier", (double) FAIR_QUAL_MULT, 0d, 512d);
         RICH_QUAL_MULT_V = cfg.comment(String.format(qualityText, Quality.RICH)).defineInRange("Global Rich Quality Multiplier", (double) RICH_QUAL_MULT, 0d, 512d);
@@ -746,6 +769,8 @@ public class WarForgeConfig {
         INSURANCE_BLACKLIST_IDS = toStringArray(INSURANCE_BLACKLIST_IDS_V.get());
         DEFAULT_FLAG_IDS = toStringArray(DEFAULT_FLAG_IDS_V.get());
         CUSTOM_FLAG_ALLOWLIST = toStringArray(CUSTOM_FLAG_ALLOWLIST_V.get());
+        FLAG_WHITELIST = toStringArray(FLAG_WHITELIST_V.get());
+        rebuildFlagWhitelist();
 
         // Sieges
         ATTACK_STRENGTH_SIEGE_CAMP = ATTACK_STRENGTH_SIEGE_CAMP_V.get();
@@ -810,7 +835,13 @@ public class WarForgeConfig {
 
         // Yields
         YIELD_DAY_LENGTH = YIELD_DAY_LENGTH_V.get();
-        TICK_BASED_TIMERS = TICK_BASED_TIMERS_V.get();
+        TICK_YIELDS = TICK_YIELDS_V.get();
+        TICK_SIEGES = TICK_SIEGES_V.get();
+        TICK_MOMENTUM = TICK_MOMENTUM_V.get();
+        TICK_OFFLINE_PROTECTION = TICK_OFFLINE_PROTECTION_V.get();
+        TICK_SIEGE_GRACE = TICK_SIEGE_GRACE_V.get();
+        TICK_CITADEL_MOVE = TICK_CITADEL_MOVE_V.get();
+        TICK_TRUCES = TICK_TRUCES_V.get();
         POOR_QUAL_MULT = POOR_QUAL_MULT_V.get().floatValue();
         FAIR_QUAL_MULT = FAIR_QUAL_MULT_V.get().floatValue();
         RICH_QUAL_MULT = RICH_QUAL_MULT_V.get().floatValue();
@@ -963,6 +994,50 @@ public class WarForgeConfig {
             }
         }
         return false;
+    }
+
+    private static void rebuildFlagWhitelist() {
+        FLAG_WHITELIST_MAP.clear();
+        for (String entry : FLAG_WHITELIST) {
+            if (entry == null) {
+                continue;
+            }
+            int eq = entry.indexOf('=');
+            if (eq <= 0) {
+                continue;
+            }
+            String flagId = entry.substring(0, eq).trim().toLowerCase(Locale.ROOT);
+            if (flagId.isEmpty()) {
+                continue;
+            }
+            Set<UUID> uuids = FLAG_WHITELIST_MAP.computeIfAbsent(flagId, k -> new HashSet<UUID>());
+            for (String raw : entry.substring(eq + 1).split(",")) {
+                String trimmed = raw.trim();
+                if (trimmed.isEmpty()) {
+                    continue;
+                }
+                try {
+                    uuids.add(UUID.fromString(trimmed));
+                } catch (IllegalArgumentException e) {
+                    WarForgeMod.LOGGER.warn("Ignoring invalid UUID '{}' in flag whitelist entry for {}", trimmed, flagId);
+                }
+            }
+        }
+    }
+
+    public static boolean isFlagRestricted(String flagId) {
+        return flagId != null && FLAG_WHITELIST_MAP.containsKey(flagId.trim().toLowerCase(Locale.ROOT));
+    }
+
+    public static boolean isFlagAllowedForPlayer(String flagId, UUID player) {
+        if (flagId == null) {
+            return false;
+        }
+        Set<UUID> allowed = FLAG_WHITELIST_MAP.get(flagId.trim().toLowerCase(Locale.ROOT));
+        if (allowed == null) {
+            return true;
+        }
+        return player != null && allowed.contains(player);
     }
 
     public static class ProtectionConfig {

@@ -57,6 +57,9 @@ public class CommandFactions {
         return SharedSuggestionProvider.suggest(names, builder);
     };
 
+    private static final SuggestionProvider<CommandSourceStack> FLAG_ID_SUGGESTIONS = (ctx, builder) ->
+            SharedSuggestionProvider.suggest(WarForgeMod.FLAG_REGISTRY.getAvailableFlagIds(), builder);
+
     // Registration entrypoint, called from RegisterCommandsEvent.
     public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
         LiteralCommandNode<CommandSourceStack> root = dispatcher.register(buildTree("faction"));
@@ -203,6 +206,18 @@ public class CommandFactions {
                         .then(Commands.literal("disable").executes(ctx -> doOfflineProtection(ctx, "disable")))
                         .then(Commands.literal("status").executes(ctx -> doOfflineProtection(ctx, "status")))));
 
+        // flag <faction> <set <flagId> | reset> (op)
+        root.then(Commands.literal("flag").requires(CommandFactions::isOp)
+                .executes(CommandFactions::doFlagUsage)
+                .then(Commands.argument("faction", StringArgumentType.string())
+                        .suggests(FACTION_NAME_SUGGESTIONS)
+                        .executes(CommandFactions::doFlagUsage)
+                        .then(Commands.literal("reset").executes(CommandFactions::doFlagReset))
+                        .then(Commands.literal("set")
+                                .then(Commands.argument("flagId", StringArgumentType.greedyString())
+                                        .suggests(FLAG_ID_SUGGESTIONS)
+                                        .executes(CommandFactions::doFlagSet)))));
+
         // rename <old> <new> (op)
         root.then(Commands.literal("rename").requires(CommandFactions::isOp)
                 .executes(CommandFactions::doRenameUsage)
@@ -265,6 +280,7 @@ public class CommandFactions {
             src.sendSuccess(() -> Component.literal("/f offlineprotection <faction> <enable|disable|status>"), false);
             src.sendSuccess(() -> Component.literal("/f zone <safe|war|remove>"), false);
             src.sendSuccess(() -> Component.literal("/f rename <oldFactionName> <newFactionName>"), false);
+            src.sendSuccess(() -> Component.literal("/f flag <factionName> <set <flagId> | reset>"), false);
             src.sendSuccess(() -> Component.literal("/f vein <info|set <vein> [quality]|clear|reroll> [at <chunkX> <chunkZ> [dim] [radius]]"), false);
         }
         return Command.SINGLE_SUCCESS;
@@ -725,6 +741,33 @@ public class CommandFactions {
             ), false);
             default -> src.sendFailure(Component.literal("Usage: /f offlineprotection <faction> <enable|disable|status>"));
         }
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int doFlagUsage(CommandContext<CommandSourceStack> ctx) {
+        ctx.getSource().sendFailure(Component.literal("Usage: /f flag <factionName> <set <flagId> | reset>"));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int doFlagReset(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        Faction faction = WarForgeMod.FACTIONS.getFaction(StringArgumentType.getString(ctx, "faction"));
+        if (faction == null) {
+            src.sendFailure(Component.literal("Could not find that faction"));
+            return Command.SINGLE_SUCCESS;
+        }
+        WarForgeMod.FACTIONS.adminSetFactionFlag(src, faction.uuid, "");
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int doFlagSet(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        Faction faction = WarForgeMod.FACTIONS.getFaction(StringArgumentType.getString(ctx, "faction"));
+        if (faction == null) {
+            src.sendFailure(Component.literal("Could not find that faction"));
+            return Command.SINGLE_SUCCESS;
+        }
+        WarForgeMod.FACTIONS.adminSetFactionFlag(src, faction.uuid, StringArgumentType.getString(ctx, "flagId").trim());
         return Command.SINGLE_SUCCESS;
     }
 

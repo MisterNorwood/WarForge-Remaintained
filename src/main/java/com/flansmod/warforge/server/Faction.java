@@ -132,7 +132,7 @@ public class Faction {
             siegeMomentum++;
             increased = true;
         }
-        momentumExpireryTimestamp = WarForgeMod.getGameTime() + (long) WarForgeConfig.SIEGE_MOMENTUM_DURATION * 60 * 1000;
+        momentumExpireryTimestamp = WarForgeMod.momentumClock() + (long) WarForgeConfig.SIEGE_MOMENTUM_DURATION * 60 * 1000;
         if (increased) {
             long nextSiegeMillis = WarForgeConfig.SIEGE_MOMENTUM_TIME.getOrDefault(siegeMomentum, 0) * 1000;
             String formattedTime = new Time(nextSiegeMillis)
@@ -165,7 +165,7 @@ public class Faction {
     }
 
     public byte getSiegeMomentum() {
-        if (WarForgeMod.getGameTime() > momentumExpireryTimestamp)
+        if (WarForgeMod.momentumClock() > momentumExpireryTimestamp)
             return 0;
         else
             return siegeMomentum;
@@ -361,7 +361,7 @@ public class Faction {
         if (expiry == null) {
             return false;
         }
-        if (expiry <= WarForgeMod.getGameTime()) {
+        if (expiry <= WarForgeMod.truceClock()) {
             truces.remove(factionID);
             return false;
         }
@@ -370,7 +370,7 @@ public class Faction {
 
     public long getTruceRemainingMs(UUID factionID) {
         Long expiry = truces.get(factionID);
-        return expiry == null ? 0L : Math.max(0L, expiry - WarForgeMod.getGameTime());
+        return expiry == null ? 0L : Math.max(0L, expiry - WarForgeMod.truceClock());
     }
 
     public boolean canPlaceClaim() {

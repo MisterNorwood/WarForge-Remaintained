@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -68,6 +69,10 @@ public class ServerFlagRegistry {
         return false;
     }
 
+    public boolean isAvailable(String flagId, UUID player) {
+        return isAvailable(flagId) && WarForgeConfig.isFlagAllowedForPlayer(flagId, player);
+    }
+
     public List<String> getAvailableFlagIds() {
         ArrayList<String> result = new ArrayList<String>();
         for (String id : WarForgeConfig.DEFAULT_FLAG_IDS) {
@@ -83,9 +88,19 @@ public class ServerFlagRegistry {
         return result;
     }
 
+    public List<String> getAvailableFlagIds(UUID player) {
+        ArrayList<String> result = new ArrayList<String>();
+        for (String id : getAvailableFlagIds()) {
+            if (WarForgeConfig.isFlagAllowedForPlayer(id, player)) {
+                result.add(id);
+            }
+        }
+        return result;
+    }
+
     public void syncToPlayer(ServerPlayer player) {
         PacketFlagManifest manifest = new PacketFlagManifest();
-        manifest.flagIds.addAll(getAvailableFlagIds());
+        manifest.flagIds.addAll(getAvailableFlagIds(player.getUUID()));
         WarForgeMod.NETWORK.sendTo(manifest, player);
 
         for (CustomFlagData data : customFlags.values()) {

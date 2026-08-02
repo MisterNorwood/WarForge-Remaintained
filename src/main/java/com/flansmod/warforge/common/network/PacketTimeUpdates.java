@@ -9,24 +9,21 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 
 public class PacketTimeUpdates extends PacketBase
 {
-	public long msTimeOfNextSiegeDay = 0L;
-	public long msTimeOfNextYieldDay = 0L;
-	public long msServerNow = 0L;
+	public long msUntilNextSiegeDay = 0L;
+	public long msUntilNextYieldDay = 0L;
 
 	@Override
 	public void encodeInto(FriendlyByteBuf data)
 	{
-		data.writeLong(msTimeOfNextSiegeDay);
-		data.writeLong(msTimeOfNextYieldDay);
-		data.writeLong(msServerNow);
+		data.writeLong(msUntilNextSiegeDay);
+		data.writeLong(msUntilNextYieldDay);
 	}
 
 	@Override
 	public void decodeInto(FriendlyByteBuf data)
 	{
-		msTimeOfNextSiegeDay = data.readLong();
-		msTimeOfNextYieldDay = data.readLong();
-		msServerNow = data.readLong();
+		msUntilNextSiegeDay = data.readLong();
+		msUntilNextYieldDay = data.readLong();
 	}
 
 	@Override
@@ -40,8 +37,8 @@ public class PacketTimeUpdates extends PacketBase
 	public void handleClientSide(Player clientPlayer)
 	{
 		long clientNow = System.currentTimeMillis();
-		ClientTickHandler.nextSiegeDayMs = clientNow + (msTimeOfNextSiegeDay - msServerNow);
-		ClientTickHandler.nextYieldDayMs = clientNow + (msTimeOfNextYieldDay - msServerNow);
+		ClientTickHandler.nextSiegeDayMs = clientNow + msUntilNextSiegeDay;
+		ClientTickHandler.nextYieldDayMs = clientNow + msUntilNextYieldDay;
 	}
 
 }

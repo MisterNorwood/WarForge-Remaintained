@@ -302,7 +302,7 @@ public class Siege {
     }
 
     private void recalculateEndTimestamp() {
-        siegeEndTimeStamp = WarForgeMod.getGameTime() + timeRemainingMillis;
+        siegeEndTimeStamp = WarForgeMod.siegeClock() + timeRemainingMillis;
     }
 
     public boolean updateSiegeTimer() {
@@ -320,7 +320,7 @@ public class Siege {
                     .get(WarForgeMod.FACTIONS.getFaction(attackingFaction).getSiegeMomentum()) * 1000L;
             timeRemainingMillis = momentumTime;
 
-            siegeEndTimeStamp = WarForgeMod.getGameTime() + timeRemainingMillis;
+            siegeEndTimeStamp = WarForgeMod.siegeClock() + timeRemainingMillis;
 
             WarForgeMod.FOBS.onSiegeTimerReset(this);
 
@@ -329,7 +329,7 @@ public class Siege {
         } else {
             timeRemainingMillis -= 50L;
 
-            long actualRemaining = siegeEndTimeStamp - WarForgeMod.getGameTime();
+            long actualRemaining = siegeEndTimeStamp - WarForgeMod.siegeClock();
             if (Math.abs(actualRemaining - timeRemainingMillis) > 1000L) {
                 timeRemainingMillis = actualRemaining;
             }

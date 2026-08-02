@@ -18,7 +18,7 @@ public class PacketSiegeCampProgressUpdate extends PacketBase
 	@Override
 	public void encodeInto(FriendlyByteBuf data)
 	{
-		msServerNow = WarForgeMod.getGameTime();
+		msServerNow = WarForgeMod.siegeClock();
 		// Attack
 		data.writeUtf(info.attackingPos.dim.location().toString());
 		data.writeInt(info.attackingPos.getX());

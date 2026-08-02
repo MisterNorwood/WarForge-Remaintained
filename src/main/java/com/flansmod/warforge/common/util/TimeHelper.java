@@ -115,14 +115,14 @@ public class TimeHelper {
     }
 
     public long getTimeToNextSiegeAdvanceMs() {
-        long elapsedMS = WarForgeMod.getGameTime() - WarForgeMod.timestampOfFirstDay;
+        long elapsedMS = WarForgeMod.siegeClock() - WarForgeMod.timestampOfFirstDay;
         long todayElapsedMS = elapsedMS % getSiegeDayLengthMS();
 
         return getSiegeDayLengthMS() - todayElapsedMS;
     }
 
     public long getTimeToNextYieldMs() {
-        long elapsedMS = WarForgeMod.getGameTime() - WarForgeMod.timestampOfFirstDay;
+        long elapsedMS = WarForgeMod.yieldClock() - WarForgeMod.timestampOfFirstDay;
         long todayElapsedMS = elapsedMS % getYieldDayLengthMs();
 
         return getYieldDayLengthMs() - todayElapsedMS;
