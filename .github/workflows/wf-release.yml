@@ -43,4 +43,4 @@ jobs:
           gh release create wf warforge.jar \
             --title "WF rolling release" \
             --notes "Rolling pack release. Triggered by wf tag." \
-            --prerelease
+            --latest

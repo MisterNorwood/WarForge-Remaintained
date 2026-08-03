@@ -83,6 +83,7 @@ jobs:
           tag_name: ${{ env.TAG }}
           name: "Release ${{ env.TAG }}"
           prerelease: false
+          make_latest: false
           generate_release_notes: true
           files: ${{ env.FILE }}
         env:
