@@ -1622,6 +1622,10 @@ public class FactionStorage {
             player.sendSystemMessage(Component.literal("That flag is not available"));
             return false;
         }
+        if (WarForgeConfig.UNIQUE_FLAGS && isFlagTakenByOtherFaction(flagId, faction.uuid)) {
+            player.sendSystemMessage(Component.literal("That flag is already taken by another faction"));
+            return false;
+        }
 
         applyFactionFlag(faction, flagId);
         WarForgeMod.syncClaimToPlayer(player, faction.citadelPos.toRegularPos());
@@ -1650,6 +1654,24 @@ public class FactionStorage {
             faction.messageAll(Component.literal("Your faction's flag was changed to " + newFlagId + " by an admin"));
         }
         return true;
+    }
+
+    // Returns true if any faction other than excludeFactionId already uses this flag.
+    // Used to enforce WarForgeConfig.UNIQUE_FLAGS for player-chosen flags; admin
+    // overrides (adminSetFactionFlag) deliberately skip this check.
+    public boolean isFlagTakenByOtherFaction(String flagId, UUID excludeFactionId) {
+        if (flagId == null || flagId.isEmpty()) {
+            return false;
+        }
+        for (Faction other : mFactions.values()) {
+            if (other == null || other.uuid.equals(excludeFactionId)) {
+                continue;
+            }
+            if (flagId.equalsIgnoreCase(other.flagId)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void applyFactionFlag(Faction faction, String flagId) {

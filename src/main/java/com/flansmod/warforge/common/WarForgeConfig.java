@@ -106,6 +106,7 @@ public class WarForgeConfig {
     };
     public static String[] CUSTOM_FLAG_ALLOWLIST = new String[]{"*"};
     public static String[] FLAG_WHITELIST = new String[]{};
+    public static boolean UNIQUE_FLAGS = true;
     private static final Map<String, Set<UUID>> FLAG_WHITELIST_MAP = new HashMap<>();
 
     // Sieges
@@ -368,6 +369,7 @@ public class WarForgeConfig {
     private static ForgeConfigSpec.ConfigValue<List<? extends String>> DEFAULT_FLAG_IDS_V;
     private static ForgeConfigSpec.ConfigValue<List<? extends String>> CUSTOM_FLAG_ALLOWLIST_V;
     private static ForgeConfigSpec.ConfigValue<List<? extends String>> FLAG_WHITELIST_V;
+    private static ForgeConfigSpec.BooleanValue UNIQUE_FLAGS_V;
 
     // Sieges
     private static ForgeConfigSpec.IntValue ATTACK_STRENGTH_SIEGE_CAMP_V;
@@ -536,6 +538,7 @@ public class WarForgeConfig {
         DEFAULT_FLAG_IDS_V = cfg.comment("Default built-in flags that can be chosen by factions. Each id is rendered client-side as a solid colour square/rectangle. Use a vanilla dye colour name (e.g. red, light_blue) or a 6-digit hex colour (e.g. ff8800).").defineList("Available Default Flags", asList(DEFAULT_FLAG_IDS), o -> o instanceof String);
         CUSTOM_FLAG_ALLOWLIST_V = cfg.comment("Custom server-side flags allowed from resources/warforge/flags. Use '*' to allow all validated custom flags or list exact ids without extension.").defineList("Available Custom Flags", asList(CUSTOM_FLAG_ALLOWLIST), o -> o instanceof String);
         FLAG_WHITELIST_V = cfg.comment("Restrict specific flags to specific players so factions can have exclusive flags. Each entry is 'flagId=uuid1,uuid2' where flagId matches the ids used elsewhere (e.g. 'default:red' or 'custom:myflag') and each uuid is a player's UUID. A flag listed here can only be selected by the listed players; flags not listed stay available to everyone. Multiple UUIDs per flag are supported and duplicates are ignored.").defineList("Flag Whitelist", asList(FLAG_WHITELIST), o -> o instanceof String);
+        UNIQUE_FLAGS_V = cfg.comment("If true, each flag can only be used by one faction at a time: a faction cannot select a flag another faction has already taken. Admin flag overrides ('/f flag <faction> set <flagId>') bypass this check.").define("Unique Flags", UNIQUE_FLAGS);
         cfg.pop();
 
         // Siege Camp Settings
@@ -770,6 +773,7 @@ public class WarForgeConfig {
         DEFAULT_FLAG_IDS = toStringArray(DEFAULT_FLAG_IDS_V.get());
         CUSTOM_FLAG_ALLOWLIST = toStringArray(CUSTOM_FLAG_ALLOWLIST_V.get());
         FLAG_WHITELIST = toStringArray(FLAG_WHITELIST_V.get());
+        UNIQUE_FLAGS = UNIQUE_FLAGS_V.get();
         rebuildFlagWhitelist();
 
         // Sieges
