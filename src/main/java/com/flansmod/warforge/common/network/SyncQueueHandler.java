@@ -29,6 +29,7 @@ public class SyncQueueHandler {
         if (event.phase == TickEvent.Phase.END && !syncTasks.isEmpty()) {
             for (int i = 0; i < perTick && !syncTasks.isEmpty(); i++) {
                 SyncTask task = syncTasks.poll();
+                if(task == null) continue;
                 if (task.player != null && task.player.hasDisconnected()) {
                     syncTasks.removeIf(t -> t.player == task.player);
                 } else if (task.runnable != null) {
