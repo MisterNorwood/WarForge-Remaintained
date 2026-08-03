@@ -211,6 +211,7 @@ public class WarForgeConfig {
     public static boolean ENABLE_SPAWN_POTION_EFFECT = false; // TODO
     public static boolean ALLOW_SPAWN_BETWEEN_DIMENSIONS = false;
     public static boolean SPAWN_AT_CITADEL = false;
+    public static boolean ALLOW_BED_SPAWN_IN_CLAIMS = false;
     public static boolean ENABLE_TPA_POTIONS = true;
 
     // When enabled, logs every server-side setBlockState that lands inside a claimed chunk.
@@ -477,6 +478,7 @@ public class WarForgeConfig {
     private static ForgeConfigSpec.BooleanValue ENABLE_SPAWN_POTION_EFFECT_V;
     private static ForgeConfigSpec.BooleanValue ALLOW_SPAWN_BETWEEN_DIMENSIONS_V;
     private static ForgeConfigSpec.BooleanValue SPAWN_AT_CITADEL_V;
+    private static ForgeConfigSpec.BooleanValue ALLOW_BED_SPAWN_IN_CLAIMS_V;
     private static ForgeConfigSpec.IntValue NUM_TICKS_FOR_WARP_COMMANDS_V;
 
     // Debug
@@ -675,6 +677,7 @@ public class WarForgeConfig {
         ENABLE_SPAWN_POTION_EFFECT_V = cfg.comment("Allow players to craft a potion that takes them to the world spawn").define("Enable /spawn Potion", ENABLE_SPAWN_POTION_EFFECT);
         ALLOW_SPAWN_BETWEEN_DIMENSIONS_V = cfg.comment("Allow players to use /spawn when in a different dimension to the world spawn").define("Allow /spawn across dimensions", ALLOW_SPAWN_BETWEEN_DIMENSIONS);
         SPAWN_AT_CITADEL_V = cfg.comment("If enabled, bed and respawn-anchor spawn points are disabled and players respawn in their faction citadel's chunk, at the citadel's Y level. Players not in a faction fall back to the world spawn.").define("Respawn At Citadel", SPAWN_AT_CITADEL);
+        ALLOW_BED_SPAWN_IN_CLAIMS_V = cfg.comment("Only used when Respawn At Citadel is enabled. If enabled, players may set bed and respawn-anchor spawn points, but only inside chunks claimed by their own faction. They then respawn at that spawn point; if the bed is broken or the chunk is no longer claimed by their faction, they respawn at their citadel instead.").define("Allow Bed Spawn In Claims", ALLOW_BED_SPAWN_IN_CLAIMS);
         NUM_TICKS_FOR_WARP_COMMANDS_V = cfg.comment("How many ticks must the player stand still for a warp command to take effect").defineInRange("Num Ticks for Warps", NUM_TICKS_FOR_WARP_COMMANDS, 0, 20 * 60 * 5);
         cfg.pop();
 
@@ -893,6 +896,7 @@ public class WarForgeConfig {
         ENABLE_SPAWN_POTION_EFFECT = ENABLE_SPAWN_POTION_EFFECT_V.get();
         ALLOW_SPAWN_BETWEEN_DIMENSIONS = ALLOW_SPAWN_BETWEEN_DIMENSIONS_V.get();
         SPAWN_AT_CITADEL = SPAWN_AT_CITADEL_V.get();
+        ALLOW_BED_SPAWN_IN_CLAIMS = ALLOW_BED_SPAWN_IN_CLAIMS_V.get();
         NUM_TICKS_FOR_WARP_COMMANDS = NUM_TICKS_FOR_WARP_COMMANDS_V.get();
 
         // Graphics controls
