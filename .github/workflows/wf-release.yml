@@ -1,0 +1,46 @@
+name: WF Rolling Release
+
+on:
+  push:
+    tags: ['wf']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wf-release
+  cancel-in-progress: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        run: |
+          chmod +x ./gradlew
+          ./gradlew build -x test --no-daemon
+
+      - name: Stage jar
+        run: |
+          SRC=$(find build/libs -maxdepth 1 -name '*.jar' ! -name '*-sources*' ! -name '*-slim*' ! -name '*-dev*' | head -1)
+          cp "$SRC" warforge.jar
+
+      - name: Publish wf release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete wf --yes --cleanup-tag || true
+          gh release create wf warforge.jar \
+            --title "WF rolling release" \
+            --notes "Rolling pack release. Triggered by wf tag." \
+            --prerelease
