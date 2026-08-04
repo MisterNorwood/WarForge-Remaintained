@@ -207,6 +207,8 @@ public class WarForgeConfig {
     public static boolean ALLOW_F_HOME_BETWEEN_DIMENSIONS = false;
     public static boolean ENABLE_F_HOME_POTION_EFFECT = false; // TODO
     public static int NUM_TICKS_FOR_WARP_COMMANDS = 20 * 20;
+    public static boolean ENABLE_TPA_COMMAND = true;
+    public static int TPA_REQUEST_TIMEOUT_SECONDS = 60;
     public static boolean ENABLE_SPAWN_COMMAND = true;
     public static boolean ENABLE_SPAWN_POTION_EFFECT = false; // TODO
     public static boolean ALLOW_SPAWN_BETWEEN_DIMENSIONS = false;
@@ -480,6 +482,8 @@ public class WarForgeConfig {
     private static ForgeConfigSpec.BooleanValue SPAWN_AT_CITADEL_V;
     private static ForgeConfigSpec.BooleanValue ALLOW_BED_SPAWN_IN_CLAIMS_V;
     private static ForgeConfigSpec.IntValue NUM_TICKS_FOR_WARP_COMMANDS_V;
+    private static ForgeConfigSpec.BooleanValue ENABLE_TPA_COMMAND_V;
+    private static ForgeConfigSpec.IntValue TPA_REQUEST_TIMEOUT_SECONDS_V;
 
     // Debug
     private static ForgeConfigSpec.BooleanValue DEBUG_TRACE_SETBLOCK_V;
@@ -679,6 +683,8 @@ public class WarForgeConfig {
         SPAWN_AT_CITADEL_V = cfg.comment("If enabled, bed and respawn-anchor spawn points are disabled and players respawn in their faction citadel's chunk, at the citadel's Y level. Players not in a faction fall back to the world spawn.").define("Respawn At Citadel", SPAWN_AT_CITADEL);
         ALLOW_BED_SPAWN_IN_CLAIMS_V = cfg.comment("Only used when Respawn At Citadel is enabled. If enabled, players may set bed and respawn-anchor spawn points, but only inside chunks claimed by their own faction. They then respawn at that spawn point; if the bed is broken or the chunk is no longer claimed by their faction, they respawn at their citadel instead.").define("Allow Bed Spawn In Claims", ALLOW_BED_SPAWN_IN_CLAIMS);
         NUM_TICKS_FOR_WARP_COMMANDS_V = cfg.comment("How many ticks must the player stand still for a warp command to take effect").defineInRange("Num Ticks for Warps", NUM_TICKS_FOR_WARP_COMMANDS, 0, 20 * 60 * 5);
+        ENABLE_TPA_COMMAND_V = cfg.comment("Allow players to use /f tpa <player> to request a teleport to another player").define("Enable /f tpa Command", ENABLE_TPA_COMMAND);
+        TPA_REQUEST_TIMEOUT_SECONDS_V = cfg.comment("How many seconds a pending teleport request lasts before it expires").defineInRange("TPA Request Timeout Seconds", TPA_REQUEST_TIMEOUT_SECONDS, 1, 60 * 30);
         cfg.pop();
 
         // Debug / diagnostics
@@ -898,6 +904,8 @@ public class WarForgeConfig {
         SPAWN_AT_CITADEL = SPAWN_AT_CITADEL_V.get();
         ALLOW_BED_SPAWN_IN_CLAIMS = ALLOW_BED_SPAWN_IN_CLAIMS_V.get();
         NUM_TICKS_FOR_WARP_COMMANDS = NUM_TICKS_FOR_WARP_COMMANDS_V.get();
+        ENABLE_TPA_COMMAND = ENABLE_TPA_COMMAND_V.get();
+        TPA_REQUEST_TIMEOUT_SECONDS = TPA_REQUEST_TIMEOUT_SECONDS_V.get();
 
         // Graphics controls
         DO_FANCY_RENDERING = DO_FANCY_RENDERING_V.get();

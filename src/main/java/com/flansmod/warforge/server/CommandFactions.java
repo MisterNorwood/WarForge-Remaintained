@@ -238,12 +238,21 @@ public class CommandFactions {
         root.then(Commands.literal("msg")
                 .then(Commands.argument("message", StringArgumentType.greedyString()).executes(CommandFactions::doMsg)));
 
-        for (String alias : new String[]{"tpa", "tpaccept", "tp", "tprequest"}) {
-            root.then(Commands.literal(alias).executes(ctx -> {
-                ctx.getSource().sendSuccess(() -> Component.literal("Try brewing a potion of Teleportation / Telereception"), false);
-                return Command.SINGLE_SUCCESS;
-            }));
+        // tpa / tprequest / tp <player> - request to teleport to another player
+        for (String alias : new String[]{"tpa", "tprequest", "tp"}) {
+            root.then(Commands.literal(alias)
+                    .then(Commands.argument("player", EntityArgument.player())
+                            .executes(CommandFactions::doTpaRequest)));
         }
+        // tpaccept / tpdeny [player]-- resolve a pending request (newest, or from a specific player)
+        root.then(Commands.literal("tpaccept")
+                .executes(ctx -> doTpaResolve(ctx, true, false))
+                .then(Commands.argument("player", EntityArgument.player())
+                        .executes(ctx -> doTpaResolve(ctx, true, true))));
+        root.then(Commands.literal("tpdeny")
+                .executes(ctx -> doTpaResolve(ctx, false, false))
+                .then(Commands.argument("player", EntityArgument.player())
+                        .executes(ctx -> doTpaResolve(ctx, false, true))));
 
         root.then(Commands.literal("borders").executes(CommandFactions::doBorders));
 
@@ -275,6 +284,8 @@ public class CommandFactions {
         src.sendSuccess(() -> Component.literal("/f legacy"), false);
         src.sendSuccess(() -> Component.literal("/f notoriety"), false);
         src.sendSuccess(() -> Component.literal("/f borders"), false);
+        src.sendSuccess(() -> Component.literal("/f tpa <playerName>"), false);
+        src.sendSuccess(() -> Component.literal("/f tpaccept | tpdeny [playerName]"), false);
         src.sendSuccess(() -> Component.literal("/f vault redeem"), false);
         if (isOp(src)) {
             src.sendSuccess(() -> Component.literal("/f offlineprotection <faction> <enable|disable|status>"), false);
@@ -674,6 +685,32 @@ public class CommandFactions {
             WarForgeMod.TELEPORTS.requestSpawn(player);
         else
             src.sendFailure(Component.literal("Only valid for players"));
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int doTpaRequest(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        CommandSourceStack src = ctx.getSource();
+        if (!(src.getEntity() instanceof Player player)) {
+            src.sendFailure(Component.literal("Only valid for players"));
+            return Command.SINGLE_SUCCESS;
+        }
+        ServerPlayer target = EntityArgument.getPlayer(ctx, "player");
+        WarForgeMod.TELEPORTS.requestTpa(player, target);
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int doTpaResolve(CommandContext<CommandSourceStack> ctx, boolean accept, boolean withPlayer) throws CommandSyntaxException {
+        CommandSourceStack src = ctx.getSource();
+        if (!(src.getEntity() instanceof ServerPlayer player)) {
+            src.sendFailure(Component.literal("Only valid for players"));
+            return Command.SINGLE_SUCCESS;
+        }
+        UUID filter = withPlayer ? EntityArgument.getPlayer(ctx, "player").getUUID() : null;
+        if (accept) {
+            WarForgeMod.TELEPORTS.acceptTpa(player, filter);
+        } else {
+            WarForgeMod.TELEPORTS.denyTpa(player, filter);
+        }
         return Command.SINGLE_SUCCESS;
     }
 
