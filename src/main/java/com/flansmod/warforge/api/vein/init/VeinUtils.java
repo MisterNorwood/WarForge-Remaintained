@@ -451,8 +451,11 @@ public class VeinUtils {
 
         // if some vein has occurred too many times, we may need to skip over it if we select it
         if (!doRandomRoll && weightRemaining < WEIGHT_FRACTION_TENS_POW) {
+            int skipGuard = ID_TO_VEINS.size() + 1;
             while (currMegachunk.getLeft().get(currID) >= dimExpCount) {
-                trimmedHash += getDimWeight(currVein, dim);
+                short step = getDimWeight(currVein, dim);
+                if (step <= 0 || --skipGuard < 0) { break; }
+                trimmedHash += step;
                 currVeinKey.rebaseKey(trimmedHash);
                 currID = currDimWeights.getShort(currVeinKey);
                 currVein = ID_TO_VEINS.get(currID);

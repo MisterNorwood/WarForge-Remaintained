@@ -3336,23 +3336,6 @@ public class FactionStorage {
         if (targetPlayer == null) {
             return; //Likely bruteforcer TODO:Kick him
         }
-        if (!playerEntity.level().dimension().equals(targetPlayer.level().dimension())) {
-            return; //Also sus
-        }
-
-
-        double dx = playerEntity.getX() - targetPlayer.getX();
-        double dz = playerEntity.getZ() - targetPlayer.getZ();
-        double dy = playerEntity.getY() - targetPlayer.getY();
-
-        int viewDistanceChunks = MC_SERVER.getPlayerList().getViewDistance();
-        double maxDistanceBlocks = viewDistanceChunks * 16;
-        double maxDistanceSq = maxDistanceBlocks * maxDistanceBlocks;
-        double distance = dx * dx + dy * dy + dz * dz;
-        if (distance > maxDistanceSq) {
-            WarForgeMod.LOGGER.warn(playerEntity.getName().getString() + "Made a nameplate request for player " + name + "who is" + distance + "blocks away.");
-            return;
-        }
         Faction faction = getFactionOfPlayer(targetPlayer.getUUID());
         if (faction == null)
             return;
