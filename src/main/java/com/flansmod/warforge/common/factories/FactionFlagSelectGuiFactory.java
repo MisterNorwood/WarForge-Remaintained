@@ -115,7 +115,7 @@ public class FactionFlagSelectGuiFactory extends AbstractUIFactory<FactionFlagSe
         data.currentFlagId = faction.flagId;
         boolean isOp = player.getServer() != null && player.getServer().getPlayerList().isOp(player.getGameProfile());
         data.canChoose = (isOp || faction.isPlayerRoleInFaction(player.getUUID(), Faction.Role.LEADER)) && faction.flagId.isEmpty();
-        data.availableFlags.addAll(WarForgeMod.FLAG_REGISTRY.getAvailableFlagIds());
+        data.availableFlags.addAll(WarForgeMod.FLAG_REGISTRY.getAvailableFlagIds(player.getUUID()));
         return data;
     }
 }
