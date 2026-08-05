@@ -1,11 +1,15 @@
 package com.flansmod.warforge.client;
 
+import brachy.modularui.api.MCHelper;
 import brachy.modularui.api.drawable.IDrawable;
 import brachy.modularui.api.drawable.Text;
+import brachy.modularui.api.widget.IWidget;
 import brachy.modularui.drawable.ItemDrawable;
 import brachy.modularui.screen.ModularPanel;
+import brachy.modularui.screen.ModularScreen;
 import brachy.modularui.screen.viewport.GuiContext;
 import brachy.modularui.theme.WidgetTheme;
+import brachy.modularui.widget.WidgetTree;
 import brachy.modularui.widgets.ButtonWidget;
 import brachy.modularui.widgets.ScrollingTextWidget;
 import brachy.modularui.widgets.layout.Flow;
@@ -36,10 +40,12 @@ import net.minecraft.core.Vec3i;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 
+import java.util.List;
 import java.util.Objects;
 
 public final class GuiClaimManager {
@@ -487,5 +493,43 @@ public final class GuiClaimManager {
             return center.colour;
         }
         return WILDERNESS_ACCENT;
+    }
+
+    /**
+     * Re-navigates an already-open claim manager in place. Every navigation button (pan arrows, siege
+     * declare/cancel, target pick) funnels through {@link ClaimManagerGuiFactory#openClient}, which used to
+     * close the screen and do a full server round-trip to reopen it — flashing the world on every click.
+     * The map is drawn entirely from {@link ClientClaimChunkCache}, so a pan/siege-mode change only alters
+     * the page/center/radius: rebuild the current screen's main panel directly instead.
+     *
+     * @return true if the claim manager screen was open and the rebuild was scheduled, false to fall back
+     *         to the normal {@code DeferredGuiOpen} open flow
+     */
+    public static boolean rebuild(ClaimManagerGuiData data) {
+        if (!ModularScreen.isScreen(MCHelper.getCurrentScreen(), Tags.MODID, "claim_manager")) {
+            return false;
+        }
+        Minecraft.getInstance().execute(() -> applyPanel(data));
+        return true;
+    }
+
+    private static void applyPanel(ClaimManagerGuiData data) {
+        if (!ModularScreen.isScreen(MCHelper.getCurrentScreen(), Tags.MODID, "claim_manager")) {
+            return;
+        }
+        ModularScreen screen = ModularScreen.getCurrent();
+        if (screen == null) {
+            return;
+        }
+        ModularPanel<?> panel = screen.getMainPanel();
+        ModularPanel<?> newPanel = buildPanel(data);
+        panel.resizer().copyPropertiesOf(newPanel.resizer());
+        for (IWidget child : List.copyOf(panel.getChildren())) {
+            panel.remove(child);
+        }
+        for (IWidget child : List.copyOf(newPanel.getChildren())) {
+            panel.addChild(child, panel.getChildren().size());
+        }
+        WidgetTree.resizeInternal(panel.resizer(), true);
     }
 }
