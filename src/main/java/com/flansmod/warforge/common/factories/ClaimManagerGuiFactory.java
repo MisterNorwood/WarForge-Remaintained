@@ -72,8 +72,11 @@ public class ClaimManagerGuiFactory extends AbstractUIFactory<ClaimManagerGuiDat
 
     @OnlyIn(Dist.CLIENT)
     public void openClient(DimChunkPos center, int radius, int pageX, int pageZ) {
-        com.flansmod.warforge.client.DeferredGuiOpen.open(() ->
-                GuiManager.openFromClient(this, new ClaimManagerGuiData(verifyClientSide(MCHelper.getPlayer()), center, radius, pageX, pageZ)));
+        ClaimManagerGuiData data = new ClaimManagerGuiData(verifyClientSide(MCHelper.getPlayer()), center, radius, pageX, pageZ);
+        if (GuiClaimManager.rebuild(data)) {
+            return;
+        }
+        com.flansmod.warforge.client.DeferredGuiOpen.open(() -> GuiManager.openFromClient(this, data));
     }
 
     @Override

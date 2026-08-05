@@ -3,8 +3,10 @@ package com.flansmod.warforge.client;
 import com.flansmod.warforge.Tags;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 public final class WarforgeIconButton extends AbstractButton {
@@ -18,6 +20,17 @@ public final class WarforgeIconButton extends AbstractButton {
         super(x, y, WARFORGE_BUTTON_SIZE, WARFORGE_BUTTON_SIZE, CommonComponents.EMPTY);
         this.textureX = textureX;
         this.handler = handler;
+        setTooltip(Tooltip.create(Component.literal(labelFor(textureX))));
+    }
+
+    private static String labelFor(int textureX) {
+        return switch (textureX) {
+            case 0 -> "Territory Map";
+            case WARFORGE_BUTTON_SIZE -> "Faction Members";
+            case WARFORGE_BUTTON_SIZE * 2 -> "Faction Stats";
+            case WARFORGE_BUTTON_SIZE * 3 -> "Move Citadel";
+            default -> "Operations";
+        };
     }
 
     @Override
