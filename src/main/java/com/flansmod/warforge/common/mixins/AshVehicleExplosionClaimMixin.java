@@ -14,7 +14,17 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 // destroyBlock; the GBU-57 bunker buster uses the 3-arg (Entity) overload, so both are guarded. Targets
 // are strings so this compiles without Ash Vehicles present; the whole mixin is only registered when the
 // mod is loaded (see CompatMixinPlugin).
+// Ash Vehicles renamed its package Aru.Aru.* (older CF builds) -> aru.aru.* (newer "div" builds). Both
+// casings are listed so this protects claims regardless of which build the pack ships; the missing casing
+// is skipped harmlessly (require=0 + CompatMixinPlugin gates the whole mixin on the mod being present).
 @Mixin(remap = false, targets = {
+        "aru.aru.ashvehicle.entity.projectile.Agm114Entity",
+        "aru.aru.ashvehicle.entity.projectile.Agm158Entity",
+        "aru.aru.ashvehicle.entity.projectile.Aim120Entity",
+        "aru.aru.ashvehicle.entity.projectile.Aim54Entity",
+        "aru.aru.ashvehicle.entity.projectile.Aim9Entity",
+        "aru.aru.ashvehicle.entity.projectile.Gbu57Entity",
+        "aru.aru.ashvehicle.entity.projectile.R60Entity",
         "Aru.Aru.ashvehicle.entity.projectile.Agm114Entity",
         "Aru.Aru.ashvehicle.entity.projectile.Agm158Entity",
         "Aru.Aru.ashvehicle.entity.projectile.Aim120Entity",

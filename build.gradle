@@ -144,6 +144,11 @@ dependencies {
     compileOnly("curse.maven:ashvehicle-1291715:7948580") {
         exclude group: "org.spongepowered", module: "mixin"
     }
+    // Newer Ash Vehicles "div" build renamed its package Aru.Aru.* -> aru.aru.* (lowercase). Put it on the
+    // compile classpath too so the Mixin AP can resolve the lowercase @Mixin(targets=...) names; the mixin
+    // lists BOTH casings so it protects claims against whichever Ash Vehicles build the pack ships. Raw jar
+    // (not fg.deobf): only the target class *names* need to resolve, and those redirects are remap=false.
+    compileOnly(files("libs/ashvehicle-div.jar"))
 
     // Dev-run only: load SBW (and its mandatory geckolib dep) so the explosion claim mixin can be
     // smoke-tested in runClient/runServer. fg.deobf remaps the production jars to the named dev runtime;
