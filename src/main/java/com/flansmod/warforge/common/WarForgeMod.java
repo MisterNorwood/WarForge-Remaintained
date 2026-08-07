@@ -186,19 +186,79 @@ public class WarForgeMod {
             Content.bake();
             IMultiBlockInit.registerMaps();
             loadUpgradeConfig();
-            WarForgeConfig.UNCLAIMED.findBlocks();
-            WarForgeConfig.SAFE_ZONE.findBlocks();
-            WarForgeConfig.WAR_ZONE.findBlocks();
-            WarForgeConfig.CITADEL_FRIEND.findBlocks();
-            WarForgeConfig.CITADEL_FOE.findBlocks();
-            WarForgeConfig.CLAIM_FRIEND.findBlocks();
-            WarForgeConfig.CLAIM_FOE.findBlocks();
-            WarForgeConfig.CLAIM_DEFENDED.findBlocks();
-            WarForgeConfig.SIEGED_FRIEND.findBlocks();
-            WarForgeConfig.SIEGED_FOE.findBlocks();
-            WarForgeConfig.WAR_FRIEND.findBlocks();
-            WarForgeConfig.WAR_FOE.findBlocks();
+            WarForgeConfig.findAllProtectionBlocks();
         });
+    }
+
+    public static String reloadServerConfig() {
+        WarForgeConfig.reloadFromDisk();
+        findVaultBlocks();
+        WarForgeConfig.findAllProtectionBlocks();
+
+        String levelStatus;
+        try {
+            loadUpgradeConfig();
+            levelStatus = "levels ok";
+        } catch (RuntimeException e) {
+            LOGGER.error("Failed to reload citadel upgrade levels", e);
+            levelStatus = "levels FAILED";
+        }
+
+        String veinStatus = reloadVeins();
+
+        FLAG_REGISTRY.reload();
+
+        if (MC_SERVER != null) {
+            for (ServerPlayer player : MC_SERVER.getPlayerList().getPlayers()) {
+                resyncConfigDependentData(player);
+            }
+        }
+
+        return "main config ok, " + levelStatus + ", " + veinStatus;
+    }
+
+    private static String reloadVeins() {
+        try {
+            CompoundTag snapshot = new CompoundTag();
+            if (VEIN_HANDLER != null) {
+                VEIN_HANDLER.WriteToNBT(snapshot);
+            }
+            VeinConfigHandler.writeStubIfEmpty();
+            VeinConfigHandler.loadVeins();
+            VEIN_HANDLER.readFromNBT(snapshot);
+            FACTIONS.recalculateAllWealth();
+            return "veins ok";
+        } catch (Exception e) {
+            LOGGER.error("Failed to reload veins", e);
+            return "veins FAILED";
+        }
+    }
+
+    private static void resyncConfigDependentData(ServerPlayer player) {
+        NETWORK.sendTo(WarForgeConfig.createConfigSyncPacket(), player);
+        FLAG_REGISTRY.syncToPlayer(player);
+
+        if (UPGRADE_HANDLER.getLEVELS() != null) {
+            for (int i = 0; i < UPGRADE_HANDLER.getLEVELS().length; i++) {
+                final int level = i;
+                final HashMap<ItemMatcher, Integer> requirements = UPGRADE_HANDLER.getLEVELS()[i];
+                final int limit = UPGRADE_HANDLER.getLIMITS()[i];
+                final int insuranceSlots = UPGRADE_HANDLER.getINSURANCE_SLOTS()[i];
+                final int loadedChunks = UPGRADE_HANDLER.getLOADED_CHUNKS()[i];
+                NETWORK.sendTo(new PacketCitadelUpgradeRequirement(level, requirements, limit, insuranceSlots, loadedChunks), player);
+            }
+        }
+
+        int veinIndex = 0;
+        ArrayList<Vein> veins = new ArrayList<>(VEIN_HANDLER.ID_TO_VEINS.values());
+        while (veinIndex < veins.size()) {
+            PacketVeinEntries currPacket = new PacketVeinEntries();
+            veinIndex = currPacket.fillFrom(veins, veinIndex);
+            NETWORK.sendTo(currPacket, player);
+        }
+
+        JOURNEYMAP_SYNC.onPlayerJoin(player);
+        JOURNEYMAP_VEIN_SYNC.onPlayerJoin(player);
     }
 
     private static void findVaultBlocks() {
@@ -814,6 +874,11 @@ public class WarForgeMod {
     @SubscribeEvent
     public void serverAboutToStart(ServerAboutToStartEvent event) {
         MC_SERVER = event.getServer();
+        if (!MC_SERVER.isDedicatedServer()) {
+            WarForgeConfig.reloadFromDisk();
+            findVaultBlocks();
+            WarForgeConfig.findAllProtectionBlocks();
+        }
         FLAG_REGISTRY.reload();
 
         try {

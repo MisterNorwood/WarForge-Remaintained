@@ -334,13 +334,13 @@ public class ProtectionsModule {
             return;
 
         // MineTime turns a denied break into a slow break (paced by OnBreakSpeed). Keep the hard cancel
-        // when MineTime opts this block out, AND whenever slowing is impossible — creative instabuild
-        // and instant-break (hardness <= 0) blocks ignore break speed, so un-cancelling them would hand
-        // out a free break in protected territory.
-        boolean slowable = config.mineTime.resolve(block) != null
-                && !event.getPlayer().getAbilities().instabuild
-                && event.getState().getDestroySpeed(event.getLevel(), event.getPos()) > 0;
-        if (slowable)
+        // when MineTime opts this block out, or when the player is in creative — creative instabreaks
+        // every block, so un-cancelling would hand out a free break. Instant-break blocks (grass, plants:
+        // hardness <= 0) cannot be paced by break speed, so the client predictor never cancels them and
+        // OnBreakSpeed leaves them at natural speed; a server hard-cancel would only rubber-band, so let
+        // them break.
+        MineTime.Rule rule = config.mineTime.resolve(block);
+        if (rule != null && !event.getPlayer().getAbilities().instabuild)
             return;
 
         event.setCanceled(true);

@@ -227,6 +227,11 @@ public class CommandFactions {
                         .then(Commands.argument("newFactionName", StringArgumentType.string())
                                 .executes(CommandFactions::doRename))));
 
+        for (String alias : new String[]{"reloadConfig", "reloadconfig", "reload"}) {
+            root.then(Commands.literal(alias).requires(CommandFactions::isOp)
+                    .executes(CommandFactions::doReloadConfig));
+        }
+
         root.then(Commands.literal("clearnotoriety").requires(CommandFactions::isOp)
                 .executes(ctx -> { WarForgeMod.FACTIONS.clearNotoriety(); return Command.SINGLE_SUCCESS; }));
         root.then(Commands.literal("clearlegacy").requires(CommandFactions::isOp)
@@ -293,6 +298,7 @@ public class CommandFactions {
             src.sendSuccess(() -> Component.literal("/f rename <oldFactionName> <newFactionName>"), false);
             src.sendSuccess(() -> Component.literal("/f flag <factionName> <set <flagId> | reset>"), false);
             src.sendSuccess(() -> Component.literal("/f vein <info|set <vein> [quality]|clear|reroll> [at <chunkX> <chunkZ> [dim] [radius]]"), false);
+            src.sendSuccess(() -> Component.literal("/f reloadConfig"), false);
         }
         return Command.SINGLE_SUCCESS;
     }
@@ -611,6 +617,19 @@ public class CommandFactions {
         else
             src.sendSuccess(() -> Component.literal("Admins can no longer build in protected areas."), false);
         return Command.SINGLE_SUCCESS;
+    }
+
+    private static int doReloadConfig(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        try {
+            String status = WarForgeMod.reloadServerConfig();
+            src.sendSuccess(() -> Component.literal("WarForge config reloaded (" + status + ")"), true);
+            return Command.SINGLE_SUCCESS;
+        } catch (Exception e) {
+            WarForgeMod.LOGGER.error("Failed to reload WarForge config", e);
+            src.sendFailure(Component.literal("Failed to reload WarForge config: " + e.getMessage() + " (see server log)"));
+            return 0;
+        }
     }
 
     private static int doSiegeUsage(CommandContext<CommandSourceStack> ctx) {

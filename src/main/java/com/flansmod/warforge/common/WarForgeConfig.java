@@ -1,9 +1,16 @@
 package com.flansmod.warforge.common;
 
+import com.electronwill.nightconfig.core.CommentedConfig;
+import com.electronwill.nightconfig.core.Config;
+import com.electronwill.nightconfig.core.UnmodifiableConfig;
+import com.electronwill.nightconfig.core.file.CommentedFileConfig;
+import com.electronwill.nightconfig.core.io.WritingMode;
+import com.electronwill.nightconfig.toml.TomlParser;
+import com.electronwill.nightconfig.toml.TomlWriter;
+import com.flansmod.warforge.Tags;
 import com.flansmod.warforge.api.Time;
 import com.flansmod.warforge.api.vein.Quality;
 import com.flansmod.warforge.common.network.PacketSyncConfig;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -13,6 +20,10 @@ import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.registries.ForgeRegistries;
 
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -529,7 +540,7 @@ public class WarForgeConfig {
         FOB_VEHICLE_TICKET_COST_V = cfg.comment("Extra warp ticket cost per vehicle entity, in the form 'namespace:path=extraCost'. A warp with a vehicle costs 1 plus this value.").defineList("FOB Vehicle Ticket Cost", asList(new String[]{}), o -> o instanceof String);
         MIN_DISTANCE_BETWEEN_FACTIONS_V = cfg.comment("Minimum gap, in chunks, that must separate a new claim from an opposing (non-allied) faction's claims. A value of N forbids claiming within N chunks (square radius) of an opposing faction; allied factions are exempt. Set to 0 to disable.").defineInRange("Minimum Distance Between Opposing Factions", MIN_DISTANCE_BETWEEN_FACTIONS, 0, 64);
         CLAIM_MANAGER_RADIUS_V = cfg.comment("Square radius in chunks shown in the claim manager UI.").defineInRange("Claim Manager Radius", CLAIM_MANAGER_RADIUS, 1, 12);
-        ISLAND_COLLECTOR_SLOTS_V = cfg.comment("Number of pull-only storage slots in the faction yield collector block. Shrinking this on an existing world relocates any items that no longer fit into remaining slots.").defineInRange("Island Collector Slot Count", ISLAND_COLLECTOR_SLOTS, 1, 1024);
+        ISLAND_COLLECTOR_SLOTS_V = cfg.comment("Number of pull-only storage slots in the faction yield collector block. Shrinking this on an existing world relocates any items that no longer fit into remaining slots. Only partly hot-reloadable: after /war reloadConfig each already-placed collector keeps its current size until its chunk next reloads.").defineInRange("Island Collector Slot Count", ISLAND_COLLECTOR_SLOTS, 1, 1024);
         ENABLE_OFFLINE_RAID_PROTECTION_V = cfg.comment("If enabled, factions cannot be sieged for a limited period after all their members go offline.").define("Enable Offline Raid Protection", ENABLE_OFFLINE_RAID_PROTECTION);
         OFFLINE_RAID_PROTECTION_HOURS_V = cfg.comment("How many hours a faction remains protected from new sieges after the last member goes offline.").defineInRange("Offline Raid Protection Hours", OFFLINE_RAID_PROTECTION_HOURS, 0, 168);
         ENABLE_SIEGE_GRACE_PERIOD_V = cfg.comment("If enabled, freshly created factions cannot be sieged for a grace period. If a graced faction starts a siege of its own, it forfeits its grace instantly.").define("Enable New Faction Siege Grace", ENABLE_SIEGE_GRACE_PERIOD);
@@ -602,8 +613,8 @@ public class WarForgeConfig {
         VAULT_BLOCK_IDS_V = cfg.comment("The block IDs that count towards the value of your citadel's vault").defineList("Valuable Blocks", asList(VAULT_BLOCK_IDS), o -> o instanceof String);
         FACTION_NAME_LENGTH_MAX_V = cfg.comment("How many characters long can a faction name be.").defineInRange("Max Faction Name Length", FACTION_NAME_LENGTH_MAX, 3, 128);
         FACTION_NAME_BANLIST_V = cfg.comment("Case-insensitive substrings that disallow faction names from being created or renamed.").defineList("Faction Name Banlist", asList(FACTION_NAME_BANLIST), o -> o instanceof String);
-        SHOW_OPPONENT_BORDERS_V = cfg.comment("Turns the in-world border rendering on/off for opponent chunks").define("Show Opponent Chunk Borders", SHOW_OPPONENT_BORDERS);
-        SHOW_ALLY_BORDERS_V = cfg.comment("Turns the in-world border rendering on/off for ally chunks").define("Show Ally Chunk Borders", SHOW_ALLY_BORDERS);
+        SHOW_OPPONENT_BORDERS_V = cfg.comment("Turns the in-world border rendering on/off for opponent chunks. Client-side rendering preference: it is read from each client's own config and is not synced or overridden by the server.").define("Show Opponent Chunk Borders", SHOW_OPPONENT_BORDERS);
+        SHOW_ALLY_BORDERS_V = cfg.comment("Turns the in-world border rendering on/off for ally chunks. Client-side rendering preference: it is read from each client's own config and is not synced or overridden by the server.").define("Show Ally Chunk Borders", SHOW_ALLY_BORDERS);
         BLOCK_ENDER_CHEST_V = cfg.comment("Prevent players from opening ender chests").define("Disable Ender Chest", BLOCK_ENDER_CHEST);
         ENABLE_TPA_POTIONS_V = cfg.comment("Allow players to craft and consume /tpa and /tpaccept style potions").define("Enable TPA Potions", ENABLE_TPA_POTIONS);
         FACTIONS_BOT_CHANNEL_ID_V = cfg.comment("https://github.com/Chikachi/DiscordIntegration/wiki/IMC-Feature").define("Discord Bot Channel ID", Long.toString(FACTIONS_BOT_CHANNEL_ID));
@@ -613,7 +624,7 @@ public class WarForgeConfig {
         cfg.push(CATEGORY_YIELDS);
         String qualityText = "The global multiplier for %s quality veins which all veins fall back to if they do not have an override.";
         YIELD_DAY_LENGTH_V = cfg.comment("The length of time between yields, in real-world seconds.").defineInRange("Yield Day Length", YIELD_DAY_LENGTH, 1, Integer.MAX_VALUE);
-        String tickComment = "If true, this timer advances on server ticks (game time that pauses while the server is stopped or not ticking) instead of real-world wall-clock time. Each timer is independent. Do not change on an existing world that has active factions; stored timestamps are not converted.";
+        String tickComment = "If true, this timer advances on server ticks (game time that pauses while the server is stopped or not ticking) instead of real-world wall-clock time. Each timer is independent. Do not change on an existing world that has active factions; stored timestamps are not converted. NOT safely hot-reloadable: /war reloadConfig will read the new value, but flipping the timebase on a live world mixes tick-time and wall-clock timestamps and corrupts active timers, so only change this with the server stopped.";
         TICK_YIELDS_V = cfg.comment("Passive yield cycle. " + tickComment).define("Tick-Based Yield Timer", TICK_YIELDS);
         TICK_SIEGES_V = cfg.comment("Siege day advance, siege end-timer countdown, siege start cooldown, and conquered-chunk revert. " + tickComment).define("Tick-Based Siege Timers", TICK_SIEGES);
         TICK_MOMENTUM_V = cfg.comment("Siege momentum expiry. " + tickComment).define("Tick-Based Siege Momentum", TICK_MOMENTUM);
@@ -641,7 +652,7 @@ public class WarForgeConfig {
         cfg.pop();
 
         // Client / Visual
-        cfg.push(CATEGORY_CLIENT);
+        cfg.comment("Client-side rendering and HUD preferences. Every setting in this category is read from each client's own config; the server never syncs or overrides them, so on a dedicated server each player controls their own values.").push(CATEGORY_CLIENT);
         SHOW_NEW_AREA_TIMER_V = cfg.comment("How many in-game ticks to show the 'You have entered {faction}' message for.").defineInRange("New Area Timer", (double) SHOW_NEW_AREA_TIMER, 0.0d, 1000d);
         SHOW_YIELD_TIMERS_V = cfg.comment("Whether to show a readout of the time until the next yield / siege in top left of your screen").define("Show yield timers", SHOW_YIELD_TIMERS);
         VEIN_MEMBER_DISPLAY_TIME_MS_V = cfg.comment("The time in milliseconds for which each member of a vein will be displayed when it is being cycled through, to the precision allowed by the client tick system.").defineInRange("Vein Member Display Time", (int) VEIN_MEMBER_DISPLAY_TIME_MS, 100, Integer.MAX_VALUE);
@@ -718,6 +729,90 @@ public class WarForgeConfig {
 
     public static void register() {
         ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
+    }
+
+    public static final Path CONFIG_PATH = Paths.get("config", Tags.MODID + "-common.toml");
+
+    public static void reloadFromDisk() {
+        CommentedFileConfig file = CommentedFileConfig.builder(CONFIG_PATH)
+                .sync()
+                .preserveInsertionOrder()
+                .writingMode(WritingMode.REPLACE)
+                .build();
+        file.load();
+        SPEC.setConfig(file);
+        bake();
+    }
+
+    private static void removeClientOnlyEntries(Config config) {
+        config.remove(Collections.singletonList(CATEGORY_CLIENT));
+        config.remove(Arrays.asList(CATEGORY_GENERAL, "Show Opponent Chunk Borders"));
+        config.remove(Arrays.asList(CATEGORY_GENERAL, "Show Ally Chunk Borders"));
+    }
+
+    public static String buildSyncedConfigToml() {
+        CommentedFileConfig file = CommentedFileConfig.builder(CONFIG_PATH).sync().build();
+        try {
+            file.load();
+            Config values = Config.copy(file);
+            removeClientOnlyEntries(values);
+            StringWriter out = new StringWriter();
+            new TomlWriter().write(values, out);
+            return out.toString();
+        } finally {
+            file.close();
+        }
+    }
+
+    public static void applySyncedConfig(String toml) {
+        CommentedConfig serverValues = new TomlParser().parse(new StringReader(toml));
+
+        CommentedConfig merged;
+        CommentedFileConfig local = CommentedFileConfig.builder(CONFIG_PATH).sync().build();
+        try {
+            local.load();
+            merged = CommentedConfig.copy(local);
+        } finally {
+            local.close();
+        }
+
+        deepMerge(serverValues, merged);
+        SPEC.setConfig(merged);
+        bake();
+        findAllProtectionBlocks();
+    }
+
+    private static void deepMerge(UnmodifiableConfig from, CommentedConfig into) {
+        for (UnmodifiableConfig.Entry entry : from.entrySet()) {
+            List<String> path = Collections.singletonList(entry.getKey());
+            Object value = entry.getValue();
+            if (value instanceof UnmodifiableConfig sub) {
+                Object existing = into.get(path);
+                if (existing instanceof CommentedConfig existingSub) {
+                    deepMerge(sub, existingSub);
+                } else {
+                    into.set(path, CommentedConfig.copy(sub));
+                }
+            } else {
+                into.set(path, value);
+            }
+        }
+    }
+
+    public static void findAllProtectionBlocks() {
+        UNCLAIMED.findBlocks();
+        SAFE_ZONE.findBlocks();
+        WAR_ZONE.findBlocks();
+        CITADEL_FRIEND.findBlocks();
+        CITADEL_FOE.findBlocks();
+        CLAIM_FRIEND.findBlocks();
+        CLAIM_ALLY.findBlocks();
+        CLAIM_FOE.findBlocks();
+        CLAIM_DEFENDED.findBlocks();
+        SIEGED_FRIEND.findBlocks();
+        SIEGED_FOE.findBlocks();
+        WAR_FRIEND.findBlocks();
+        WAR_FOE.findBlocks();
     }
 
     // Copies spec values into the static fields. Invoked on ModConfigEvent.Loading / Reloading.
@@ -918,48 +1013,11 @@ public class WarForgeConfig {
         DEBUG_TRACE_SETBLOCK = DEBUG_TRACE_SETBLOCK_V.get();
     }
 
-    //New system to deal with that config sync
     public static PacketSyncConfig createConfigSyncPacket() {
         var packet = new PacketSyncConfig();
-        var compoundNBT = new CompoundTag();
-        compoundNBT.putBoolean("enableUpgrades", ENABLE_CITADEL_UPGRADES);
-        compoundNBT.putBoolean("newSiegeTimer", SIEGE_ENABLE_NEW_TIMER);
-        compoundNBT.putInt("defenceThreshold", SIEGE_DEFENCE_THRESHOLD);
-        compoundNBT.putInt("maxMomentum", SIEGE_MOMENTUM_MAX);
-        compoundNBT.putInt("timeMomentum", SIEGE_MOMENTUM_DURATION);
-        compoundNBT.putString("momentumMap", SIEGE_MOMENTUM_TIME.toString());
-        compoundNBT.putFloat("poorQualMult", POOR_QUAL_MULT);
-        compoundNBT.putFloat("fairQualMult", FAIR_QUAL_MULT);
-        compoundNBT.putFloat("richQualMult", RICH_QUAL_MULT);
-        compoundNBT.putShort("megachunkLength", VEIN_HANDLER.megachunkLength);
-        compoundNBT.putInt("battleSiegeRadius", SIEGE_BATTLE_RADIUS);
-        compoundNBT.putInt("atkSiegeRadius", SIEGE_ATTACKER_RADIUS);
-        compoundNBT.putInt("defSiegeRadius", SIEGE_DEFENDER_RADIUS);
-        compoundNBT.putBoolean("offlineRaidProtection", ENABLE_OFFLINE_RAID_PROTECTION);
-        compoundNBT.putInt("offlineRaidProtectionHours", OFFLINE_RAID_PROTECTION_HOURS);
-        compoundNBT.putString("insuranceBlacklist", String.join("\n", INSURANCE_BLACKLIST_IDS));
-        compoundNBT.putBoolean("factionPrefixChat", FACTION_PREFIX_IN_CHAT);
-        compoundNBT.putBoolean("factionPrefixTab", FACTION_PREFIX_IN_TABLIST);
-        compoundNBT.putInt("islandCollectorSlots", ISLAND_COLLECTOR_SLOTS);
-        compoundNBT.putInt("jmClaimMode", JOURNEYMAP_CLAIM_MODE);
-        compoundNBT.putInt("jmVeinMode", JOURNEYMAP_VEIN_MODE);
-
-        // The break/place rules + per-zone MineTime settings of the client-determinable zones
-        CompoundTag zones = new CompoundTag();
-        zones.put("unclaimed", UNCLAIMED.writeProtectionSync());
-        zones.put("safe", SAFE_ZONE.writeProtectionSync());
-        zones.put("war", WAR_ZONE.writeProtectionSync());
-        zones.put("citadelFriend", CITADEL_FRIEND.writeProtectionSync());
-        zones.put("citadelFoe", CITADEL_FOE.writeProtectionSync());
-        zones.put("claimFriend", CLAIM_FRIEND.writeProtectionSync());
-        zones.put("claimFoe", CLAIM_FOE.writeProtectionSync());
-        zones.put("siegedFriend", SIEGED_FRIEND.writeProtectionSync());
-        zones.put("siegedFoe", SIEGED_FOE.writeProtectionSync());
-        zones.put("warFriend", WAR_FRIEND.writeProtectionSync());
-        zones.put("warFoe", WAR_FOE.writeProtectionSync());
-        compoundNBT.put("protectionZones", zones);
-
-        packet.configNBT = compoundNBT.toString();
+        packet.configToml = buildSyncedConfigToml();
+        packet.megachunkLength = VEIN_HANDLER.megachunkLength;
+        packet.maxMomentum = SIEGE_MOMENTUM_MAX;
         return packet;
     }
 
@@ -1156,54 +1214,6 @@ public class WarForgeConfig {
                 }
             }
             return output;
-        }
-
-        // Serialises the break/place-relevant subset for the config-sync packet, so the client can run
-        // the same breakDenied()/placeDenied() checks locally and predict MineTime slow-downs and denied
-        // placements without rubber-banding.
-        public CompoundTag writeProtectionSync() {
-            CompoundTag tag = new CompoundTag();
-            tag.putBoolean("break", BREAK_BLOCKS);
-            tag.putBoolean("removal", BLOCK_REMOVAL);
-            tag.putString("bw", String.join("\n", BLOCK_BREAK_WHITELIST_IDS));
-            tag.putString("bb", String.join("\n", BLOCK_BREAK_BLACKLIST_IDS));
-            tag.putBoolean("place", PLACE_BLOCKS);
-            tag.putString("pw", String.join("\n", BLOCK_PLACE_WHITELIST_IDS));
-            tag.putString("pb", String.join("\n", BLOCK_PLACE_BLACKLIST_IDS));
-            tag.putBoolean("mtEnabled", MINETIME_ENABLED);
-            tag.putString("mtMode", MINETIME_MODE);
-            tag.putDouble("mtValue", MINETIME_VALUE);
-            tag.putString("mtWl", String.join("\n", MINETIME_WHITELIST_IDS));
-            tag.putString("mtBl", String.join("\n", MINETIME_BLACKLIST_IDS));
-            return tag;
-        }
-
-        public void readProtectionSync(CompoundTag tag) {
-            BREAK_BLOCKS = tag.getBoolean("break");
-            BLOCK_REMOVAL = tag.getBoolean("removal");
-            String bw = tag.getString("bw");
-            String bb = tag.getString("bb");
-            BLOCK_BREAK_WHITELIST_IDS = bw.isEmpty() ? new String[0] : bw.split("\n");
-            BLOCK_BREAK_BLACKLIST_IDS = bb.isEmpty() ? new String[0] : bb.split("\n");
-            BLOCK_BREAK_WHITELIST = findBlocks(BLOCK_BREAK_WHITELIST_IDS);
-            BLOCK_BREAK_BLACKLIST = findBlocks(BLOCK_BREAK_BLACKLIST_IDS);
-
-            PLACE_BLOCKS = tag.getBoolean("place");
-            String pw = tag.getString("pw");
-            String pb = tag.getString("pb");
-            BLOCK_PLACE_WHITELIST_IDS = pw.isEmpty() ? new String[0] : pw.split("\n");
-            BLOCK_PLACE_BLACKLIST_IDS = pb.isEmpty() ? new String[0] : pb.split("\n");
-            BLOCK_PLACE_WHITELIST = findBlocks(BLOCK_PLACE_WHITELIST_IDS);
-            BLOCK_PLACE_BLACKLIST = findBlocks(BLOCK_PLACE_BLACKLIST_IDS);
-
-            MINETIME_ENABLED = tag.getBoolean("mtEnabled");
-            MINETIME_MODE = tag.getString("mtMode");
-            MINETIME_VALUE = tag.getDouble("mtValue");
-            String mtWl = tag.getString("mtWl");
-            String mtBl = tag.getString("mtBl");
-            MINETIME_WHITELIST_IDS = mtWl.isEmpty() ? new String[0] : mtWl.split("\n");
-            MINETIME_BLACKLIST_IDS = mtBl.isEmpty() ? new String[0] : mtBl.split("\n");
-            mineTime.configure(MINETIME_ENABLED, MINETIME_MODE, MINETIME_VALUE, MINETIME_WHITELIST_IDS, MINETIME_BLACKLIST_IDS);
         }
 
         public void findBlocks() {
