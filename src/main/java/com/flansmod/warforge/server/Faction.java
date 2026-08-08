@@ -1009,11 +1009,17 @@ public class Faction {
         return null;
     }
 
-    // checks all stored claim locations to check if they are siege blocks
     public int calcNumSieges() {
         int result = 0;
-        for (DimBlockPos claimPos : claims.keySet())
-            if (WarForgeMod.FACTIONS.getSieges().get(claimPos) != null) ++result;
+        for (Siege siege : WarForgeMod.FACTIONS.getSieges().values())
+            if (uuid.equals(siege.attackingFaction)) ++result;
+        return result;
+    }
+
+    public int calcNumDefendingSieges() {
+        int result = 0;
+        for (Siege siege : WarForgeMod.FACTIONS.getSieges().values())
+            if (uuid.equals(siege.defendingFaction)) ++result;
         return result;
     }
 

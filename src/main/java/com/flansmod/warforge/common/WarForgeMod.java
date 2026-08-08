@@ -688,7 +688,7 @@ public class WarForgeMod {
                 return;
             }
 
-            if (playerFaction.calcNumSieges() >= WarForgeConfig.MAX_SIEGES) {
+            if (WarForgeConfig.MAX_SIEGES > 0 && playerFaction.calcNumSieges() >= WarForgeConfig.MAX_SIEGES) {
                 player.sendSystemMessage(Component.translatable("warforge.info.too_many_siege_blocks"));
                 event.setCanceled(true);
                 return;

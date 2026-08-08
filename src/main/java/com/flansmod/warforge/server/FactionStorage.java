@@ -2131,6 +2131,11 @@ public class FactionStorage {
             return;
         }
 
+        if (WarForgeConfig.MAX_SIEGES > 0 && attacking.calcNumSieges() >= WarForgeConfig.MAX_SIEGES) {
+            factionOfficer.sendSystemMessage(Component.literal("Your faction already has the maximum number of active sieges (" + WarForgeConfig.MAX_SIEGES + ")"));
+            return;
+        }
+
         // TODO: Verify there aren't existing alliances
 
         if (direction.getZ() == 0 && direction.getX() == 0) {
@@ -2189,6 +2194,11 @@ public class FactionStorage {
 
         if (isSiegeGraceProtected(defending)) {
             factionOfficer.sendSystemMessage(Component.literal("That faction is too new to be sieged. Grace expires in " + TimeHelper.formatTime(defending.siegeGraceUntil - WarForgeMod.graceClock())));
+            return;
+        }
+
+        if (WarForgeConfig.MAX_INCOMING_SIEGES > 0 && defending.calcNumDefendingSieges() >= WarForgeConfig.MAX_INCOMING_SIEGES) {
+            factionOfficer.sendSystemMessage(Component.literal(defending.name + " is already defending against the maximum number of sieges (" + WarForgeConfig.MAX_INCOMING_SIEGES + ")"));
             return;
         }
 
@@ -2259,6 +2269,11 @@ public class FactionStorage {
             return;
         }
 
+        if (WarForgeConfig.MAX_SIEGES > 0 && attacking.calcNumSieges() >= WarForgeConfig.MAX_SIEGES) {
+            officer.sendSystemMessage(Component.literal("Your faction already has the maximum number of active sieges (" + WarForgeConfig.MAX_SIEGES + ")"));
+            return;
+        }
+
         // Same dimension only (the map data and the player are bound to one dimension) and a real,
         // in-range separation between the start-from chunk and the target.
         if (!targetChunk.dim.equals(fromChunk.dim) || !targetChunk.dim.equals(officer.level().dimension())) {
@@ -2298,6 +2313,11 @@ public class FactionStorage {
 
         if (isSiegeGraceProtected(defending)) {
             officer.sendSystemMessage(Component.literal("That faction is too new to be sieged. Grace expires in " + TimeHelper.formatTime(defending.siegeGraceUntil - WarForgeMod.graceClock())));
+            return;
+        }
+
+        if (WarForgeConfig.MAX_INCOMING_SIEGES > 0 && defending.calcNumDefendingSieges() >= WarForgeConfig.MAX_INCOMING_SIEGES) {
+            officer.sendSystemMessage(Component.literal(defending.name + " is already defending against the maximum number of sieges (" + WarForgeConfig.MAX_INCOMING_SIEGES + ")"));
             return;
         }
 

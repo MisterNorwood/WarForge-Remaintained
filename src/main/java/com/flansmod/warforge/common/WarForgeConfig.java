@@ -141,6 +141,7 @@ public class WarForgeConfig {
     public static boolean SIEGE_CAPTURE = false;
     public static int SIEGE_COOLDOWN_FAIL = 30; // in minutes;
     public static int MAX_SIEGES = 3;
+    public static int MAX_INCOMING_SIEGES = 3;
     public static int ATTACKER_DESERTION_TIMER = 180; // in seconds
     public static int DEFENDER_DESERTION_TIMER = 300; // in seconds (5 mins by default)
     public static int ATTACKER_CONQUERED_CHUNK_PERIOD = 3600000; // in ms (one hour by default)
@@ -389,6 +390,7 @@ public class WarForgeConfig {
     private static ForgeConfigSpec.IntValue ATTACK_STRENGTH_SIEGE_CAMP_V;
     private static ForgeConfigSpec.DoubleValue LEECH_PROPORTION_SIEGE_CAMP_V;
     private static ForgeConfigSpec.IntValue MAX_SIEGES_V;
+    private static ForgeConfigSpec.IntValue MAX_INCOMING_SIEGES_V;
     private static ForgeConfigSpec.IntValue ATTACKER_DESERTION_TIMER_V;
     private static ForgeConfigSpec.IntValue DEFENDER_DESERTION_TIMER_V;
     private static ForgeConfigSpec.IntValue ATTACKER_CONQUERED_CHUNK_PERIOD_V;
@@ -562,7 +564,8 @@ public class WarForgeConfig {
         cfg.push(CATEGORY_SIEGES);
         ATTACK_STRENGTH_SIEGE_CAMP_V = cfg.comment("How much attack pressure a siege camp exerts on adjacent enemy claims").defineInRange("Siege Camp Attack Strength", ATTACK_STRENGTH_SIEGE_CAMP, 1, 1024);
         LEECH_PROPORTION_SIEGE_CAMP_V = cfg.comment("What proportion of a claim's yields are leeched when a siege camp is set to leech mode").defineInRange("Siege Camp Leech Proportion", (double) LEECH_PROPORTION_SIEGE_CAMP, 0d, 1d);
-        MAX_SIEGES_V = cfg.comment("How many sieges each faction is allowed to have, with any additional siege camps being unable to be placed by members").defineInRange("Siege Camp Max Count Per Faction", MAX_SIEGES, 1, 1000);
+        MAX_SIEGES_V = cfg.comment("How many concurrent sieges each faction is allowed to open as the attacker, with any additional siege camps being unable to be placed or started by members. Set to 0 for unlimited.").defineInRange("Siege Camp Max Count Per Faction", MAX_SIEGES, 0, 1000);
+        MAX_INCOMING_SIEGES_V = cfg.comment("How many concurrent sieges each faction can be the defender of at once, with any additional sieges against them being blocked. Set to 0 for unlimited.").defineInRange("Incoming Siege Max Count Per Faction", MAX_INCOMING_SIEGES, 0, 1000);
         ATTACKER_DESERTION_TIMER_V = cfg.comment("The number of seconds a siege can idle with no attackers in it before any action occurs. Setting to 0 results in checks being run every tick.").defineInRange("Attacker Desertion Timer [s]", ATTACKER_DESERTION_TIMER, 0, Integer.MAX_VALUE);
         DEFENDER_DESERTION_TIMER_V = cfg.comment("The number of seconds a siege can be undefended before any action occurs. Setting to 0 results in checks being run every tick.").defineInRange("Defender Desertion Timer [s]", DEFENDER_DESERTION_TIMER, 0, Integer.MAX_VALUE);
         ATTACKER_CONQUERED_CHUNK_PERIOD_V = cfg.comment("Milliseconds a chunk stays conquered no-man's-land after attackers win a siege on it: unclaimable by everyone and unprotected (free-build wilderness) until it reverts to normal wilderness. Setting to 0 makes won chunks immediately claimable.").defineInRange("Attacker Conquered Chunk Grace Period [ms]", ATTACKER_CONQUERED_CHUNK_PERIOD, 0, Integer.MAX_VALUE);
@@ -884,6 +887,7 @@ public class WarForgeConfig {
         ATTACK_STRENGTH_SIEGE_CAMP = ATTACK_STRENGTH_SIEGE_CAMP_V.get();
         LEECH_PROPORTION_SIEGE_CAMP = LEECH_PROPORTION_SIEGE_CAMP_V.get().floatValue();
         MAX_SIEGES = MAX_SIEGES_V.get();
+        MAX_INCOMING_SIEGES = MAX_INCOMING_SIEGES_V.get();
         ATTACKER_DESERTION_TIMER = ATTACKER_DESERTION_TIMER_V.get();
         DEFENDER_DESERTION_TIMER = DEFENDER_DESERTION_TIMER_V.get();
         ATTACKER_CONQUERED_CHUNK_PERIOD = ATTACKER_CONQUERED_CHUNK_PERIOD_V.get();
