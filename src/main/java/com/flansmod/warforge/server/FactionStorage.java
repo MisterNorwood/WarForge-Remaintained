@@ -390,6 +390,7 @@ public class FactionStorage {
         b.messageAll(Component.literal("Your faction is now allied with " + a.name + "."));
         sendNotificationToFaction(a, "alliance_formed_" + b.uuid, "Alliance Formed", "Now allied with " + b.name, TOAST_SUCCESS, 6000);
         sendNotificationToFaction(b, "alliance_formed_" + a.uuid, "Alliance Formed", "Now allied with " + a.name, TOAST_SUCCESS, 6000);
+        VanillaTeamSync.syncAllTeams();
     }
 
     public void requestDeclineAlliance(ServerPlayer player, UUID requesterFactionId) {
@@ -440,6 +441,7 @@ public class FactionStorage {
             ally.messageAll(Component.literal(faction.name + " broke your alliance." + truceMsg));
             sendNotificationToFaction(ally, "alliance_broken_" + faction.uuid, "Alliance Broken", faction.name + " broke the alliance", TOAST_DANGER, 6000);
         }
+        VanillaTeamSync.syncAllTeams();
     }
 
     public void requestToggleAllyInteraction(ServerPlayer player) {
@@ -1976,6 +1978,7 @@ public class FactionStorage {
         removeFactionFromAllAlliances(faction.uuid);
         WarForgeMod.CHUNK_LOADING_MANAGER.releaseFaction(faction.uuid);
         LEADERBOARD.UnregisterFaction(faction);
+        VanillaTeamSync.syncAllTeams();
     }
 
     //Use disbandAndCleanup

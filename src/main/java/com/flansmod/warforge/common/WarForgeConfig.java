@@ -171,6 +171,7 @@ public class WarForgeConfig {
     // Alliances
     public static int ALLIANCE_TRUCE_DURATION_MINUTES = 60; // truce length after a broken alliance (0 disables the truce)
     public static int MAX_ALLIES = 10; // maximum simultaneous alliances per faction; -1 for unlimited
+    public static boolean VANILLA_TEAM_SYNC = true;
     public static int NOTORIETY_PER_PLAYER_KILL = 1;
     public static int NOTORIETY_KILL_CAP_PER_PLAYER = 3;
     //public static int NOTORIETY_PER_DRAGON_KILL = 9;
@@ -431,6 +432,7 @@ public class WarForgeConfig {
     // Alliances
     private static ForgeConfigSpec.IntValue ALLIANCE_TRUCE_DURATION_MINUTES_V;
     private static ForgeConfigSpec.IntValue MAX_ALLIES_V;
+    private static ForgeConfigSpec.BooleanValue VANILLA_TEAM_SYNC_V;
 
     // Vault
     private static ForgeConfigSpec.ConfigValue<List<? extends String>> VAULT_BLOCK_IDS_V;
@@ -609,6 +611,7 @@ public class WarForgeConfig {
         cfg.push(CATEGORY_ALLIANCES);
         ALLIANCE_TRUCE_DURATION_MINUTES_V = cfg.comment("When an alliance is broken, both factions enter a truce during which they cannot siege or harm each other. Length in minutes; 0 disables the truce.").defineInRange("Alliance Truce Duration [min]", ALLIANCE_TRUCE_DURATION_MINUTES, 0, 525600);
         MAX_ALLIES_V = cfg.comment("Maximum number of simultaneous alliances a faction may hold. Set to -1 for unlimited.").defineInRange("Max Allies Per Faction", MAX_ALLIES, -1, 1000);
+        VANILLA_TEAM_SYNC_V = cfg.comment("Mirror faction membership onto vanilla scoreboard teams so mods that read vanilla teams (e.g. Superb Warfare turrets) treat faction-mates and allies as friendly. Each alliance group shares one team. Faction members are moved onto WarForge-managed teams; disable if another system manages your players' scoreboard teams.").define("Sync Factions To Vanilla Teams", VANILLA_TEAM_SYNC);
         cfg.pop();
 
         // Vault parameters
@@ -941,6 +944,7 @@ public class WarForgeConfig {
         // Alliances
         ALLIANCE_TRUCE_DURATION_MINUTES = ALLIANCE_TRUCE_DURATION_MINUTES_V.get();
         MAX_ALLIES = MAX_ALLIES_V.get();
+        VANILLA_TEAM_SYNC = VANILLA_TEAM_SYNC_V.get();
 
         // Vault
         VAULT_BLOCK_IDS = toStringArray(VAULT_BLOCK_IDS_V.get());

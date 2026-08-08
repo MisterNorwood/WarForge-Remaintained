@@ -261,6 +261,7 @@ public class Faction {
         onlinePlayerCount = getOnlinePlayers(entityPlayer -> entityPlayer != null).size();
 
         FactionDisplay.refreshTabName(playerID);
+        VanillaTeamSync.syncPlayer(playerID);
     }
 
     // TODO:
@@ -297,6 +298,7 @@ public class Faction {
     public void removePlayer(UUID playerID) {
         members.remove(playerID);
         FactionDisplay.refreshTabName(playerID);
+        VanillaTeamSync.removePlayer(playerID);
     }
 
     public void disband() {

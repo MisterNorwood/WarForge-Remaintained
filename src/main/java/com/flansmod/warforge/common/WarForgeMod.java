@@ -793,6 +793,7 @@ public class WarForgeMod {
 
         FACTIONS.onFactionMemberLoggedIn(player.getUUID());
         FACTIONS.updateAttackerSiegePresence(player);
+        VanillaTeamSync.syncPlayer(player.getUUID());
 
         PacketTimeUpdates packet = new PacketTimeUpdates();
         packet.msUntilNextSiegeDay = timeHelper.getTimeToNextSiegeAdvanceMs();
@@ -916,6 +917,7 @@ public class WarForgeMod {
         CHUNK_LOADING_MANAGER.refreshAllFactions(FACTIONS.getAllFactions());
         // Veins are loaded by now; recompute vein-based wealth for all loaded factions.
         FACTIONS.recalculateAllWealth();
+        VanillaTeamSync.syncAllTeams();
     }
 
     @SubscribeEvent
