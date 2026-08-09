@@ -19,9 +19,11 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.phys.BlockHitResult;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 public class BlockIslandCollector extends Block implements EntityBlock {
     public BlockIslandCollector() {
@@ -45,8 +47,21 @@ public class BlockIslandCollector extends Block implements EntityBlock {
         DimBlockPos collectorPos = new DimBlockPos(world.dimension(), pos);
         boolean success = WarForgeMod.FACTIONS.registerCollector(player, collectorPos);
         if (!success) {
-            world.destroyBlock(pos, true);
+            world.removeBlock(pos, false);
+            if (!player.isCreative()) {
+                ItemStack refund = new ItemStack(this);
+                if (!player.getInventory().add(refund)) {
+                    player.drop(refund, false);
+                } else {
+                    player.inventoryMenu.broadcastChanges();
+                }
+            }
         }
+    }
+
+    @Override
+    public List<ItemStack> getDrops(BlockState state, LootParams.Builder params) {
+        return List.of(new ItemStack(this));
     }
 
     @Override

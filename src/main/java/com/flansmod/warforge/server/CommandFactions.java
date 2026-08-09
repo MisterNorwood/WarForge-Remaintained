@@ -243,6 +243,16 @@ public class CommandFactions {
         root.then(Commands.literal("msg")
                 .then(Commands.argument("message", StringArgumentType.greedyString()).executes(CommandFactions::doMsg)));
 
+        root.then(Commands.literal("ally")
+                .then(Commands.literal("chat")
+                        .then(Commands.argument("message", StringArgumentType.greedyString()).executes(CommandFactions::doAllyMsg)))
+                .then(Commands.literal("msg")
+                        .then(Commands.argument("message", StringArgumentType.greedyString()).executes(CommandFactions::doAllyMsg))));
+        root.then(Commands.literal("allychat")
+                .then(Commands.argument("message", StringArgumentType.greedyString()).executes(CommandFactions::doAllyMsg)));
+        root.then(Commands.literal("ac")
+                .then(Commands.argument("message", StringArgumentType.greedyString()).executes(CommandFactions::doAllyMsg)));
+
         // tpa / tprequest / tp <player> - request to teleport to another player
         for (String alias : new String[]{"tpa", "tprequest", "tp"}) {
             root.then(Commands.literal(alias)
@@ -291,6 +301,7 @@ public class CommandFactions {
         src.sendSuccess(() -> Component.literal("/f borders"), false);
         src.sendSuccess(() -> Component.literal("/f tpa <playerName>"), false);
         src.sendSuccess(() -> Component.literal("/f tpaccept | tpdeny [playerName]"), false);
+        src.sendSuccess(() -> Component.literal("/f ally chat <message>"), false);
         src.sendSuccess(() -> Component.literal("/f vault redeem"), false);
         if (isOp(src)) {
             src.sendSuccess(() -> Component.literal("/f offlineprotection <faction> <enable|disable|status>"), false);
@@ -851,6 +862,20 @@ public class CommandFactions {
                 String msg = "§a[" + src.getTextName() + " > Faction]§f " + StringArgumentType.getString(ctx, "message");
                 faction.messageAll(Component.literal(msg));
             }
+        }
+        return Command.SINGLE_SUCCESS;
+    }
+
+    private static int doAllyMsg(CommandContext<CommandSourceStack> ctx) {
+        CommandSourceStack src = ctx.getSource();
+        if (src.getEntity() instanceof Player player) {
+            Faction faction = WarForgeMod.FACTIONS.getFactionOfPlayer(player.getUUID());
+            if (faction == null) {
+                src.sendFailure(Component.literal("You are not in a faction"));
+                return Command.SINGLE_SUCCESS;
+            }
+            String msg = "§b[" + src.getTextName() + " (" + faction.name + ") > Ally]§f " + StringArgumentType.getString(ctx, "message");
+            WarForgeMod.FACTIONS.messageAlliance(faction, Component.literal(msg));
         }
         return Command.SINGLE_SUCCESS;
     }

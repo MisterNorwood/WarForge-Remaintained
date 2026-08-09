@@ -458,6 +458,28 @@ public class FactionStorage {
                 TOAST_INFO, 5000);
     }
 
+    public void messageAlliance(Faction origin, Component chat) {
+        if (origin == null) {
+            return;
+        }
+        Set<UUID> visited = new HashSet<>();
+        Deque<UUID> queue = new ArrayDeque<>();
+        visited.add(origin.uuid);
+        queue.add(origin.uuid);
+        while (!queue.isEmpty()) {
+            Faction faction = getFaction(queue.poll());
+            if (faction == null) {
+                continue;
+            }
+            faction.messageAll(chat);
+            for (UUID allyId : faction.allies) {
+                if (getFaction(allyId) != null && visited.add(allyId)) {
+                    queue.add(allyId);
+                }
+            }
+        }
+    }
+
     public static boolean IsNeutralZone(UUID factionID) {
         return factionID.equals(SAFE_ZONE_ID) || factionID.equals(WAR_ZONE_ID);
     }

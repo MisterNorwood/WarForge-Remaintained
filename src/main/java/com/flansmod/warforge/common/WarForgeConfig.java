@@ -170,7 +170,7 @@ public class WarForgeConfig {
 
     // Alliances
     public static int ALLIANCE_TRUCE_DURATION_MINUTES = 60; // truce length after a broken alliance (0 disables the truce)
-    public static int MAX_ALLIES = 10; // maximum simultaneous alliances per faction; -1 for unlimited
+    public static int MAX_ALLIES = 2; // maximum simultaneous alliances per faction; -1 for unlimited
     public static boolean VANILLA_TEAM_SYNC = true;
     public static int NOTORIETY_PER_PLAYER_KILL = 1;
     public static int NOTORIETY_KILL_CAP_PER_PLAYER = 3;
