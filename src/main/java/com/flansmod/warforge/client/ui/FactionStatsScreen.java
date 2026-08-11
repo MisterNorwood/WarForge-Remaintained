@@ -45,9 +45,11 @@ public final class FactionStatsScreen {
 
         UIElement root = new UIElement();
         UIElement body = WarForgeUiTheme.frame(root, 320, stripeColor);
+        Button close = WarForgeUiTheme.closeButton();
+        close.setOnClick(event -> Minecraft.getInstance().setScreen(null));
 
         if (!hasFaction) {
-            body.addChild(WarForgeUiTheme.header("Faction Stats"));
+            body.addChild(WarForgeUiTheme.header("Faction Stats", close));
             UIElement empty = WarForgeUiTheme.section();
             empty.addChild(WarForgeUiTheme.text("No faction information is available.", WarForgeUiTheme.TEXT_SECONDARY));
             body.addChild(empty);
@@ -55,7 +57,7 @@ public final class FactionStatsScreen {
             return;
         }
 
-        body.addChild(WarForgeUiTheme.header("Faction Stats", info.factionName, info.colour));
+        body.addChild(WarForgeUiTheme.header("Faction Stats", info.factionName, info.colour, close));
 
         int total = info.notoriety + info.wealth + info.legacy;
         int claimLimit = WarForgeMod.UPGRADE_HANDLER.getClaimLimitForLevel(info.lvl);

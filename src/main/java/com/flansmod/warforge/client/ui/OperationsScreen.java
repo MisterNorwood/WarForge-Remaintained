@@ -37,8 +37,10 @@ public final class OperationsScreen {
 
         UIElement root = new UIElement();
         UIElement body = WarForgeUiTheme.frame(root, WIDTH, data != null && data.hasFaction ? data.factionColor : 0x4A4A4A);
+        Button close = WarForgeUiTheme.closeButton();
+        close.setOnClick(event -> Minecraft.getInstance().setScreen(null));
 
-        body.addChild(WarForgeUiTheme.header("War Room"));
+        body.addChild(WarForgeUiTheme.header("War Room", close));
 
         if (data == null || !data.hasFaction) {
             UIElement noDataSection = WarForgeUiTheme.section();

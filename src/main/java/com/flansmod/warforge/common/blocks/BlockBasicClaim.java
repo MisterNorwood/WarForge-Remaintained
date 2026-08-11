@@ -172,7 +172,13 @@ public class BlockBasicClaim extends MultiBlockColumn implements EntityBlock, IM
         UIElement content = com.flansmod.warforge.api.modularui.WarForgeUiTheme.frame(root, 260);
 
         if (holder.player.level().getBlockEntity(holder.pos) instanceof TileEntityBasicClaim claim) {
-            content.addChild(com.flansmod.warforge.api.modularui.WarForgeUiTheme.header(claim.getClaimDisplayName()));
+            Button close = com.flansmod.warforge.api.modularui.WarForgeUiTheme.closeButton();
+            close.setOnServerClick(event -> {
+                if (holder.player instanceof ServerPlayer sp) {
+                    sp.closeContainer();
+                }
+            });
+            content.addChild(com.flansmod.warforge.api.modularui.WarForgeUiTheme.header(claim.getClaimDisplayName(), close));
 
             UIElement yieldsSection = com.flansmod.warforge.api.modularui.WarForgeUiTheme.section();
             yieldsSection.addChild(com.flansmod.warforge.api.modularui.WarForgeUiTheme.boldText("Yields", com.flansmod.warforge.api.modularui.WarForgeUiTheme.TEXT_PRIMARY));

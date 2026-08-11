@@ -7,6 +7,7 @@ import com.lowdragmc.lowdraglib2.gui.factory.BlockUIMenuType;
 import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
 import com.lowdragmc.lowdraglib2.gui.ui.UI;
 import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.Button;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.ItemSlot;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.inventory.InventorySlots;
 import dev.vfyjxf.taffy.style.FlexDirection;
@@ -120,7 +121,13 @@ public class BlockIslandCollector extends Block implements EntityBlock, BlockUIM
             String factionLabel = hasFaction ? collector.factionName : "Unclaimed";
             int colour = hasFaction ? collector.colour : 0xC7CCD1;
 
-            body.addChild(com.flansmod.warforge.api.modularui.WarForgeUiTheme.header("Faction Yield Storage", factionLabel, colour));
+            Button close = com.flansmod.warforge.api.modularui.WarForgeUiTheme.closeButton();
+            close.setOnServerClick(event -> {
+                if (holder.player instanceof ServerPlayer sp) {
+                    sp.closeContainer();
+                }
+            });
+            body.addChild(com.flansmod.warforge.api.modularui.WarForgeUiTheme.header("Faction Yield Storage", factionLabel, colour, close));
 
             IItemHandlerModifiable storage = collector.getStorageHandler();
             int slots = storage.getSlots();
@@ -141,7 +148,7 @@ public class BlockIslandCollector extends Block implements EntityBlock, BlockUIM
             body.addChild(section);
         }
 
-        body.addChild(new InventorySlots());
+        body.addChild(com.flansmod.warforge.api.modularui.WarForgeUiTheme.inventoryPanel(new InventorySlots()));
         return ModularUI.of(UI.of(root), holder.player);
     }
 }

@@ -22,6 +22,8 @@ public final class WFNetwork {
         PayloadRegistrar r = event.registrar("1");
         reg(r, PacketCreateFaction.TYPE, PacketCreateFaction.STREAM_CODEC);
         reg(r, PacketOpenCreateFaction.TYPE, PacketOpenCreateFaction.STREAM_CODEC);
+        reg(r, PacketOpenFlagSelect.TYPE, PacketOpenFlagSelect.STREAM_CODEC);
+        reg(r, PacketOpenRecolour.TYPE, PacketOpenRecolour.STREAM_CODEC);
         reg(r, PacketRequestFactionInfo.TYPE, PacketRequestFactionInfo.STREAM_CODEC);
         reg(r, PacketFactionInfo.TYPE, PacketFactionInfo.STREAM_CODEC);
         reg(r, PacketSiegeCampInfo.TYPE, PacketSiegeCampInfo.STREAM_CODEC);

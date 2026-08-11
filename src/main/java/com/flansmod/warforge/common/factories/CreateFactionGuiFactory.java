@@ -22,4 +22,9 @@ public final class CreateFactionGuiFactory {
     public void openCreateScreen() {
         CreateFactionScreen.open();
     }
+
+    @OnlyIn(Dist.CLIENT)
+    public void openRecolourScreen(int colour) {
+        CreateFactionScreen.openRecolour(colour);
+    }
 }

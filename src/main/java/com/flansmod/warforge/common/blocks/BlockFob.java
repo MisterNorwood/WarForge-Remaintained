@@ -1,5 +1,6 @@
 package com.flansmod.warforge.common.blocks;
 
+import com.flansmod.warforge.api.modularui.WarForgeUiTheme;
 import com.flansmod.warforge.common.Content;
 import com.flansmod.warforge.common.WarForgeConfig;
 import com.flansmod.warforge.common.WarForgeMod;
@@ -22,6 +23,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
@@ -119,18 +121,24 @@ public class BlockFob extends Block implements EntityBlock, BlockUIMenuType.Bloc
     @Override
     public ModularUI createUI(BlockUIMenuType.BlockUIHolder holder) {
         UIElement root = new UIElement();
-        UIElement body = com.flansmod.warforge.api.modularui.WarForgeUiTheme.frame(root, 280);
-        body.addChild(com.flansmod.warforge.api.modularui.WarForgeUiTheme.header("Forward Operating Base"));
+        UIElement body = WarForgeUiTheme.frame(root, 280);
+        Button close = WarForgeUiTheme.closeButton();
+        close.setOnServerClick(event -> {
+            if (holder.player instanceof ServerPlayer sp) {
+                sp.closeContainer();
+            }
+        });
+        body.addChild(com.flansmod.warforge.api.modularui.WarForgeUiTheme.header("Forward Operating Base", close));
 
         BlockEntity be = holder.player.level().getBlockEntity(holder.pos);
         if (be instanceof TileEntityFob fob) {
             boolean established = !fob.ownerFaction.equals(new UUID(0, 0)) && !fob.name.isEmpty();
             if (established) {
-                UIElement section = com.flansmod.warforge.api.modularui.WarForgeUiTheme.section();
-                section.addChild(com.flansmod.warforge.api.modularui.WarForgeUiTheme.text("FOB: " + fob.name, com.flansmod.warforge.api.modularui.WarForgeUiTheme.TEXT_PRIMARY));
-                section.addChild(com.flansmod.warforge.api.modularui.WarForgeUiTheme.text("Tickets: " + fob.tickets, com.flansmod.warforge.api.modularui.WarForgeUiTheme.TEXT_SECONDARY));
+                UIElement section = WarForgeUiTheme.section();
+                section.addChild(WarForgeUiTheme.text("FOB: " + fob.name, WarForgeUiTheme.TEXT_PRIMARY));
+                section.addChild(WarForgeUiTheme.text("Tickets: " + fob.tickets, WarForgeUiTheme.TEXT_SECONDARY));
                 Button warpBtn = new Button().setText("Warp to FOB");
-                com.flansmod.warforge.api.modularui.WarForgeUiTheme.styleButton(warpBtn, 100);
+               WarForgeUiTheme.styleButton(warpBtn, 100);
                 warpBtn.setOnServerClick(event -> {
                     if (holder.player instanceof ServerPlayer sp) {
                         DimBlockPos dpos = new DimBlockPos(sp.level().dimension(), holder.pos);
@@ -143,7 +151,7 @@ public class BlockFob extends Block implements EntityBlock, BlockUIMenuType.Bloc
                 section.addChild(warpBtn);
                 body.addChild(section);
             } else {
-                body.addChild(com.flansmod.warforge.api.modularui.WarForgeUiTheme.text("This FOB is not established.", com.flansmod.warforge.api.modularui.WarForgeUiTheme.TEXT_MUTED));
+                body.addChild(WarForgeUiTheme.text("This FOB is not established.", com.flansmod.warforge.api.modularui.WarForgeUiTheme.TEXT_MUTED));
             }
         }
 
@@ -151,7 +159,7 @@ public class BlockFob extends Block implements EntityBlock, BlockUIMenuType.Bloc
     }
 
     @Override
-    public float getDestroyProgress(BlockState state, Player player, net.minecraft.world.level.BlockGetter world, BlockPos pos) {
+    public float getDestroyProgress(BlockState state, Player player, BlockGetter world, BlockPos pos) {
         if (!WarForgeConfig.FOB_BLOCK_BREAKABLE) {
             return 0.0F;
         }

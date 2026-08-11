@@ -49,11 +49,13 @@ public final class FlagSelectScreen {
 
         UIElement root = new UIElement();
         UIElement body = WarForgeUiTheme.frame(root, GRID_W, factionColour);
+        Button close = WarForgeUiTheme.closeButton();
+        close.setOnClick(event -> Minecraft.getInstance().setScreen(null));
 
         if (!factionName.isEmpty()) {
-            body.addChild(WarForgeUiTheme.header("Faction Flag", factionName, factionColour));
+            body.addChild(WarForgeUiTheme.header("Faction Flag", factionName, factionColour, close));
         } else {
-            body.addChild(WarForgeUiTheme.header("Faction Flag"));
+            body.addChild(WarForgeUiTheme.header("Faction Flag", close));
         }
 
         String statusText = canChoose

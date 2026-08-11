@@ -5,8 +5,11 @@ import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.api.modularui.WarForgeUiTheme;
 import com.flansmod.warforge.common.factories.CitadelGuiFactory;
 import com.flansmod.warforge.common.factories.FactionMemberManagerGuiData;
+import com.flansmod.warforge.common.network.PacketDisbandFaction;
 import com.flansmod.warforge.common.network.PacketFactionInfo;
 import com.flansmod.warforge.common.network.PacketOpenCreateFaction;
+import com.flansmod.warforge.common.network.PacketOpenFlagSelect;
+import com.flansmod.warforge.common.network.PacketOpenRecolour;
 import com.flansmod.warforge.common.network.PacketRequestInsurance;
 import com.flansmod.warforge.common.network.PacketRequestMemberData;
 import com.flansmod.warforge.common.network.PacketRequestUpgradeUI;
@@ -21,6 +24,8 @@ import com.lowdragmc.lowdraglib2.gui.ui.elements.inventory.InventorySlots;
 import dev.vfyjxf.taffy.style.FlexDirection;
 import dev.vfyjxf.taffy.style.FlexWrap;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import com.flansmod.warforge.common.util.DimChunkPos;
 import com.flansmod.warforge.server.Faction;
 import com.flansmod.warforge.server.FactionStorage;
@@ -187,7 +192,13 @@ public class BlockCitadel extends MultiBlockColumn implements EntityBlock, IMult
             String title = hasFaction ? citadel.getClaimDisplayName() : "Unclaimed Citadel";
             String subtitle = hasFaction ? "Faction vault, banner relay, and command center"
                     : "Claimed by the placer until a faction is founded";
-            content.addChild(WarForgeUiTheme.header(title, subtitle, WarForgeUiTheme.TEXT_SECONDARY));
+            Button close = WarForgeUiTheme.closeButton();
+            close.setOnServerClick(event -> {
+                if (holder.player instanceof ServerPlayer sp) {
+                    sp.closeContainer();
+                }
+            });
+            content.addChild(WarForgeUiTheme.header(title, subtitle, WarForgeUiTheme.TEXT_SECONDARY, close));
 
             UIElement vault = WarForgeUiTheme.section();
             vault.addChild(WarForgeUiTheme.boldText("Yield Storage", WarForgeUiTheme.TEXT_PRIMARY));
@@ -198,6 +209,29 @@ public class BlockCitadel extends MultiBlockColumn implements EntityBlock, IMult
             }
             vault.addChild(grid);
             content.addChild(vault);
+
+            UIElement flagSection = WarForgeUiTheme.section();
+            flagSection.addChild(WarForgeUiTheme.boldText("Faction Flag", WarForgeUiTheme.TEXT_PRIMARY));
+            if (!citadel.factionFlagId.isEmpty()) {
+                if (holder.player.level().isClientSide) {
+                    addFlagPreview(flagSection, citadel.factionFlagId);
+                }
+            } else if (hasFaction) {
+                flagSection.addChild(WarForgeUiTheme.text("Choose once. This cannot be changed later.", WarForgeUiTheme.TEXT_MUTED));
+                Button chooseFlag = new Button().setText("Choose Flag");
+                WarForgeUiTheme.styleButton(chooseFlag, 100);
+                chooseFlag.setOnServerClick(event -> {
+                    if (holder.player instanceof ServerPlayer sp) {
+                        PacketOpenFlagSelect pkt = new PacketOpenFlagSelect();
+                        pkt.factionId = faction.uuid;
+                        WarForgeMod.NETWORK.sendTo(pkt, sp);
+                    }
+                });
+                flagSection.addChild(chooseFlag);
+            } else {
+                flagSection.addChild(WarForgeUiTheme.text("Create a faction first.", WarForgeUiTheme.TEXT_MUTED));
+            }
+            content.addChild(flagSection);
 
             UIElement actionsSection = WarForgeUiTheme.section();
             actionsSection.addChild(WarForgeUiTheme.boldText("Command Surface", WarForgeUiTheme.TEXT_PRIMARY));
@@ -254,6 +288,27 @@ public class BlockCitadel extends MultiBlockColumn implements EntityBlock, IMult
                     });
                     actions.addChild(upgradeBtn);
                 }
+
+                Button recolorBtn = new Button().setText("Recolor");
+                WarForgeUiTheme.styleButton(recolorBtn, 70);
+                recolorBtn.setOnServerClick(event -> {
+                    if (holder.player instanceof ServerPlayer sp) {
+                        PacketOpenRecolour pkt = new PacketOpenRecolour();
+                        pkt.colour = citadel.colour;
+                        WarForgeMod.NETWORK.sendTo(pkt, sp);
+                    }
+                });
+                actions.addChild(recolorBtn);
+
+                Button disbandBtn = new Button().setText("Disband");
+                WarForgeUiTheme.styleButton(disbandBtn, 70, WarForgeUiTheme.DANGER_FILL);
+                disbandBtn.setOnServerClick(event -> {
+                    if (holder.player instanceof ServerPlayer sp) {
+                        new PacketDisbandFaction().handleServerSide(sp);
+                        sp.closeContainer();
+                    }
+                });
+                actions.addChild(disbandBtn);
             } else {
                 Button createBtn = new Button().setText("Create Faction");
                 WarForgeUiTheme.styleButton(createBtn, 100);
@@ -270,8 +325,15 @@ public class BlockCitadel extends MultiBlockColumn implements EntityBlock, IMult
             content.addChild(actionsSection);
         }
 
-        content.addChild(new InventorySlots());
+        content.addChild(WarForgeUiTheme.inventoryPanel(new InventorySlots()));
         return ModularUI.of(UI.of(root), holder.player);
+    }
+
+    @OnlyIn(Dist.CLIENT)
+    private void addFlagPreview(UIElement parent, String flagId) {
+        com.flansmod.warforge.client.util.FlagElement flag = new com.flansmod.warforge.client.util.FlagElement(flagId);
+        flag.layout(l -> l.width(42).height(24));
+        parent.addChild(flag);
     }
 
     @Override

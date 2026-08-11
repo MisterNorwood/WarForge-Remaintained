@@ -6,7 +6,10 @@ import com.lowdragmc.lowdraglib2.gui.texture.IGuiTexture;
 import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.Button;
 import com.lowdragmc.lowdraglib2.gui.ui.elements.Label;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.inventory.InventorySlots;
+import dev.vfyjxf.taffy.style.AlignItems;
 import dev.vfyjxf.taffy.style.FlexDirection;
+import dev.vfyjxf.taffy.style.FlexWrap;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
@@ -64,17 +67,48 @@ public final class WarForgeUiTheme {
     }
 
     public static UIElement header(String title) {
-        UIElement header = new UIElement();
-        header.layout(l -> l.flexDirection(FlexDirection.COLUMN).widthStretch().paddingHorizontal(8).paddingVertical(6).gapRow(2).marginBottom(2));
-        header.style(s -> s.background(borderedFill(HEADER_FILL, HEADER_BORDER)));
-        header.addChild(boldText(title, TEXT_PRIMARY));
-        return header;
+        return header(title, null, 0, null);
     }
 
     public static UIElement header(String title, String subtitle, int subtitleColor) {
-        UIElement header = header(title);
-        header.addChild(boldText(subtitle, subtitleColor));
+        return header(title, subtitle, subtitleColor, null);
+    }
+
+    public static UIElement header(String title, UIElement closeButton) {
+        return header(title, null, 0, closeButton);
+    }
+
+    public static UIElement header(String title, String subtitle, int subtitleColor, UIElement closeButton) {
+        UIElement header = new UIElement();
+        header.layout(l -> l.flexDirection(FlexDirection.ROW).widthStretch().paddingHorizontal(8).paddingVertical(6).gapColumn(6).marginBottom(2).alignItems(AlignItems.CENTER));
+        header.style(s -> s.background(borderedFill(HEADER_FILL, HEADER_BORDER)));
+
+        UIElement titles = new UIElement();
+        titles.layout(l -> l.flexDirection(FlexDirection.COLUMN).flexGrow(1).gapRow(2));
+        titles.addChild(boldText(title, TEXT_PRIMARY));
+        if (subtitle != null) {
+            titles.addChild(boldText(subtitle, subtitleColor));
+        }
+        header.addChild(titles);
+
+        if (closeButton != null) {
+            header.addChild(closeButton);
+        }
         return header;
+    }
+
+    public static Button closeButton() {
+        Button button = new Button().setText("X");
+        button.layout(l -> l.width(16).height(16));
+        button.style(s -> s.background(borderedFill(DANGER_FILL, BUTTON_BORDER)));
+        return button;
+    }
+
+    public static UIElement inventoryPanel(InventorySlots inventory) {
+        UIElement section = section();
+        inventory.layout(l -> l.widthStretch());
+        section.addChild(inventory);
+        return section;
     }
 
     public static UIElement section() {
@@ -86,7 +120,7 @@ public final class WarForgeUiTheme {
 
     public static UIElement row(int gap) {
         UIElement row = new UIElement();
-        row.layout(l -> l.flexDirection(FlexDirection.ROW).gapColumn(gap));
+        row.layout(l -> l.flexDirection(FlexDirection.ROW).flexWrap(FlexWrap.WRAP).widthStretch().gapColumn(gap).gapRow(gap));
         return row;
     }
 

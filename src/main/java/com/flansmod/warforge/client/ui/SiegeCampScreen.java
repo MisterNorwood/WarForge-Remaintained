@@ -18,6 +18,7 @@ import com.lowdragmc.lowdraglib2.gui.holder.ModularUIScreen;
 import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
 import com.lowdragmc.lowdraglib2.gui.ui.UI;
 import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.Button;
 import com.lowdragmc.lowdraglib2.gui.ui.event.UIEventListener;
 import com.lowdragmc.lowdraglib2.gui.ui.event.UIEvents;
 import dev.vfyjxf.taffy.style.FlexDirection;
@@ -95,7 +96,9 @@ public final class SiegeCampScreen {
         WarForgeUiTheme.panel(root);
         UIElement body = root;
 
-        body.addChild(WarForgeUiTheme.header("Siege Target Map"));
+        Button close = WarForgeUiTheme.closeButton();
+        close.setOnClick(event -> Minecraft.getInstance().setScreen(null));
+        body.addChild(WarForgeUiTheme.header("Siege Target Map", close));
         body.addChild(WarForgeUiTheme.text(
                 "Camp [" + centerChunk.x + ", " + centerChunk.z + "] | Dim " + dimName + " | Radius " + RADIUS,
                 WarForgeUiTheme.TEXT_SECONDARY));

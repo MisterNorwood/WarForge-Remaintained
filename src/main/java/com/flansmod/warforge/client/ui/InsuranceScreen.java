@@ -38,9 +38,11 @@ public final class InsuranceScreen {
                 ? data.factionColor
                 : 0x4A4A4A;
         UIElement body = WarForgeUiTheme.frame(root, WIDTH, stripeColor);
+        Button close = WarForgeUiTheme.closeButton();
+        close.setOnClick(event -> Minecraft.getInstance().setScreen(null));
 
         if (!data.hasFaction || data.factionId.equals(Faction.nullUuid)) {
-            body.addChild(WarForgeUiTheme.header("Insurance Stash"));
+            body.addChild(WarForgeUiTheme.header("Insurance Stash", close));
             UIElement empty = WarForgeUiTheme.section();
             empty.addChild(WarForgeUiTheme.text("No insurance stash is available.", WarForgeUiTheme.TEXT_SECONDARY));
             body.addChild(empty);
@@ -48,7 +50,7 @@ public final class InsuranceScreen {
             return;
         }
 
-        body.addChild(WarForgeUiTheme.header("Insurance Stash", data.factionName, data.factionColor));
+        body.addChild(WarForgeUiTheme.header("Insurance Stash", data.factionName, data.factionColor, close));
 
         List<ItemStack> stacks = data.stacks;
         boolean canWithdraw = data.canWithdraw;

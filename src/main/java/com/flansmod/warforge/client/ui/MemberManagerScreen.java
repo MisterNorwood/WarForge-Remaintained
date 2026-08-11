@@ -43,6 +43,8 @@ public final class MemberManagerScreen {
         UIElement root = new UIElement();
         int stripeColor = data.hasFaction ? (data.factionColor & 0xFFFFFF) : 0x4A4A4A;
         UIElement body = WarForgeUiTheme.frame(root, WIDTH, stripeColor);
+        Button close = WarForgeUiTheme.closeButton();
+        close.setOnClick(event -> Minecraft.getInstance().setScreen(null));
 
         if (data.hasFaction) {
             int roleColor = switch (data.viewerRole) {
@@ -50,9 +52,9 @@ public final class MemberManagerScreen {
                 case OFFICER -> 0x55E3FF;
                 default -> 0xFFFFFF;
             };
-            body.addChild(WarForgeUiTheme.header("Faction Members", data.factionName + " | Role: " + formatRole(data.viewerRole), roleColor));
+            body.addChild(WarForgeUiTheme.header("Faction Members", data.factionName + " | Role: " + formatRole(data.viewerRole), roleColor, close));
         } else {
-            body.addChild(WarForgeUiTheme.header("Faction Members"));
+            body.addChild(WarForgeUiTheme.header("Faction Members", close));
             UIElement noFactionRow = WarForgeUiTheme.row(4);
             noFactionRow.addChild(WarForgeUiTheme.text("You are not currently in a faction", WarForgeUiTheme.TEXT_SECONDARY));
             body.addChild(noFactionRow);

@@ -38,8 +38,10 @@ public final class FactionUpgradeScreen {
 
         UIElement root = new UIElement();
         UIElement body = WarForgeUiTheme.frame(root, 320, data.color & 0xFFFFFF);
+        Button close = WarForgeUiTheme.closeButton();
+        close.setOnClick(event -> Minecraft.getInstance().setScreen(null));
 
-        body.addChild(WarForgeUiTheme.header("Citadel Upgrade", data.mFactionName, data.color & 0xFFFFFF));
+        body.addChild(WarForgeUiTheme.header("Citadel Upgrade", data.mFactionName, data.color & 0xFFFFFF, close));
 
         UIElement infoSection = WarForgeUiTheme.section();
         infoSection.addChild(WarForgeUiTheme.boldText("Current Level: " + data.level, WarForgeUiTheme.TEXT_PRIMARY));

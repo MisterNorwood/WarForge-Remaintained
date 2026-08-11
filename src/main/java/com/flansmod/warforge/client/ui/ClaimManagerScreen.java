@@ -126,7 +126,9 @@ public final class ClaimManagerScreen {
         UIElement body = root;
 
         String titleText = startPickMode ? "Choose Siege Origin" : targetMode ? "Select Siege Target" : "Territory Map";
-        body.addChild(WarForgeUiTheme.header(titleText));
+        Button close = WarForgeUiTheme.closeButton();
+        close.setOnClick(event -> Minecraft.getInstance().setScreen(null));
+        body.addChild(WarForgeUiTheme.header(titleText, close));
 
         body.addChild(WarForgeUiTheme.text(
                 "Center [" + center.x + ", " + center.z + "] | Radius " + radius + " | Dim " + center.dim.location(),
