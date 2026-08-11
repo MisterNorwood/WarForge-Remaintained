@@ -3,6 +3,7 @@ package com.flansmod.warforge.common.blocks;
 import com.flansmod.warforge.common.Content;
 import com.flansmod.warforge.common.WarForgeMod;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -63,8 +64,8 @@ public class TileEntityDummy extends BlockEntity implements IBlockDummy {
     }//Primitive but sufficent for the time tbh
 
     @Override
-    public void saveAdditional(CompoundTag compound) {
-        super.saveAdditional(compound);
+    public void saveAdditional(CompoundTag compound, HolderLookup.Provider registries) {
+        super.saveAdditional(compound, registries);
         compound.putBoolean("laser", canRenderLaser);
         compound.putFloat("r", laserRGB[0]);
         compound.putFloat("g", laserRGB[1]);
@@ -94,8 +95,8 @@ public class TileEntityDummy extends BlockEntity implements IBlockDummy {
     }
 
     @Override
-    public void load(CompoundTag compound) {
-        super.load(compound);
+    protected void loadAdditional(CompoundTag compound, HolderLookup.Provider registries) {
+        super.loadAdditional(compound, registries);
         canRenderLaser = compound.getBoolean("laser");
         laserRGB[0] = compound.getFloat("r");
         laserRGB[1] = compound.getFloat("g");
@@ -112,13 +113,13 @@ public class TileEntityDummy extends BlockEntity implements IBlockDummy {
     }
 
     @Override
-    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet) {
-        handleUpdateTag(packet.getTag());
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet, HolderLookup.Provider registries) {
+        handleUpdateTag(packet.getTag(), registries);
     }
 
     @Override
-    public CompoundTag getUpdateTag() {
-        CompoundTag tags = super.getUpdateTag();
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        CompoundTag tags = super.getUpdateTag(registries);
         tags.putBoolean("laser", canRenderLaser);
         tags.putFloat("r", laserRGB[0]);
         tags.putFloat("g", laserRGB[1]);
@@ -130,29 +131,12 @@ public class TileEntityDummy extends BlockEntity implements IBlockDummy {
     }
 
     @Override
-    public void handleUpdateTag(CompoundTag tags) {
+    public void handleUpdateTag(CompoundTag tags, HolderLookup.Provider registries) {
         canRenderLaser = tags.getBoolean("laser");
         laserRGB[0] = tags.getFloat("r");
         laserRGB[1] = tags.getFloat("g");
         laserRGB[2] = tags.getFloat("b");
         masterPos = BlockPos.of(tags.getLong("master"));
-    }
-
-    @Override
-    public AABB getRenderBoundingBox() {
-        if (canRenderLaser) {
-            BlockPos pos = getBlockPos();
-            double poleTop = pos.getY() + PoleGeometry.BASE_TRANSLATE;
-            if (masterPos != null) {
-                float poleLength = TileEntityClaim.DEFAULT_POLE_LENGTH;
-                if (level != null && level.getBlockEntity(masterPos) instanceof TileEntityClaim claim) {
-                    poleLength = claim.getPoleLength();
-                }
-                poleTop = masterPos.getY() + PoleGeometry.topOffset(poleLength);
-            }
-            return new AABB(pos.getX(), poleTop, pos.getZ(), pos.getX() + 1, 257, pos.getZ() + 1);
-        }
-        return super.getRenderBoundingBox();
     }
 
 }

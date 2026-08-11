@@ -8,7 +8,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -171,7 +171,7 @@ public final class MineTime {
                 String regex = Pattern.quote(pattern).replace("\\*", "\\E.*\\Q");
                 Pattern compiled = Pattern.compile(regex);
                 return block -> {
-                    ResourceLocation id = ForgeRegistries.BLOCKS.getKey(block);
+                    ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
                     return id != null && compiled.matcher(id.toString()).matches();
                 };
             }
@@ -181,7 +181,7 @@ public final class MineTime {
                 WarForgeMod.LOGGER.warn("MineTime: invalid block pattern '{}'", raw);
                 return null;
             }
-            return block -> exact.equals(ForgeRegistries.BLOCKS.getKey(block));
+            return block -> exact.equals(BuiltInRegistries.BLOCK.getKey(block));
         }
     }
 }

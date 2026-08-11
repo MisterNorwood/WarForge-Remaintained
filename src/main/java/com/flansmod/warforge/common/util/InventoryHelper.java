@@ -1,7 +1,7 @@
 package com.flansmod.warforge.common.util;
 
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.IItemHandler;
+import net.neoforged.neoforge.items.IItemHandler;
 
 /**
  * Adds access to the InventoryPlayer stack combination methods for arbitrary inventories
@@ -71,7 +71,7 @@ public class InventoryHelper
 			if(!oldStack.isEmpty() && oldStack.getItem() == stack.getItem() &&
 					oldStack.isStackable() && oldStack.getCount() < oldStack.getMaxStackSize() &&
 					oldStack.getCount() < inventory.getSlotLimit(i) &&
-					ItemStack.isSameItemSameTags(oldStack, stack))
+					ItemStack.isSameItemSameComponents(oldStack, stack))
 			{
 				return i;
 			}

@@ -24,7 +24,7 @@ import org.joml.Matrix4f;
 
 public final class PoleFlagRenderer {
 
-    private static final ResourceLocation POLE_MODEL = new ResourceLocation(Tags.MODID, "block/pole");
+    private static final net.minecraft.client.resources.model.ModelResourceLocation POLE_MODEL = net.minecraft.client.resources.model.ModelResourceLocation.standalone(ResourceLocation.fromNamespaceAndPath(Tags.MODID, "block/pole"));
 
     private static final int WAVE_SEGMENTS = 8;
     private static final float WAVE_AMPLITUDE = 0.12F;
@@ -70,11 +70,11 @@ public final class PoleFlagRenderer {
         RandomSource random = RandomSource.create();
         for (Direction dir : Direction.values()) {
             for (BakedQuad quad : bakedModel.getQuads(dummyState, dir, random)) {
-                consumer.putBulkData(isShaftQuad(quad) ? shaftPose : basePose, quad, 1.0F, 1.0F, 1.0F, poleLight, packedOverlay);
+                consumer.putBulkData(isShaftQuad(quad) ? shaftPose : basePose, quad, 1.0F, 1.0F, 1.0F, 1.0F, poleLight, packedOverlay);
             }
         }
         for (BakedQuad quad : bakedModel.getQuads(dummyState, null, random)) {
-            consumer.putBulkData(isShaftQuad(quad) ? shaftPose : basePose, quad, 1.0F, 1.0F, 1.0F, poleLight, packedOverlay);
+            consumer.putBulkData(isShaftQuad(quad) ? shaftPose : basePose, quad, 1.0F, 1.0F, 1.0F, 1.0F, poleLight, packedOverlay);
         }
         pose.popPose();
 
@@ -119,8 +119,6 @@ public final class PoleFlagRenderer {
         float time = WAVE_SPEED * ((float) (level.getGameTime() % 100000L) + partialTicks);
 
         VertexConsumer flag = buffers.getBuffer(RenderType.entityCutout(flagTexture));
-        Matrix4f mat = pose.last().pose();
-        Matrix3f norm = pose.last().normal();
 
         float x0 = ANCHOR_X;
         float dx = bannerWidth / WAVE_SEGMENTS;
@@ -134,8 +132,8 @@ public final class PoleFlagRenderer {
             float za = wave(time, seg);
             float zb = wave(time, seg + 1);
 
-            quad(flag, mat, norm, xa, xb, za, zb, ua, ub, bannerTop, bannerBottom, packedLight, packedOverlay, true);
-            quad(flag, mat, norm, xa, xb, za, zb, ua, ub, bannerTop, bannerBottom, packedLight, packedOverlay, false);
+            quad(flag, pose.last(), xa, xb, za, zb, ua, ub, bannerTop, bannerBottom, packedLight, packedOverlay, true);
+            quad(flag, pose.last(), xa, xb, za, zb, ua, ub, bannerTop, bannerBottom, packedLight, packedOverlay, false);
         }
     }
 
@@ -143,22 +141,22 @@ public final class PoleFlagRenderer {
         return WAVE_AMPLITUDE * Mth.sin(time + seg * WAVE_FREQUENCY) * seg / WAVE_SEGMENTS;
     }
 
-    private static void quad(VertexConsumer c, Matrix4f mat, Matrix3f norm,
+    private static void quad(VertexConsumer c, com.mojang.blaze3d.vertex.PoseStack.Pose pose,
                              float xa, float xb, float za, float zb, float ua, float ub,
                              float bannerTop, float bannerBottom,
                              int packedLight, int packedOverlay, boolean front) {
         float nz = front ? 1.0F : -1.0F;
         float z = front ? 0.005F : -0.005F;
         if (front) {
-            c.vertex(mat, xa, bannerTop, za + z).color(255, 255, 255, 255).uv(ua, 0.0F).overlayCoords(packedOverlay).uv2(packedLight).normal(norm, 0.0F, 0.0F, nz).endVertex();
-            c.vertex(mat, xa, bannerBottom, za + z).color(255, 255, 255, 255).uv(ua, 1.0F).overlayCoords(packedOverlay).uv2(packedLight).normal(norm, 0.0F, 0.0F, nz).endVertex();
-            c.vertex(mat, xb, bannerBottom, zb + z).color(255, 255, 255, 255).uv(ub, 1.0F).overlayCoords(packedOverlay).uv2(packedLight).normal(norm, 0.0F, 0.0F, nz).endVertex();
-            c.vertex(mat, xb, bannerTop, zb + z).color(255, 255, 255, 255).uv(ub, 0.0F).overlayCoords(packedOverlay).uv2(packedLight).normal(norm, 0.0F, 0.0F, nz).endVertex();
+            c.addVertex(pose, xa, bannerTop, za + z).setColor(255, 255, 255, 255).setUv(ua, 0.0F).setOverlay(packedOverlay).setLight(packedLight).setNormal(pose, 0.0F, 0.0F, nz);
+            c.addVertex(pose, xa, bannerBottom, za + z).setColor(255, 255, 255, 255).setUv(ua, 1.0F).setOverlay(packedOverlay).setLight(packedLight).setNormal(pose, 0.0F, 0.0F, nz);
+            c.addVertex(pose, xb, bannerBottom, zb + z).setColor(255, 255, 255, 255).setUv(ub, 1.0F).setOverlay(packedOverlay).setLight(packedLight).setNormal(pose, 0.0F, 0.0F, nz);
+            c.addVertex(pose, xb, bannerTop, zb + z).setColor(255, 255, 255, 255).setUv(ub, 0.0F).setOverlay(packedOverlay).setLight(packedLight).setNormal(pose, 0.0F, 0.0F, nz);
         } else {
-            c.vertex(mat, xb, bannerTop, zb + z).color(255, 255, 255, 255).uv(ub, 0.0F).overlayCoords(packedOverlay).uv2(packedLight).normal(norm, 0.0F, 0.0F, nz).endVertex();
-            c.vertex(mat, xb, bannerBottom, zb + z).color(255, 255, 255, 255).uv(ub, 1.0F).overlayCoords(packedOverlay).uv2(packedLight).normal(norm, 0.0F, 0.0F, nz).endVertex();
-            c.vertex(mat, xa, bannerBottom, za + z).color(255, 255, 255, 255).uv(ua, 1.0F).overlayCoords(packedOverlay).uv2(packedLight).normal(norm, 0.0F, 0.0F, nz).endVertex();
-            c.vertex(mat, xa, bannerTop, za + z).color(255, 255, 255, 255).uv(ua, 0.0F).overlayCoords(packedOverlay).uv2(packedLight).normal(norm, 0.0F, 0.0F, nz).endVertex();
+            c.addVertex(pose, xb, bannerTop, zb + z).setColor(255, 255, 255, 255).setUv(ub, 0.0F).setOverlay(packedOverlay).setLight(packedLight).setNormal(pose, 0.0F, 0.0F, nz);
+            c.addVertex(pose, xb, bannerBottom, zb + z).setColor(255, 255, 255, 255).setUv(ub, 1.0F).setOverlay(packedOverlay).setLight(packedLight).setNormal(pose, 0.0F, 0.0F, nz);
+            c.addVertex(pose, xa, bannerBottom, za + z).setColor(255, 255, 255, 255).setUv(ua, 1.0F).setOverlay(packedOverlay).setLight(packedLight).setNormal(pose, 0.0F, 0.0F, nz);
+            c.addVertex(pose, xa, bannerTop, za + z).setColor(255, 255, 255, 255).setUv(ua, 0.0F).setOverlay(packedOverlay).setLight(packedLight).setNormal(pose, 0.0F, 0.0F, nz);
         }
     }
 }

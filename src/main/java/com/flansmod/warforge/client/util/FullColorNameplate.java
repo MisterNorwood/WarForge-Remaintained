@@ -22,7 +22,7 @@ public class FullColorNameplate {
      */
     public static void drawNameplate(Font font, Component name, Entity entity, PoseStack pose, MultiBufferSource buffers, int verticalShift, boolean isSneaking, int color, int darker, int packedLight) {
         pose.pushPose();
-        pose.translate(0.0F, entity.getNameTagOffsetY(), 0.0F);
+        pose.translate(0.0F, entity.getBbHeight() + 0.5F, 0.0F);
         pose.mulPose(Minecraft.getInstance().getEntityRenderDispatcher().cameraOrientation());
         pose.scale(-0.025F, -0.025F, 0.025F);
 

@@ -5,6 +5,7 @@ import com.flansmod.warforge.common.WarForgeConfig;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
@@ -13,10 +14,10 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.storage.LevelResource;
-import net.minecraftforge.server.ServerLifecycleHooks;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -56,27 +57,24 @@ public class CombatLogHandler {
         GameProfile profile = server.getProfileCache().get(playerUUID).orElse(null);
         if (profile == null) return;
 
-        File worldDir = server.getWorldPath(LevelResource.ROOT).toFile();
-        File playerDataFile = new File(worldDir, "playerdata/" + playerUUID + ".dat");
+        Path worldDir = server.getWorldPath(LevelResource.ROOT);
+        Path playerDataFile = worldDir.resolve("playerdata/" + playerUUID + ".dat");
 
-        if (playerDataFile.exists() && playerDataFile.isFile()) {
+        if (playerDataFile.toFile().exists() && playerDataFile.toFile().isFile()) {
             try {
-                CompoundTag playerData = NbtIo.readCompressed(playerDataFile);
+                CompoundTag playerData = NbtIo.readCompressed(playerDataFile, NbtAccounter.unlimitedHeap());
                 if (playerData != null) {
                     ListTag inventoryList = playerData.getList("Inventory", Tag.TAG_COMPOUND).copy();
                     DimBlockPos logoffPos = player.logoffPos;
                     ServerLevel world = server.getLevel(logoffPos.dim);
 
-                    // Clear inventory data
                     playerData.put("Inventory", new ListTag());
 
-                    // Save modified player data
                     NbtIo.writeCompressed(playerData, playerDataFile);
 
-                    // Go through every tag and drop it
                     for (int i = 0; i < inventoryList.size(); i++) {
                         CompoundTag itemCompound = inventoryList.getCompound(i);
-                        ItemStack stack = ItemStack.of(itemCompound);
+                        ItemStack stack = ItemStack.parseOptional(server.registryAccess(), itemCompound);
 
                         ItemEntity entityItem = new ItemEntity(world, logoffPos.getX(), logoffPos.getY(), logoffPos.getZ(), stack);
                         world.addFreshEntity(entityItem);

@@ -4,18 +4,14 @@ import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.Tags;
 
 import com.flansmod.warforge.common.network.SyncQueueHandler;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.TickEvent.ServerTickEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 public class ServerTickHandler
 {
 	@SubscribeEvent
-	public void OnTick(ServerTickEvent tick) {
-		// for some reason, ticks may occur with 0ms between them. A tick timer is more useful for distinguishing whether an update has occurred
-		if (tick.phase == TickEvent.Phase.END) {
-			WarForgeMod.gameTimeMs += 50L;
-		}
+	public void OnTick(ServerTickEvent.Post tick) {
+		WarForgeMod.gameTimeMs += 50L;
 		WarForgeMod.INSTANCE.updateServer();
 		WarForgeMod.NETWORK.handleServerPackets();
 		WarForgeMod.PROTECTIONS.UpdateServer();

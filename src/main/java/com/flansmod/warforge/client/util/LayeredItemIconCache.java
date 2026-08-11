@@ -9,13 +9,11 @@ import net.minecraft.client.renderer.texture.SpriteContents;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.Direction;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.model.data.ModelData;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nullable;
 import java.awt.Graphics2D;
@@ -53,7 +51,7 @@ public final class LayeredItemIconCache {
 
         NativeImage native_ = toNativeImage(baked);
         Minecraft mc = Minecraft.getInstance();
-        ResourceLocation location = new ResourceLocation(Tags.MODID, "generated/vein/" + Integer.toUnsignedString(key.hashCode()));
+        ResourceLocation location = ResourceLocation.fromNamespaceAndPath(Tags.MODID, "generated/vein/" + Integer.toUnsignedString(key.hashCode()));
         mc.getTextureManager().register(location, new DynamicTexture(native_));
         CACHE.put(key, location);
         return location;
@@ -98,9 +96,9 @@ public final class LayeredItemIconCache {
         List<Layer> ordered = new ArrayList<>();
         Set<String> seen = new LinkedHashSet<>();
 
-        collectLayers(ordered, seen, model.getQuads(null, null, rand, ModelData.EMPTY, null), stack, mc);
+        collectLayers(ordered, seen, model.getQuads(null, null, rand), stack, mc);
         for (Direction facing : Direction.values()) {
-            collectLayers(ordered, seen, model.getQuads(null, facing, rand, ModelData.EMPTY, null), stack, mc);
+            collectLayers(ordered, seen, model.getQuads(null, facing, rand), stack, mc);
         }
 
         TextureAtlasSprite particle = model.getParticleIcon();
@@ -230,10 +228,7 @@ public final class LayeredItemIconCache {
     private static String makeKey(ItemStack stack) {
         StringBuilder builder = new StringBuilder();
         builder.append(stack.getItem().builtInRegistryHolder().key().location());
-        CompoundTag tag = stack.getTag();
-        if (tag != null) {
-            builder.append('#').append(tag);
-        }
+        builder.append('#').append(stack.getComponentsPatch());
         return builder.toString();
     }
 

@@ -1,13 +1,19 @@
 package com.flansmod.warforge.common.blocks;
 
-import brachy.modularui.factory.BlockEntityUIFactory;
 import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.common.util.DimBlockPos;
 import com.flansmod.warforge.server.Faction;
+import com.lowdragmc.lowdraglib2.gui.factory.BlockUIMenuType;
+import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
+import com.lowdragmc.lowdraglib2.gui.ui.UI;
+import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.ItemSlot;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.inventory.InventorySlots;
+import dev.vfyjxf.taffy.style.FlexDirection;
+import dev.vfyjxf.taffy.style.FlexWrap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Containers;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -21,11 +27,13 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.phys.BlockHitResult;
+import net.neoforged.neoforge.items.IItemHandlerModifiable;
+import net.neoforged.neoforge.items.SlotItemHandler;
 
 import javax.annotation.Nullable;
 import java.util.List;
 
-public class BlockIslandCollector extends Block implements EntityBlock {
+public class BlockIslandCollector extends Block implements EntityBlock, BlockUIMenuType.BlockUI {
     public BlockIslandCollector() {
         super(BlockBehaviour.Properties.of()
                 .strength(4.0F, 20.0F)
@@ -81,7 +89,7 @@ public class BlockIslandCollector extends Block implements EntityBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    public InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult hit) {
         if (world.isClientSide) {
             return InteractionResult.SUCCESS;
         }
@@ -93,9 +101,47 @@ public class BlockIslandCollector extends Block implements EntityBlock {
                 return InteractionResult.SUCCESS;
             }
             WarForgeMod.syncClaimToPlayer(player, pos);
-            BlockEntityUIFactory.INSTANCE.open(player, pos);
+            if (player instanceof ServerPlayer serverPlayer) {
+                BlockUIMenuType.openUI(serverPlayer, pos);
+            }
             return InteractionResult.SUCCESS;
         }
         return InteractionResult.PASS;
+    }
+
+    @Override
+    public ModularUI createUI(BlockUIMenuType.BlockUIHolder holder) {
+        UIElement root = new UIElement();
+        UIElement body = com.flansmod.warforge.api.modularui.WarForgeUiTheme.frame(root, 200);
+
+        BlockEntity be = holder.player.level().getBlockEntity(holder.pos);
+        if (be instanceof TileEntityIslandCollector collector) {
+            boolean hasFaction = !collector.getFaction().equals(Faction.nullUuid);
+            String factionLabel = hasFaction ? collector.factionName : "Unclaimed";
+            int colour = hasFaction ? collector.colour : 0xC7CCD1;
+
+            body.addChild(com.flansmod.warforge.api.modularui.WarForgeUiTheme.header("Faction Yield Storage", factionLabel, colour));
+
+            IItemHandlerModifiable storage = collector.getStorageHandler();
+            int slots = storage.getSlots();
+            UIElement grid = new UIElement();
+            grid.layout(l -> l.flexDirection(FlexDirection.ROW).flexWrap(FlexWrap.WRAP).width(180));
+            for (int i = 0; i < slots; i++) {
+                grid.addChild(new ItemSlot()
+                        .bind(new SlotItemHandler(storage, i, 0, 0) {
+                            @Override
+                            public boolean mayPlace(ItemStack stack) {
+                                return false;
+                            }
+                        })
+                        .layout(l -> l.width(18).height(18)));
+            }
+            UIElement section = com.flansmod.warforge.api.modularui.WarForgeUiTheme.section();
+            section.addChild(grid);
+            body.addChild(section);
+        }
+
+        body.addChild(new InventorySlots());
+        return ModularUI.of(UI.of(root), holder.player);
     }
 }

@@ -4,7 +4,8 @@ import com.flansmod.warforge.common.WarForgeConfig;
 import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.common.util.DimBlockPos;
 import com.flansmod.warforge.server.TeleportUtil;
-import com.flansmod.warforge.server.WfTeleporter;
+import net.minecraft.world.level.portal.DimensionTransition;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -29,7 +30,7 @@ public class FobWarpQueue {
         if (vehicle == null) {
             return 0;
         }
-        String id = net.minecraftforge.registries.ForgeRegistries.ENTITY_TYPES.getKey(vehicle.getType()).toString();
+        String id = net.minecraft.core.registries.BuiltInRegistries.ENTITY_TYPE.getKey(vehicle.getType()).toString();
         Integer extra = WarForgeConfig.FOB_VEHICLE_TICKET_COST.get(id);
         return extra == null ? 0 : Math.max(0, extra);
     }
@@ -53,7 +54,9 @@ public class FobWarpQueue {
 
         Entity movedVehicle = vehicle;
         if (!movedVehicle.level().dimension().equals(target.dim)) {
-            movedVehicle = movedVehicle.changeDimension(targetLevel, new WfTeleporter());
+            movedVehicle = movedVehicle.changeDimension(new DimensionTransition(targetLevel,
+                    new Vec3(x, y, z), movedVehicle.getDeltaMovement(),
+                    movedVehicle.getYRot(), movedVehicle.getXRot(), DimensionTransition.DO_NOTHING));
         }
         if (movedVehicle == null) {
             return;
@@ -66,7 +69,9 @@ public class FobWarpQueue {
             }
             Entity moved = passenger;
             if (!moved.level().dimension().equals(target.dim)) {
-                moved = moved.changeDimension(targetLevel, new WfTeleporter());
+                moved = moved.changeDimension(new DimensionTransition(targetLevel,
+                        new Vec3(x, y, z), moved.getDeltaMovement(),
+                        moved.getYRot(), moved.getXRot(), DimensionTransition.DO_NOTHING));
             }
             if (moved != null) {
                 moved.moveTo(x, y, z, moved.getYRot(), moved.getXRot());

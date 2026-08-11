@@ -107,7 +107,7 @@ public final class ClientFlagRegistry {
                 return;
             }
             NativeImage nativeImage = bufferedImageToNativeImage(image);
-            ResourceLocation location = new ResourceLocation(Tags.MODID, "dynamic/flag/" + Integer.toUnsignedString(flagId.hashCode()));
+            ResourceLocation location = ResourceLocation.fromNamespaceAndPath(Tags.MODID, "dynamic/flag/" + Integer.toUnsignedString(flagId.hashCode()));
             Minecraft.getInstance().getTextureManager().register(location, new DynamicTexture(nativeImage));
             textures.put(flagId, location);
             dimensions.put(flagId, new int[]{width, height});
@@ -128,7 +128,7 @@ public final class ClientFlagRegistry {
                 nativeImage.setPixelRGBA(x, y, argbToAbgr(argbPixel));
             }
         }
-        ResourceLocation location = new ResourceLocation(Tags.MODID, "dynamic/flag/default_" + name.toLowerCase(Locale.ROOT));
+        ResourceLocation location = ResourceLocation.fromNamespaceAndPath(Tags.MODID, "dynamic/flag/default_" + name.toLowerCase(Locale.ROOT));
         Minecraft.getInstance().getTextureManager().register(location, new DynamicTexture(nativeImage));
         textures.put(flagId, location);
         dimensions.put(flagId, new int[]{DEFAULT_FLAG_SIZE, DEFAULT_FLAG_SIZE});

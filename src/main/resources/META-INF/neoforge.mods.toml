@@ -1,5 +1,5 @@
 modLoader="javafml"
-loaderVersion="[47,)"
+loaderVersion="[1,)"
 license="All Rights Reserved"
 issueTrackerURL="https://github.com/Warfactory-Offical/WarForge-Remaintained/issues"
 
@@ -23,30 +23,30 @@ config="mixins.${mod_id}.json"
 config="mixins.${mod_id}.compat.json"
 
 [[dependencies.${mod_id}]]
-    modId="forge"
-    mandatory=true
-    versionRange="[47,)"
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1.1,22)"
     ordering="NONE"
     side="BOTH"
 
 [[dependencies.${mod_id}]]
     modId="minecraft"
-    mandatory=true
-    versionRange="[1.20.1,1.21)"
+    type="required"
+    versionRange="[1.21.1,1.22)"
     ordering="NONE"
     side="BOTH"
 
-# Optional integrations (re-enabled in Phase F once 1.20.1 coordinates are pinned).
+# LDLib2 — UI framework (replaces ModularUI). TODO(UI phase): confirm exact modId and make type="required".
 [[dependencies.${mod_id}]]
-    modId="modularui"
-    mandatory=false
+    modId="ldlib2"
+    type="optional"
     versionRange="*"
     ordering="AFTER"
     side="BOTH"
 
 [[dependencies.${mod_id}]]
     modId="journeymap"
-    mandatory=false
+    type="optional"
     versionRange="*"
     ordering="AFTER"
     side="CLIENT"

@@ -8,7 +8,6 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import javax.annotation.Nullable;
 
@@ -59,10 +58,10 @@ public sealed interface ItemMatcher permits ItemMatcher.OfItem, ItemMatcher.OfTa
         int last = itemId.lastIndexOf(':');
         String stripped = (last != itemId.indexOf(':')) ? itemId.substring(0, last) : itemId;
         ResourceLocation rl = ResourceLocation.tryParse(stripped);
-        if (rl == null || !ForgeRegistries.ITEMS.containsKey(rl)) {
+        if (rl == null || !BuiltInRegistries.ITEM.containsKey(rl)) {
             return null;
         }
-        return new OfItem(ForgeRegistries.ITEMS.getValue(rl));
+        return new OfItem(BuiltInRegistries.ITEM.get(rl));
     }
 
     /** Build a tag matcher; null if the id is not a valid resource location. */
@@ -115,7 +114,7 @@ public sealed interface ItemMatcher permits ItemMatcher.OfItem, ItemMatcher.OfTa
 
         @Override
         public String id() {
-            return ForgeRegistries.ITEMS.getKey(item).toString();
+            return BuiltInRegistries.ITEM.getKey(item).toString();
         }
 
         @Override

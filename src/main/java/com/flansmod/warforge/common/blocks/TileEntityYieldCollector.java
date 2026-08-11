@@ -11,12 +11,13 @@ import com.flansmod.warforge.common.util.InventoryHelper;
 import com.flansmod.warforge.server.Faction;
 import com.flansmod.warforge.server.ItemMatcher;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.items.IItemHandlerModifiable;
+import net.neoforged.neoforge.items.IItemHandlerModifiable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -139,26 +140,23 @@ public abstract class TileEntityYieldCollector extends TileEntityClaim implement
 	}
 
 	@Override
-	public void saveAdditional(CompoundTag nbt) {
-		super.saveAdditional(nbt);
+	public void saveAdditional(CompoundTag nbt, HolderLookup.Provider registries) {
+		super.saveAdditional(nbt, registries);
 
 		// Write all our stacks out
 		for(int i = 0; i < NUM_YIELD_STACKS; i++) {
-			CompoundTag yieldStackTags = new CompoundTag();
-			yieldStacks[i].save(yieldStackTags);
-			nbt.put("yield_" + i, yieldStackTags);
+			nbt.put("yield_" + i, yieldStacks[i].saveOptional(registries));
 		}
 	}
 
 
 	@Override
-	public void load(CompoundTag nbt) {
-		super.load(nbt);
+	protected void loadAdditional(CompoundTag nbt, HolderLookup.Provider registries) {
+		super.loadAdditional(nbt, registries);
 
-		// Read inventory, or as much as we can find
 		for(int i = 0; i < NUM_YIELD_STACKS; i++) {
 			if(nbt.contains("yield_" + i))
-				yieldStacks[i] = ItemStack.of(nbt.getCompound("yield_" + i));
+				yieldStacks[i] = ItemStack.parseOptional(registries, nbt.getCompound("yield_" + i));
 			else
 				yieldStacks[i] = ItemStack.EMPTY;
 		}
@@ -201,7 +199,7 @@ public abstract class TileEntityYieldCollector extends TileEntityClaim implement
 		int limit = Math.min(getSlotLimit(index), stack.getMaxStackSize());
 
 		if(!existing.isEmpty()) {
-			if(!ItemStack.isSameItemSameTags(existing, stack)) {
+			if(!ItemStack.isSameItemSameComponents(existing, stack)) {
 				return stack;
 			}
 			limit -= existing.getCount();

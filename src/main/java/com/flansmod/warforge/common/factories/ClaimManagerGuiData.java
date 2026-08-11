@@ -1,6 +1,5 @@
 package com.flansmod.warforge.common.factories;
 
-import brachy.modularui.factory.GuiData;
 import com.flansmod.warforge.common.network.ClaimChunkInfo;
 import com.flansmod.warforge.common.network.PacketClaimChunksData;
 import com.flansmod.warforge.common.util.DimChunkPos;
@@ -13,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class ClaimManagerGuiData extends GuiData {
+public class ClaimManagerGuiData {
     public final ResourceKey<Level> dim;
     public final int centerX;
     public final int centerZ;
@@ -28,7 +27,6 @@ public class ClaimManagerGuiData extends GuiData {
     public final List<ClaimChunkInfo> chunks;
 
     public ClaimManagerGuiData(Player player, DimChunkPos center, int radius, int pageX, int pageZ) {
-        super(player);
         this.dim = center.dim;
         this.centerX = center.x;
         this.centerZ = center.z;
@@ -44,7 +42,6 @@ public class ClaimManagerGuiData extends GuiData {
     }
 
     public ClaimManagerGuiData(Player player, PacketClaimChunksData packet, int pageX, int pageZ) {
-        super(player);
         this.dim = packet.dim;
         this.centerX = packet.centerX;
         this.centerZ = packet.centerZ;

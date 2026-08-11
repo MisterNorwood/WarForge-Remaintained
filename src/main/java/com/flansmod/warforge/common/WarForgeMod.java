@@ -7,6 +7,7 @@ import com.flansmod.warforge.api.vein.Vein;
 import com.flansmod.warforge.api.vein.init.VeinConfigHandler;
 import com.flansmod.warforge.api.vein.init.VeinUtils;
 import com.flansmod.warforge.client.ClientProxy;
+import com.flansmod.warforge.client.WarForgeClientInit;
 import com.flansmod.warforge.client.PlayerNametagCache;
 import com.flansmod.warforge.common.factories.WarForgeGuiFactories;
 import com.flansmod.warforge.common.blocks.BlockBasicClaim;
@@ -43,32 +44,31 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.LevelResource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.RegisterCommandsEvent;
-import net.minecraftforge.event.ServerChatEvent;
-import net.minecraftforge.event.entity.living.LivingDeathEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickBlock;
-import net.minecraftforge.event.level.BlockEvent;
-import net.minecraftforge.event.level.ChunkWatchEvent;
-import net.minecraftforge.event.level.LevelEvent;
-import net.minecraftforge.event.server.ServerAboutToStartEvent;
-import net.minecraftforge.event.server.ServerStartedEvent;
-import net.minecraftforge.event.server.ServerStoppingEvent;
-import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.event.config.ModConfigEvent;
-import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraftforge.registries.ForgeRegistries;
-import net.minecraftforge.server.ServerLifecycleHooks;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.config.ModConfigEvent;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.ServerChatEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent.RightClickBlock;
+import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.ChunkWatchEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
+import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -139,38 +139,33 @@ public class WarForgeMod {
     public static boolean showBorders = true;
     public static TimeHelper timeHelper = new TimeHelper();
 
-    public WarForgeMod() {
+    public WarForgeMod(IEventBus modBus, ModContainer modContainer) {
         INSTANCE = this;
         LOGGER = LogManager.getLogger(Tags.MODID);
-        proxy = DistExecutor.unsafeRunForDist(
-                () -> ClientProxy::new,
-                () -> CommonProxy::new
-        );
+        proxy = FMLEnvironment.dist == Dist.CLIENT
+                ? ((java.util.function.Supplier<CommonProxy>) ClientProxy::new).get()
+                : new CommonProxy();
 
         timestampOfFirstDay = System.currentTimeMillis();
         numberOfSiegeDaysTicked = 0L;
         numberOfYieldDaysTicked = 0L;
 
-        IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
         Content.register(modBus);
         Sounds.register(modBus);
         POTIONS.register(modBus);
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, WarForgeConfig.SPEC);
+        modContainer.registerConfig(ModConfig.Type.COMMON, WarForgeConfig.SPEC);
         modBus.addListener(this::commonSetup);
         modBus.addListener((ModConfigEvent event) -> WarForgeConfig.bake());
         modBus.addListener(WarForgeCapabilities::register);
-        DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-            NAMETAG_CACHE = new PlayerNametagCache(60_000, 200);
-            modBus.register(new ModelEventHandler());
-            modBus.addListener(((ClientProxy) proxy)::clientSetup);
-            modBus.addListener(((ClientProxy) proxy)::registerRenderers);
-            modBus.addListener(((ClientProxy) proxy)::registerKeyMappings);
-        });
+        CHUNK_LOADING_MANAGER.initialize(modBus);
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            WarForgeClientInit.init(modBus);
+        }
 
-        MinecraftForge.EVENT_BUS.register(this);
-        MinecraftForge.EVENT_BUS.register(new ServerTickHandler());
-        MinecraftForge.EVENT_BUS.register(PROTECTIONS);
-        MinecraftForge.EVENT_BUS.register(new SpawnModule());
+        NeoForge.EVENT_BUS.register(this);
+        NeoForge.EVENT_BUS.register(new ServerTickHandler());
+        NeoForge.EVENT_BUS.register(PROTECTIONS);
+        NeoForge.EVENT_BUS.register(new SpawnModule());
 
         NETWORK.initialise();
     }
@@ -180,8 +175,6 @@ public class WarForgeMod {
             // Register MUI factories on BOTH sides: the server must resolve the factory by name when it
             // decodes the OpenGuiPacket a client sends via GuiManager.openFromClient(factory, data).
             WarForgeGuiFactories.init();
-            CHUNK_LOADING_MANAGER.initialize();
-            POTIONS.registerBrewingRecipes();
             findVaultBlocks();
             Content.bake();
             IMultiBlockInit.registerMaps();
@@ -264,9 +257,9 @@ public class WarForgeMod {
     private static void findVaultBlocks() {
         WarForgeConfig.VAULT_BLOCKS.clear();
         for (String blockID : WarForgeConfig.VAULT_BLOCK_IDS) {
-            Block block = ForgeRegistries.BLOCKS.getValue(new ResourceLocation(blockID));
-            if (block != null) {
-                WarForgeConfig.VAULT_BLOCKS.add(block);
+            ResourceLocation blockKey = ResourceLocation.parse(blockID);
+            if (BuiltInRegistries.BLOCK.containsKey(blockKey)) {
+                WarForgeConfig.VAULT_BLOCKS.add(BuiltInRegistries.BLOCK.get(blockKey));
                 LOGGER.info("Found block with ID " + blockID + " as a valuable block for the vault");
             } else {
                 LOGGER.error("Could not find block with ID " + blockID + " as a valuable block for the vault");
@@ -900,7 +893,7 @@ public class WarForgeMod {
 
             CompoundTag tags;
             try (InputStream input = Files.newInputStream(dataFile)) {
-                tags = NbtIo.readCompressed(input);
+                tags = NbtIo.readCompressed(input, net.minecraft.nbt.NbtAccounter.unlimitedHeap());
             }
 
             readFromNBT(tags);

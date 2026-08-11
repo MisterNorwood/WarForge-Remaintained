@@ -1,18 +1,18 @@
 package com.flansmod.warforge.client;
 
 import com.flansmod.warforge.Tags;
+import com.flansmod.warforge.client.ClientClaimChunkCache;
+import com.flansmod.warforge.client.util.FullColorNameplate;
 import com.flansmod.warforge.common.WarForgeConfig;
 import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.common.factories.ClaimManagerGuiFactory;
 import com.flansmod.warforge.common.factories.FactionMemberManagerGuiData;
 import com.flansmod.warforge.common.factories.FactionMemberManagerGuiFactory;
-import com.flansmod.warforge.common.factories.FactionStatsGuiFactory;
 import com.flansmod.warforge.common.factories.OperationsGuiFactory;
 import com.flansmod.warforge.common.network.PacketMoveCitadel;
+import com.flansmod.warforge.common.network.PacketRequestFactionInfo;
 import com.flansmod.warforge.common.util.DimBlockPos;
 import com.flansmod.warforge.common.util.DimChunkPos;
-import com.flansmod.warforge.client.util.FullColorNameplate;
-import com.flansmod.warforge.server.Faction;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
@@ -21,15 +21,15 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RenderNameTagEvent;
-import net.minecraftforge.client.event.ScreenEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.client.event.RenderNameTagEvent;
+import net.neoforged.neoforge.client.event.ScreenEvent;
 
 import static com.flansmod.warforge.client.WarforgeIconButton.WARFORGE_BUTTON_SIZE;
 
-@Mod.EventBusSubscriber(modid = Tags.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid = Tags.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
 public final class WarForgeClientEventHandler {
 
     @SubscribeEvent
@@ -45,10 +45,10 @@ public final class WarForgeClientEventHandler {
         int x = screen.getGuiLeft() + screen.getXSize() + 4;
         int top = screen.getGuiTop();
         event.addListener(new WarforgeIconButton(x, top + 4, 0, WarForgeClientEventHandler::openClaims));
-        event.addListener(new WarforgeIconButton(x, top + 26, WARFORGE_BUTTON_SIZE, () -> FactionMemberManagerGuiFactory.INSTANCE.openClient(FactionMemberManagerGuiData.Page.MEMBERS)));
-        event.addListener(new WarforgeIconButton(x, top + 48, WARFORGE_BUTTON_SIZE * 2, () -> FactionStatsGuiFactory.INSTANCE.openClient(Faction.nullUuid)));
+        event.addListener(new WarforgeIconButton(x, top + 26, WARFORGE_BUTTON_SIZE, WarForgeClientEventHandler::openMembers));
+        event.addListener(new WarforgeIconButton(x, top + 48, WARFORGE_BUTTON_SIZE * 2, WarForgeClientEventHandler::openFactionStats));
         event.addListener(new WarforgeIconButton(x, top + 70, WARFORGE_BUTTON_SIZE * 3, WarForgeClientEventHandler::moveCitadel));
-        event.addListener(new WarforgeIconButton(x, top + 92, WARFORGE_BUTTON_SIZE * 4, () -> OperationsGuiFactory.INSTANCE.openClient()));
+        event.addListener(new WarforgeIconButton(x, top + 92, WARFORGE_BUTTON_SIZE * 4, WarForgeClientEventHandler::openOperations));
     }
 
     private static void openClaims() {
@@ -56,7 +56,32 @@ public final class WarForgeClientEventHandler {
         if (player == null) {
             return;
         }
-        ClaimManagerGuiFactory.INSTANCE.openClient(new DimChunkPos(player.level().dimension(), player.blockPosition()), WarForgeConfig.CLAIM_MANAGER_RADIUS, -1, -1);
+        DimChunkPos center = new DimChunkPos(player.level().dimension(), player.blockPosition());
+        ClaimManagerGuiFactory.resetSiegeState();
+        ClaimManagerGuiFactory.INSTANCE.openClient(center, WarForgeConfig.CLAIM_MANAGER_RADIUS, -1, -1);
+    }
+
+    private static void openMembers() {
+        if (Minecraft.getInstance().player == null) {
+            return;
+        }
+        FactionMemberManagerGuiFactory.INSTANCE.openClient(FactionMemberManagerGuiData.Page.MEMBERS);
+    }
+
+    private static void openFactionStats() {
+        if (Minecraft.getInstance().player == null) {
+            return;
+        }
+        PacketRequestFactionInfo packet = new PacketRequestFactionInfo();
+        packet.mFactionIDRequest = ClientClaimChunkCache.playerFactionId;
+        WarForgeMod.NETWORK.sendToServer(packet);
+    }
+
+    private static void openOperations() {
+        if (Minecraft.getInstance().player == null) {
+            return;
+        }
+        OperationsGuiFactory.INSTANCE.openClient();
     }
 
     private static void moveCitadel() {

@@ -3242,7 +3242,7 @@ public class FactionStorage {
         list = tags.getList("sieges", Tag.TAG_COMPOUND);
         for (Tag baseTag : list) {
             CompoundTag siegeTags = ((CompoundTag) baseTag);
-            ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(siegeTags.getString("dim")));
+            ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(siegeTags.getString("dim")));
             int x = siegeTags.getInt("x");
             int z = siegeTags.getInt("z");
 
@@ -3275,7 +3275,7 @@ public class FactionStorage {
             }
             CompoundTag entry = conqueredChunksDataList.getCompound(key);
             try {
-                ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(entry.getString("dim")));
+                ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(entry.getString("dim")));
                 int[] chunkXZ = entry.getIntArray("pos");
                 if (chunkXZ.length < 2) { ++index; continue; }
                 int[] factionArr = entry.getIntArray("faction");
@@ -3327,7 +3327,7 @@ public class FactionStorage {
             ArrayList<ItemStack> items = new ArrayList<ItemStack>();
             ListTag itemsList = payoutTag.getList("items", Tag.TAG_COMPOUND);
             for (Tag itemBase : itemsList) {
-                items.add(ItemStack.of((CompoundTag) itemBase));
+                items.add(ItemStack.parseOptional(WarForgeMod.MC_SERVER.registryAccess(), (CompoundTag) itemBase));
             }
             redeemableInsuranceVaults.put(owner, items);
         }
@@ -3344,7 +3344,7 @@ public class FactionStorage {
                     continue;
                 }
                 CompoundTag itemTag = new CompoundTag();
-                stack.save(itemTag);
+                stack.save(WarForgeMod.MC_SERVER.registryAccess(), itemTag);
                 itemsList.add(itemTag);
             }
             payoutTag.put("items", itemsList);

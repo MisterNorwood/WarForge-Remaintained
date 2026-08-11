@@ -1,8 +1,8 @@
 package com.flansmod.warforge.client;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraftforge.client.event.RenderLevelStageEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
 public class ClaimFlagRenderer {
     private static final double RENDER_DISTANCE_SQ = 64.0 * 64.0;
@@ -21,7 +21,7 @@ public class ClaimFlagRenderer {
 //            return;
 //        }
 //
-//        float partialTicks = event.getPartialTick();
+//        float partialTicks = event.getPartialTick().getGameTimeDeltaPartialTick(false);
 //        PoseStack pose = event.getPoseStack();
 //        Vec3 cam = mc.gameRenderer.getMainCamera().getPosition();
 //        double camX = cam.x;
@@ -53,10 +53,10 @@ public class ClaimFlagRenderer {
 //            pose.translate(dx, dy, dz);
 //            VertexConsumer consumer = buffers.getBuffer(RenderType.entityCutout(texture));
 //            Matrix4f mat = pose.last().pose();
-//            consumer.vertex(mat, (float) -HALF_WIDTH, (float) BANNER_TOP, 0.0F).color(255, 255, 255, 255).uv(0.0F, 0.0F).uv2(packedLight).normal(0, 0, 1).endVertex();
-//            consumer.vertex(mat, (float) -HALF_WIDTH, (float) BANNER_BOTTOM, 0.0F).color(255, 255, 255, 255).uv(0.0F, 1.0F).uv2(packedLight).normal(0, 0, 1).endVertex();
-//            consumer.vertex(mat, (float) HALF_WIDTH, (float) BANNER_BOTTOM, 0.0F).color(255, 255, 255, 255).uv(1.0F, 1.0F).uv2(packedLight).normal(0, 0, 1).endVertex();
-//            consumer.vertex(mat, (float) HALF_WIDTH, (float) BANNER_TOP, 0.0F).color(255, 255, 255, 255).uv(1.0F, 0.0F).uv2(packedLight).normal(0, 0, 1).endVertex();
+//            consumer.addVertex(mat, (float) -HALF_WIDTH, (float) BANNER_TOP, 0.0F).setColor(255, 255, 255, 255).setUv(0.0F, 0.0F).setLight(packedLight).setNormal(0, 0, 1);
+//            consumer.addVertex(mat, (float) -HALF_WIDTH, (float) BANNER_BOTTOM, 0.0F).setColor(255, 255, 255, 255).setUv(0.0F, 1.0F).setLight(packedLight).setNormal(0, 0, 1);
+//            consumer.addVertex(mat, (float) HALF_WIDTH, (float) BANNER_BOTTOM, 0.0F).setColor(255, 255, 255, 255).setUv(1.0F, 1.0F).setLight(packedLight).setNormal(0, 0, 1);
+//            consumer.addVertex(mat, (float) HALF_WIDTH, (float) BANNER_TOP, 0.0F).setColor(255, 255, 255, 255).setUv(1.0F, 0.0F).setLight(packedLight).setNormal(0, 0, 1);
 //            pose.popPose();
 //        }
 //

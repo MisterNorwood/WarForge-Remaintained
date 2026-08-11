@@ -12,6 +12,7 @@ public class FactionDisplayInfo
 {
 	public UUID factionId = Faction.nullUuid;
 	public String factionName = "";
+	public int colour = 0xFFFFFF;
 	public UUID mLeaderID = Faction.nullUuid;
 	public List<PlayerDisplayInfo> members = new ArrayList<>();
 

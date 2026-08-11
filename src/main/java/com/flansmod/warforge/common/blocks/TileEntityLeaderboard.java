@@ -7,6 +7,7 @@ import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.server.Faction;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.Packet;
@@ -35,7 +36,7 @@ public class TileEntityLeaderboard extends BlockEntity
 	}
 
 	@Override
-	public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet)
+	public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet, HolderLookup.Provider registries)
 	{
 		CompoundTag tags = packet.getTag();
 
@@ -46,10 +47,9 @@ public class TileEntityLeaderboard extends BlockEntity
 	}
 
 	@Override
-	public CompoundTag getUpdateTag()
+	public CompoundTag getUpdateTag(HolderLookup.Provider registries)
 	{
-		// You have to get parent tags so that x, y, z are added.
-		CompoundTag tags = super.getUpdateTag();
+		CompoundTag tags = super.getUpdateTag(registries);
 
 		ArrayList<Faction> tempList = new ArrayList<Faction>();
 		WarForgeMod.LEADERBOARD.GetSortedList(((BlockLeaderboard)getBlockState().getBlock()).stat, tempList);
@@ -70,7 +70,7 @@ public class TileEntityLeaderboard extends BlockEntity
 	}
 
 	@Override
-	public void handleUpdateTag(CompoundTag tags)
+	public void handleUpdateTag(CompoundTag tags, HolderLookup.Provider registries)
 	{
 		for(int i = 0; i < NUM_ENTRIES; i++)
 		{

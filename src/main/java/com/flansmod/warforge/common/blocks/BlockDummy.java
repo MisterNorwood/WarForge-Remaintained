@@ -62,8 +62,7 @@ public class BlockDummy extends Block implements EntityBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
-                                 InteractionHand hand, BlockHitResult hit) {
+    public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
         BlockEntity tileEntity = level.getBlockEntity(pos);
         if (!(tileEntity instanceof IBlockDummy dummy)) return InteractionResult.PASS;
 
@@ -80,7 +79,7 @@ public class BlockDummy extends Block implements EntityBlock {
         }
 
         if (!level.isEmptyBlock(masterPos)) {
-            return level.getBlockState(masterPos).use(level, player, hand, new BlockHitResult(
+            return level.getBlockState(masterPos).useWithoutItem(level, player, new BlockHitResult(
                     hit.getLocation(), hit.getDirection(), masterPos, hit.isInside()));
         }
 

@@ -1,11 +1,14 @@
 package com.flansmod.warforge.common.network;
 
+import com.flansmod.warforge.Tags;
 import com.flansmod.warforge.common.util.DimBlockPos;
 import com.flansmod.warforge.common.WarForgeMod;
-import com.flansmod.warforge.common.factories.FactionStatsGuiFactory;
 import com.flansmod.warforge.server.Faction.Role;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -14,7 +17,14 @@ import net.minecraft.world.level.Level;
 
 public class PacketFactionInfo extends PacketBase
 {
-	// Cheeky hack to make it available to the GUI
+	public static final CustomPacketPayload.Type<PacketFactionInfo> TYPE =
+		new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(Tags.MODID, "packetfactioninfo"));
+	public static final StreamCodec<RegistryFriendlyByteBuf, PacketFactionInfo> STREAM_CODEC =
+		StreamCodec.ofMember(PacketFactionInfo::encodeInto, buf -> { PacketFactionInfo p = new PacketFactionInfo(); p.decodeInto(buf); return p; });
+
+	@Override
+	public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+
 	public static FactionDisplayInfo latestInfo = null;
 
 	public FactionDisplayInfo info;
@@ -27,6 +37,7 @@ public class PacketFactionInfo extends PacketBase
 			data.writeBoolean(true);
 			writeUUID(data, info.factionId);
 			writeUTF(data, info.factionName);
+			data.writeInt(info.colour);
 
 			data.writeInt(info.notoriety);
 			data.writeInt(info.wealth);
@@ -45,7 +56,6 @@ public class PacketFactionInfo extends PacketBase
 			data.writeInt(info.mCitadelPos.getY());
 			data.writeInt(info.mCitadelPos.getZ());
 
-			// Member list
 			data.writeInt(info.members.size());
 			for(int i = 0; i < info.members.size(); i++)
 			{
@@ -73,6 +83,7 @@ public class PacketFactionInfo extends PacketBase
 
 			info.factionId = readUUID(data);
 			info.factionName = readUTF(data);
+			info.colour = data.readInt();
 
 			info.notoriety = data.readInt();
 			info.wealth = data.readInt();
@@ -86,13 +97,12 @@ public class PacketFactionInfo extends PacketBase
 
 			info.mNumClaims = data.readInt();
 
-			ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(readUTF(data)));
+			ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(readUTF(data)));
 			int x =	data.readInt();
 			int y =	data.readInt();
 			int z =	data.readInt();
 			info.mCitadelPos = new DimBlockPos(dim, x, y, z);
 
-			// Member list
 			int count = data.readInt();
 			for(int i = 0; i < count; i++)
 			{
@@ -118,9 +128,9 @@ public class PacketFactionInfo extends PacketBase
 	public void handleClientSide(Player clientPlayer)
 	{
 		latestInfo = info;
-		if(info != null)
+		if (info != null)
 		{
-			FactionStatsGuiFactory.INSTANCE.openClient(info.factionId);
+			com.flansmod.warforge.common.factories.FactionStatsGuiFactory.INSTANCE.openClient(info.factionId);
 		}
 	}
 

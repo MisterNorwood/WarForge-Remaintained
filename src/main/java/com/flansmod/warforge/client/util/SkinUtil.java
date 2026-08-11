@@ -24,10 +24,10 @@ public class SkinUtil {
         if (connection != null) {
             PlayerInfo info = connection.getPlayerInfo(uuid);
             if (info != null) {
-                return info.getSkinLocation();
+                return info.getSkin().texture();
             }
         }
-        return DefaultPlayerSkin.getDefaultSkin(uuid);
+        return DefaultPlayerSkin.get(uuid).texture();
     }
 
     /** Draws the player's head face plus hat overlay at the given position via {@link PlayerFaceRenderer}. */
@@ -36,6 +36,8 @@ public class SkinUtil {
         // draw in a roster row) can leave it non-white, which renders the face tinted or invisible.
         // Force it back to opaque white first, like other face draws in this mod do.
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        graphics.flush();
         PlayerFaceRenderer.draw(graphics, getPlayerFace(uuid), x, y, size);
+        graphics.flush();
     }
 }

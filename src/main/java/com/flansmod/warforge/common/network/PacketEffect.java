@@ -1,19 +1,26 @@
 package com.flansmod.warforge.common.network;
 
+import com.flansmod.warforge.Tags;
 import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.common.effect.EffectRegistry;
-import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.TagParser;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-
-import java.util.Random;
 
 public class PacketEffect extends PacketBase {
+    public static final CustomPacketPayload.Type<PacketEffect> TYPE =
+        new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(Tags.MODID, "packeteffect"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, PacketEffect> STREAM_CODEC =
+        StreamCodec.ofMember(PacketEffect::encodeInto, buf -> { PacketEffect p = new PacketEffect(); p.decodeInto(buf); return p; });
+
+    @Override
+    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
 
     public double x, y, z;
     public String type = "";
@@ -44,7 +51,6 @@ public class PacketEffect extends PacketBase {
     }
 
     @Override
-    @OnlyIn(Dist.CLIENT)
     public void handleClientSide(Player clientPlayer) {
         CompoundTag compound;
         try {
@@ -53,18 +59,6 @@ public class PacketEffect extends PacketBase {
             WarForgeMod.LOGGER.error("Malformed effect data NBT for " + type);
             return;
         }
-        if (EffectRegistry.EFFECT_REGISTRY.containsKey(type)) {
-            EffectRegistry.EFFECT_REGISTRY.get(type).runEffect(
-                    Minecraft.getInstance().level,
-                    clientPlayer,
-                    Minecraft.getInstance().getTextureManager(),
-                    new Random(),
-                    x, y, z,
-                    compound
-            );
-
-        }
-
-
+        EffectRegistry.runClientEffect(type, clientPlayer, x, y, z, compound);
     }
 }

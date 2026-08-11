@@ -1,7 +1,7 @@
 package com.flansmod.warforge.common.util;
 
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.items.IItemHandler;
+import net.neoforged.neoforge.items.IItemHandler;
 
 /**
  * An {@link IItemHandler} view that forbids insertion but permits extraction.

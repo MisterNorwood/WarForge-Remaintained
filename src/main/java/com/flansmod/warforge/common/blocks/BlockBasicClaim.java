@@ -1,11 +1,20 @@
 package com.flansmod.warforge.common.blocks;
 
+import com.flansmod.warforge.common.util.DimBlockPos;
 import com.flansmod.warforge.common.util.DimChunkPos;
 import com.flansmod.warforge.common.Content;
 import com.flansmod.warforge.common.WarForgeMod;
-import com.flansmod.warforge.common.factories.BasicClaimGuiFactory;
 import com.flansmod.warforge.common.network.PacketFactionInfo;
 import com.flansmod.warforge.server.Faction;
+import com.lowdragmc.lowdraglib2.gui.factory.BlockUIMenuType;
+import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
+import com.lowdragmc.lowdraglib2.gui.ui.UI;
+import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.Button;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.ItemSlot;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.inventory.InventorySlots;
+import dev.vfyjxf.taffy.style.FlexDirection;
+import dev.vfyjxf.taffy.style.FlexWrap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Vec3i;
@@ -30,7 +39,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
-import net.minecraftforge.items.IItemHandler;
+import net.neoforged.neoforge.items.IItemHandler;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -45,7 +54,7 @@ import static com.flansmod.warforge.common.blocks.BlockDummy.MODEL;
 import static com.flansmod.warforge.common.blocks.BlockDummy.modelEnum.KING;
 import static com.flansmod.warforge.common.blocks.BlockDummy.modelEnum.TRANSLUCENT;
 
-public class BlockBasicClaim extends MultiBlockColumn implements EntityBlock, IMultiBlock {
+public class BlockBasicClaim extends MultiBlockColumn implements EntityBlock, IMultiBlock, BlockUIMenuType.BlockUI {
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     public BlockBasicClaim() {
@@ -127,7 +136,7 @@ public class BlockBasicClaim extends MultiBlockColumn implements EntityBlock, IM
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    public InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult hit) {
         if (player.isShiftKeyDown()) {
             TileEntityBasicClaim claim = (TileEntityBasicClaim) world.getBlockEntity(pos);
             claim.increaseRotation();
@@ -149,11 +158,77 @@ public class BlockBasicClaim extends MultiBlockColumn implements EntityBlock, IM
                 }
             }
             // So anyone else will be from the target faction
-            else {
-                BasicClaimGuiFactory.INSTANCE.open(player, claimTE.getBlockPos());
+            else if (player instanceof ServerPlayer serverPlayer) {
+                WarForgeMod.syncClaimToPlayer(player, pos);
+                BlockUIMenuType.openUI(serverPlayer, pos);
             }
         }
         return world.isClientSide ? InteractionResult.CONSUME : InteractionResult.SUCCESS;
+    }
+
+    @Override
+    public ModularUI createUI(BlockUIMenuType.BlockUIHolder holder) {
+        UIElement root = new UIElement();
+        UIElement content = com.flansmod.warforge.api.modularui.WarForgeUiTheme.frame(root, 260);
+
+        if (holder.player.level().getBlockEntity(holder.pos) instanceof TileEntityBasicClaim claim) {
+            content.addChild(com.flansmod.warforge.api.modularui.WarForgeUiTheme.header(claim.getClaimDisplayName()));
+
+            UIElement yieldsSection = com.flansmod.warforge.api.modularui.WarForgeUiTheme.section();
+            yieldsSection.addChild(com.flansmod.warforge.api.modularui.WarForgeUiTheme.boldText("Yields", com.flansmod.warforge.api.modularui.WarForgeUiTheme.TEXT_PRIMARY));
+
+            UIElement body = new UIElement();
+            body.layout(l -> l.flexDirection(FlexDirection.ROW).gapColumn(12));
+
+            UIElement grid = new UIElement();
+            grid.layout(l -> l.flexDirection(FlexDirection.ROW).flexWrap(FlexWrap.WRAP).width(54));
+            for (int i = 0; i < claim.getSlots(); i++) {
+                grid.addChild(new ItemSlot().bind(claim, i).layout(l -> l.width(18).height(18)));
+            }
+            body.addChild(grid);
+
+            UIElement actions = new UIElement();
+            actions.layout(l -> l.flexDirection(FlexDirection.COLUMN).gapRow(4));
+
+            Button infoBtn = new Button().setText("Info");
+            com.flansmod.warforge.api.modularui.WarForgeUiTheme.styleButton(infoBtn, 90);
+            infoBtn.setOnServerClick(event -> {
+                if (holder.player instanceof ServerPlayer sp) {
+                    Faction faction = WarForgeMod.FACTIONS.getFaction(claim.getFaction());
+                    if (faction != null) {
+                        PacketFactionInfo packet = new PacketFactionInfo();
+                        packet.info = faction.createInfo();
+                        WarForgeMod.NETWORK.sendTo(packet, sp);
+                    }
+                }
+            });
+            actions.addChild(infoBtn);
+
+            Button unclaimBtn = new Button().setText("Unclaim");
+            com.flansmod.warforge.api.modularui.WarForgeUiTheme.styleButton(unclaimBtn, 90);
+            unclaimBtn.setOnServerClick(event -> {
+                if (holder.player instanceof ServerPlayer sp) {
+                    WarForgeMod.FACTIONS.requestRemoveClaim(sp, claim.getClaimPos());
+                }
+            });
+            actions.addChild(unclaimBtn);
+
+            Button moveCitadelBtn = new Button().setText("Move Citadel");
+            com.flansmod.warforge.api.modularui.WarForgeUiTheme.styleButton(moveCitadelBtn, 90);
+            moveCitadelBtn.setOnServerClick(event -> {
+                if (holder.player instanceof ServerPlayer sp) {
+                    WarForgeMod.FACTIONS.requestMoveCitadel(sp, DimBlockPos.ZERO);
+                }
+            });
+            actions.addChild(moveCitadelBtn);
+
+            body.addChild(actions);
+            yieldsSection.addChild(body);
+            content.addChild(yieldsSection);
+        }
+
+        content.addChild(new InventorySlots());
+        return ModularUI.of(UI.of(root), holder.player);
     }
 
     @Override

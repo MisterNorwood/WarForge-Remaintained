@@ -7,6 +7,7 @@ import com.flansmod.warforge.common.util.DimBlockPos;
 import com.flansmod.warforge.common.util.DimChunkPos;
 import com.flansmod.warforge.server.Faction;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -246,7 +247,7 @@ public class TileEntityCitadel extends TileEntityYieldCollector implements IClai
 
     public void onServerCreateFaction(Faction faction) {
 
-        level.playSound(null, worldPosition, SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.0F, 1.0F);
+        level.playSound(null, worldPosition, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 1.0F, 1.0F);
         level.playSound(null, worldPosition, SoundEvents.ANVIL_USE, SoundSource.PLAYERS, 1.0F, 1.2F);
         ((ServerLevel) level).sendParticles(
                 ParticleTypes.EXPLOSION_EMITTER,
@@ -259,21 +260,19 @@ public class TileEntityCitadel extends TileEntityYieldCollector implements IClai
     }
 
     @Override
-    public void saveAdditional(CompoundTag nbt) {
-        super.saveAdditional(nbt);
+    public void saveAdditional(CompoundTag nbt, HolderLookup.Provider registries) {
+        super.saveAdditional(nbt, registries);
 
         nbt.putUUID("placer", placer);
 
-        CompoundTag bannerStackTags = new CompoundTag();
-        bannerStack.save(bannerStackTags);
-        nbt.put("banner", bannerStackTags);
+        nbt.put("banner", bannerStack.saveOptional(registries));
     }
 
     @Override
-    public void load(CompoundTag nbt) {
-        super.load(nbt);
+    protected void loadAdditional(CompoundTag nbt, HolderLookup.Provider registries) {
+        super.loadAdditional(nbt, registries);
 
-        bannerStack = ItemStack.of(nbt.getCompound("banner"));
+        bannerStack = ItemStack.parseOptional(registries, nbt.getCompound("banner"));
         placer = nbt.getUUID("placer");
     }
 }

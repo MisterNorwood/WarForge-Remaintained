@@ -5,6 +5,7 @@ import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.server.Faction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -13,8 +14,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.phys.AABB;
-
 import java.util.UUID;
 
 import static com.flansmod.warforge.common.blocks.BlockCitadel.FACING;
@@ -162,8 +161,8 @@ public abstract class TileEntityClaim extends BlockEntity implements IClaim {
     }
 
     @Override
-    public void saveAdditional(CompoundTag nbt) {
-        super.saveAdditional(nbt);
+    public void saveAdditional(CompoundTag nbt, HolderLookup.Provider registries) {
+        super.saveAdditional(nbt, registries);
 
         nbt.putUUID("faction", factionUUID);
         nbt.putByte("rotation", rotation);
@@ -174,8 +173,8 @@ public abstract class TileEntityClaim extends BlockEntity implements IClaim {
     }
 
     @Override
-    public void load(CompoundTag nbt) {
-        super.load(nbt);
+    protected void loadAdditional(CompoundTag nbt, HolderLookup.Provider registries) {
+        super.loadAdditional(nbt, registries);
 
         factionUUID = nbt.getUUID("faction");
         rotation = nbt.getByte("rotation");
@@ -208,14 +207,13 @@ public abstract class TileEntityClaim extends BlockEntity implements IClaim {
     }
 
     @Override
-    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet) {
-        handleUpdateTag(packet.getTag());
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet, HolderLookup.Provider registries) {
+        handleUpdateTag(packet.getTag(), registries);
     }
 
     @Override
-    public CompoundTag getUpdateTag() {
-        // You have to get parent tags so that x, y, z are added.
-        CompoundTag tags = super.getUpdateTag();
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        CompoundTag tags = super.getUpdateTag(registries);
 
         // Custom partial nbt write method
         tags.putUUID("faction", factionUUID);
@@ -228,7 +226,7 @@ public abstract class TileEntityClaim extends BlockEntity implements IClaim {
     }
 
     @Override
-    public void handleUpdateTag(CompoundTag tags) {
+    public void handleUpdateTag(CompoundTag tags, HolderLookup.Provider registries) {
         factionUUID = tags.getUUID("faction");
         colour = tags.getInt("colour");
         factionName = tags.getString("name");
@@ -237,9 +235,4 @@ public abstract class TileEntityClaim extends BlockEntity implements IClaim {
         poleLength = tags.contains("poleLength") ? tags.getFloat("poleLength") : DEFAULT_POLE_LENGTH;
     }
 
-    @Override
-    public AABB getRenderBoundingBox() {
-        BlockPos pos = getBlockPos();
-        return new AABB(pos.offset(-1, 0, -1), pos.offset(2, 16, 2));
-    }
 }

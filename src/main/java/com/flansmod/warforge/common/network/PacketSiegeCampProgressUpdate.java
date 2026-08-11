@@ -1,9 +1,13 @@
 package com.flansmod.warforge.common.network;
 
+import com.flansmod.warforge.Tags;
 import com.flansmod.warforge.common.util.DimBlockPos;
 import com.flansmod.warforge.common.WarForgeMod;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -12,6 +16,14 @@ import net.minecraft.world.level.Level;
 
 public class PacketSiegeCampProgressUpdate extends PacketBase
 {
+	public static final CustomPacketPayload.Type<PacketSiegeCampProgressUpdate> TYPE =
+		new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(Tags.MODID, "packetsiegecampprogressupdate"));
+	public static final StreamCodec<RegistryFriendlyByteBuf, PacketSiegeCampProgressUpdate> STREAM_CODEC =
+		StreamCodec.ofMember(PacketSiegeCampProgressUpdate::encodeInto, buf -> { PacketSiegeCampProgressUpdate p = new PacketSiegeCampProgressUpdate(); p.decodeInto(buf); return p; });
+
+	@Override
+	public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+
 	public SiegeCampProgressInfo info;
 	public long msServerNow = 0L;
 
@@ -19,7 +31,6 @@ public class PacketSiegeCampProgressUpdate extends PacketBase
 	public void encodeInto(FriendlyByteBuf data)
 	{
 		msServerNow = WarForgeMod.siegeClock();
-		// Attack
 		data.writeUtf(info.attackingPos.dim.location().toString());
 		data.writeInt(info.attackingPos.getX());
 		data.writeInt(info.attackingPos.getY());
@@ -27,7 +38,6 @@ public class PacketSiegeCampProgressUpdate extends PacketBase
 		data.writeInt(info.attackingColour);
 		writeUTF(data, info.attackingName);
 
-		// Defend
 		data.writeUtf(info.defendingPos.dim.location().toString());
 		data.writeInt(info.defendingPos.getX());
 		data.writeInt(info.defendingPos.getY());
@@ -44,7 +54,6 @@ public class PacketSiegeCampProgressUpdate extends PacketBase
 		data.writeInt(info.mPreviousProgress);
 		data.writeInt(info.completionPoint);
 
-		//Common
 		data.writeLong(info.timeProgress);
 		data.writeLong(info.endTimestamp);
 		data.writeBoolean(info.finished);
@@ -56,8 +65,7 @@ public class PacketSiegeCampProgressUpdate extends PacketBase
 	{
 		info = new SiegeCampProgressInfo();
 
-		// Attacking
-		ResourceKey<Level> attackingDim = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(data.readUtf()));
+		ResourceKey<Level> attackingDim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(data.readUtf()));
 		int x = data.readInt();
 		int y = data.readInt();
 		int z = data.readInt();
@@ -65,8 +73,7 @@ public class PacketSiegeCampProgressUpdate extends PacketBase
 		info.attackingColour = data.readInt();
 		info.attackingName = readUTF(data);
 
-		// Defending
-		ResourceKey<Level> defendingDim = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(data.readUtf()));
+		ResourceKey<Level> defendingDim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(data.readUtf()));
 		x = data.readInt();
 		y = data.readInt();
 		z = data.readInt();
@@ -83,7 +90,6 @@ public class PacketSiegeCampProgressUpdate extends PacketBase
 		info.mPreviousProgress = data.readInt();
 		info.completionPoint = data.readInt();
 
-		//Common
 		info.timeProgress = data.readLong();
         info.endTimestamp = data.readLong();
 		info.finished = data.readBoolean();

@@ -12,9 +12,9 @@ import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
-import net.minecraftforge.eventbus.api.Event;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.common.util.TriState;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 
 public class ClientPlacementPredictor {
@@ -24,7 +24,7 @@ public class ClientPlacementPredictor {
         Level level = event.getLevel();
         if (!level.isClientSide)
             return;
-        if (event.getUseItem() == Event.Result.DENY)
+        if (event.getUseItem() == TriState.FALSE)
             return; // already suppressed
 
         Player player = event.getEntity();
@@ -46,6 +46,6 @@ public class ClientPlacementPredictor {
 
         Block placedBlock = blockItem.getBlock();
         if (ProtectionsModule.placeDenied(config, placedBlock))
-            event.setUseItem(Event.Result.DENY);
+            event.setUseItem(TriState.FALSE);
     }
 }

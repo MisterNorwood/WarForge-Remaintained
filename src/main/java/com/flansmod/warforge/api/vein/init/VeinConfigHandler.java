@@ -341,7 +341,7 @@ public class VeinConfigHandler {
 
     // dimension ids are modern ResourceLocation strings (e.g. minecraft:the_nether).
     private static ResourceLocation parseDimId(Object raw) {
-        return new ResourceLocation((String) raw);
+        return ResourceLocation.parse((String) raw);
     }
 
     // returns the number of occupiedIds found
@@ -564,7 +564,7 @@ public class VeinConfigHandler {
         }
 
         public static DimWeight deserialize(FriendlyByteBuf buf) {
-            ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(buf.readUtf()));
+            ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(buf.readUtf()));
             return new DimWeight(dim, buf.readShort(), buf.readFloat());
         }
     }
@@ -626,7 +626,7 @@ public class VeinConfigHandler {
             int numWeights = buf.readInt();
             Object2ShortOpenHashMap<ResourceKey<Level>> weights = new Object2ShortOpenHashMap<>(numWeights);
             for (int i = 0; i < numWeights; ++i) {
-                ResourceKey<Level> key = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(buf.readUtf()));
+                ResourceKey<Level> key = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(buf.readUtf()));
                 weights.put(key, buf.readShort());
             }
 
@@ -634,7 +634,7 @@ public class VeinConfigHandler {
             int numMults = buf.readInt();
             Object2FloatOpenHashMap<ResourceKey<Level>> multipliers = new Object2FloatOpenHashMap<>(numMults);
             for (int i = 0; i < numMults; ++i) {
-                ResourceKey<Level> key = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(buf.readUtf()));
+                ResourceKey<Level> key = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(buf.readUtf()));
                 multipliers.put(key, buf.readFloat());
             }
 

@@ -4,13 +4,17 @@ import com.flansmod.warforge.Tags;
 import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.common.util.DimBlockPos;
 import com.flansmod.warforge.common.util.DimChunkPos;
-import com.mojang.datafixers.util.Pair;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.common.world.ForgeChunkManager;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.common.world.chunk.RegisterTicketControllersEvent;
+import net.neoforged.neoforge.common.world.chunk.TicketController;
+import net.neoforged.neoforge.common.world.chunk.TicketHelper;
+import net.neoforged.neoforge.common.world.chunk.TicketSet;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -21,19 +25,16 @@ import java.util.UUID;
 
 public class FactionChunkLoadingManager {
     private final HashMap<UUID, HashMap<ResourceKey<Level>, HashSet<DimChunkPos>>> forcedByFaction = new HashMap<UUID, HashMap<ResourceKey<Level>, HashSet<DimChunkPos>>>();
+    private TicketController ticketController;
 
-    public void initialize() {
-        ForgeChunkManager.setForcedChunkLoadingCallback(Tags.MODID, this::validateTickets);
+    public void initialize(IEventBus modBus) {
+        ticketController = new TicketController(ResourceLocation.fromNamespaceAndPath(Tags.MODID, "faction_chunks"), this::validateTickets);
+        modBus.addListener((RegisterTicketControllersEvent event) -> event.register(ticketController));
     }
 
-    // Runs as forced chunks are reinstated on level load (modern Forge persists force-load tickets per
-    // level). Drop any UUID-owned tickets whose faction no longer exists or is a neutral zone, and
-    // reconcile our in-memory tracking with the tickets that survive. Without the reconciliation the
-    // map would start empty after a restart, so refreshFactionChunks could never unforce a chunk that
-    // was force-loaded in a previous session — leaving it stuck loaded forever.
-    private void validateTickets(ServerLevel level, ForgeChunkManager.TicketHelper ticketHelper) {
+    private void validateTickets(ServerLevel level, TicketHelper ticketHelper) {
         ResourceKey<Level> dim = level.dimension();
-        for (Map.Entry<UUID, Pair<LongSet, LongSet>> entry : ticketHelper.getEntityTickets().entrySet()) {
+        for (Map.Entry<UUID, TicketSet> entry : ticketHelper.getEntityTickets().entrySet()) {
             UUID factionId = entry.getKey();
             Faction faction = WarForgeMod.FACTIONS.getFaction(factionId);
             if (faction == null || !FactionStorage.isValidFaction(faction) || FactionStorage.IsNeutralZone(factionId)) {
@@ -41,13 +42,13 @@ public class FactionChunkLoadingManager {
                 continue;
             }
 
-            for (long packed : entry.getValue().getFirst().toLongArray()) {
+            for (long packed : entry.getValue().nonTicking().toLongArray()) {
                 ticketHelper.removeTicket(factionId, packed, false);
             }
             HashSet<DimChunkPos> tracked = forcedByFaction
                     .computeIfAbsent(factionId, id -> new HashMap<>())
                     .computeIfAbsent(dim, d -> new HashSet<>());
-            trackPackedChunks(tracked, dim, entry.getValue().getSecond());
+            trackPackedChunks(tracked, dim, entry.getValue().ticking());
         }
     }
 
@@ -75,7 +76,7 @@ public class FactionChunkLoadingManager {
                 continue;
             }
             for (DimChunkPos chunk : entry.getValue()) {
-                ForgeChunkManager.forceChunk(level, Tags.MODID, factionId, chunk.x, chunk.z, false, true);
+                ticketController.forceChunk(level, factionId, chunk.x, chunk.z, false, true);
             }
         }
     }
@@ -114,7 +115,7 @@ public class FactionChunkLoadingManager {
             }
             for (DimChunkPos chunk : new HashSet<>(entry.getValue())) {
                 if (desired == null || !desired.contains(chunk)) {
-                    ForgeChunkManager.forceChunk(level, Tags.MODID, faction.uuid, chunk.x, chunk.z, false, true);
+                    ticketController.forceChunk(level, faction.uuid, chunk.x, chunk.z, false, true);
                     entry.getValue().remove(chunk);
                 }
             }
@@ -135,9 +136,7 @@ public class FactionChunkLoadingManager {
             HashSet<DimChunkPos> current = currentByDim.computeIfAbsent(dim, id -> new HashSet<DimChunkPos>());
             for (DimChunkPos chunk : chunks) {
                 if (current.add(chunk)) {
-                    // ticking=true: 1.12.2 force-loaded chunks were fully active. Block entities, mobs,
-                    // redstone and machines must keep running with no player nearby.
-                    ForgeChunkManager.forceChunk(level, Tags.MODID, faction.uuid, chunk.x, chunk.z, true, true);
+                    ticketController.forceChunk(level, faction.uuid, chunk.x, chunk.z, true, true);
                 }
             }
         }

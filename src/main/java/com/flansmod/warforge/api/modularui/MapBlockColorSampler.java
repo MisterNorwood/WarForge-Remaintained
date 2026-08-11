@@ -27,9 +27,9 @@ import net.minecraft.world.level.block.VineBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.material.FluidState;
-import net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions;
-import net.minecraftforge.client.model.data.ModelData;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
+import net.neoforged.neoforge.client.model.data.ModelData;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import com.flansmod.warforge.common.WarForgeMod;
 
@@ -133,7 +133,7 @@ public final class MapBlockColorSampler {
     }
 
     private static String blockId(BlockState state) {
-        ResourceLocation id = ForgeRegistries.BLOCKS.getKey(state.getBlock());
+        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
         return id != null ? id.toString() : state.getBlock().toString();
     }
 
@@ -330,7 +330,7 @@ public final class MapBlockColorSampler {
     private static NativeImage loadSpritePng(TextureAtlasSprite sprite) {
         try {
             ResourceLocation icon = sprite.contents().name();
-            ResourceLocation file = new ResourceLocation(icon.getNamespace(), "textures/" + icon.getPath() + ".png");
+            ResourceLocation file = ResourceLocation.fromNamespaceAndPath(icon.getNamespace(), "textures/" + icon.getPath() + ".png");
             Optional<Resource> resource = Minecraft.getInstance().getResourceManager().getResource(file);
             if (resource.isEmpty()) {
                 return null;
@@ -381,7 +381,7 @@ public final class MapBlockColorSampler {
 
     private static boolean isGrass(BlockState state) {
         Block block = state.getBlock();
-        return block instanceof GrassBlock || block == Blocks.GRASS;
+        return block instanceof GrassBlock || block == Blocks.SHORT_GRASS;
     }
 
     private static boolean isFoliage(BlockState state) {
@@ -389,7 +389,7 @@ public final class MapBlockColorSampler {
         if (block instanceof LeavesBlock || block instanceof VineBlock) {
             return true;
         }
-        ResourceLocation id = ForgeRegistries.BLOCKS.getKey(block);
+        ResourceLocation id = BuiltInRegistries.BLOCK.getKey(block);
         return id != null && id.getPath().toLowerCase(Locale.ROOT).contains("leaves");
     }
 

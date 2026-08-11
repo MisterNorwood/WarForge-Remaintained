@@ -1,7 +1,6 @@
 package com.flansmod.warforge.common.network;
 
-import com.flansmod.warforge.api.modularui.ChunkMapTextureDaemon;
-import com.flansmod.warforge.api.modularui.ChunkMapUtil;
+import com.flansmod.warforge.Tags;
 import com.flansmod.warforge.api.vein.Quality;
 import com.flansmod.warforge.client.ClientBorderCache;
 import com.flansmod.warforge.client.ClientClaimChunkCache;
@@ -10,19 +9,28 @@ import com.flansmod.warforge.client.ClientTickHandler;
 import com.flansmod.warforge.server.Faction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 public class PacketClaimChunksData extends PacketBase {
+    public static final CustomPacketPayload.Type<PacketClaimChunksData> TYPE =
+        new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(Tags.MODID, "packetclaimchunksdata"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, PacketClaimChunksData> STREAM_CODEC =
+        StreamCodec.ofMember(PacketClaimChunksData::encodeInto, buf -> { PacketClaimChunksData p = new PacketClaimChunksData(); p.decodeInto(buf); return p; });
+
+    @Override
+    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+
     public ResourceKey<Level> dim = Level.OVERWORLD;
     public int centerX;
     public int centerZ;
@@ -32,8 +40,6 @@ public class PacketClaimChunksData extends PacketBase {
     public int forceLoadedMax;
     public int claimCount;
     public int claimMax;
-    // When true this is the sparse, wide border-outline payload; route it to the border cache instead
-    // of the dense claim-manager cache (and skip the claim-map texture rebuild).
     public boolean outlineOnly = false;
     public List<ClaimChunkInfo> chunks = new ArrayList<ClaimChunkInfo>();
 
@@ -71,7 +77,7 @@ public class PacketClaimChunksData extends PacketBase {
 
     @Override
     public void decodeInto(FriendlyByteBuf data) {
-        dim = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(data.readUtf()));
+        dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(data.readUtf()));
         centerX = data.readInt();
         centerZ = data.readInt();
         radius = data.readByte();
@@ -108,27 +114,17 @@ public class PacketClaimChunksData extends PacketBase {
 
     @Override
     public void handleServerSide(ServerPlayer playerEntity) {
-        // noop
     }
 
     @Override
-    @OnlyIn(Dist.CLIENT)
     public void handleClientSide(Player clientPlayer) {
         if (outlineOnly) {
-            // Lightweight border payload: fill the sparse border cache and rebuild meshes; no
-            // claim-manager state and no claim-map texture work.
             ClientBorderCache.replaceAll(dim, chunks);
             ClientTickHandler.CLAIMS_DIRTY = true;
             return;
         }
         ClientClaimChunkCache.replaceAll(dim, centerX, centerZ, radius, playerFactionId, forceLoadedCount, forceLoadedMax, claimCount, claimMax, chunks);
-        java.util.HashMap<Long, Integer> tintByChunk = new java.util.HashMap<Long, Integer>();
-        for (ClaimChunkInfo info : chunks) {
-            if (!info.factionId.equals(Faction.nullUuid)) {
-                tintByChunk.put(ChunkMapUtil.key(info.x, info.z), info.colour);
-            }
-        }
-        ChunkMapTextureDaemon.requestMapUpdate("claimmap", dim, centerX, centerZ, radius, tintByChunk);
         ClientTickHandler.CLAIMS_DIRTY = true;
+        com.flansmod.warforge.client.ui.ClaimManagerScreen.refreshIfOpen();
     }
 }

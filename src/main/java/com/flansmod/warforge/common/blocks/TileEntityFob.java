@@ -7,6 +7,7 @@ import com.flansmod.warforge.server.Faction;
 import com.flansmod.warforge.server.fob.Fob;
 import com.flansmod.warforge.server.fob.FobPresence;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -95,8 +96,8 @@ public class TileEntityFob extends BlockEntity {
     }
 
     @Override
-    public void saveAdditional(CompoundTag nbt) {
-        super.saveAdditional(nbt);
+    public void saveAdditional(CompoundTag nbt, HolderLookup.Provider registries) {
+        super.saveAdditional(nbt, registries);
         nbt.putUUID("ownerFaction", ownerFaction);
         nbt.putUUID("placer", placer);
         nbt.putString("name", name);
@@ -107,8 +108,8 @@ public class TileEntityFob extends BlockEntity {
     }
 
     @Override
-    public void load(CompoundTag nbt) {
-        super.load(nbt);
+    protected void loadAdditional(CompoundTag nbt, HolderLookup.Provider registries) {
+        super.loadAdditional(nbt, registries);
         ownerFaction = nbt.hasUUID("ownerFaction") ? nbt.getUUID("ownerFaction") : Faction.nullUuid;
         placer = nbt.hasUUID("placer") ? nbt.getUUID("placer") : Faction.nullUuid;
         name = nbt.getString("name");
@@ -124,13 +125,13 @@ public class TileEntityFob extends BlockEntity {
     }
 
     @Override
-    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet) {
-        handleUpdateTag(packet.getTag());
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket packet, HolderLookup.Provider registries) {
+        handleUpdateTag(packet.getTag(), registries);
     }
 
     @Override
-    public CompoundTag getUpdateTag() {
-        CompoundTag tags = super.getUpdateTag();
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        CompoundTag tags = super.getUpdateTag(registries);
         tags.putUUID("ownerFaction", ownerFaction);
         tags.putString("name", name);
         tags.putInt("tickets", tickets);
@@ -141,7 +142,7 @@ public class TileEntityFob extends BlockEntity {
     }
 
     @Override
-    public void handleUpdateTag(CompoundTag tags) {
+    public void handleUpdateTag(CompoundTag tags, HolderLookup.Provider registries) {
         ownerFaction = tags.hasUUID("ownerFaction") ? tags.getUUID("ownerFaction") : Faction.nullUuid;
         name = tags.getString("name");
         tickets = tags.getInt("tickets");

@@ -1,13 +1,12 @@
 package com.flansmod.warforge.common.factories;
 
-import brachy.modularui.factory.GuiData;
 import com.flansmod.warforge.server.Faction;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.items.IItemHandlerModifiable;
+import net.neoforged.neoforge.items.IItemHandlerModifiable;
 
 import java.util.UUID;
 
-public class FactionInsuranceGuiData extends GuiData {
+public class FactionInsuranceGuiData {
     public UUID requestedFactionId = Faction.nullUuid;
     public boolean hasFaction;
     public UUID factionId = Faction.nullUuid;
@@ -19,7 +18,6 @@ public class FactionInsuranceGuiData extends GuiData {
     public IItemHandlerModifiable insuranceHandler;
 
     public FactionInsuranceGuiData(Player player, UUID requestedFactionId) {
-        super(player);
         this.requestedFactionId = requestedFactionId;
     }
 }

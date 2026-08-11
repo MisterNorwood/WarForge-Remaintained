@@ -1,5 +1,6 @@
 
 {
+  "render_type": "minecraft:cutout",
   "parent": "block/cube",
   "textures": {
     "particle": "warforge:block/pedestal_front",

@@ -674,7 +674,7 @@ public class CommandFactions {
         CommandSourceStack src = ctx.getSource();
         int cX = IntegerArgumentType.getInteger(ctx, "chunkX");
         int cZ = IntegerArgumentType.getInteger(ctx, "chunkZ");
-        ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(StringArgumentType.getString(ctx, "dim")));
+        ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(StringArgumentType.getString(ctx, "dim")));
         DimChunkPos dimPos = new DimChunkPos(dim, cX, cZ);
 
         FactionStorage.siegeTermination termType;
@@ -971,7 +971,7 @@ public class CommandFactions {
         int baseX = IntegerArgumentType.getInteger(ctx, "atX");
         int baseZ = IntegerArgumentType.getInteger(ctx, "atZ");
         ResourceKey<Level> dim = hasDim
-                ? ResourceKey.create(Registries.DIMENSION, new ResourceLocation(StringArgumentType.getString(ctx, "atDim")))
+                ? ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(StringArgumentType.getString(ctx, "atDim")))
                 : senderDim(src);
         int radius = hasRadius ? IntegerArgumentType.getInteger(ctx, "atRadius") : 0;
         radius = Math.max(0, Math.min(radius, 16));

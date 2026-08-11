@@ -94,7 +94,7 @@ public final class WarforgeAPI {
                 int bonus = 0;
                 boolean stacks = false;
 
-                IChunkReinforcer reinforcer = be.getCapability(WarForgeCapabilities.CHUNK_REINFORCER).resolve().orElse(null);
+                IChunkReinforcer reinforcer = level.getCapability(WarForgeCapabilities.CHUNK_REINFORCER, be.getBlockPos(), null);
                 if (reinforcer != null) {
                     if (!reinforcer.isReinforcementActive()) continue;
                     ChunkPos rc = new ChunkPos(be.getBlockPos());

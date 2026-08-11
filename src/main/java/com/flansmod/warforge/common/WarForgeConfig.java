@@ -11,14 +11,12 @@ import com.flansmod.warforge.Tags;
 import com.flansmod.warforge.api.Time;
 import com.flansmod.warforge.api.vein.Quality;
 import com.flansmod.warforge.common.network.PacketSyncConfig;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.common.ForgeConfigSpec;
-import net.minecraftforge.fml.ModLoadingContext;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.common.ModConfigSpec;
 
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -58,7 +56,7 @@ public class WarForgeConfig {
     public static final String CATEGORY_GENERAL = "General";
 
     // Config spec
-    public static final ForgeConfigSpec SPEC;
+    public static final ModConfigSpec SPEC;
     public static boolean DO_FANCY_RENDERING = true;
     public static boolean SHOW_OPPONENT_BORDERS = true;
     public static boolean SHOW_ALLY_BORDERS = true;
@@ -340,174 +338,174 @@ public class WarForgeConfig {
         WAR_FOE.USE_ITEM = true;
         WAR_FOE.EXPLOSION_DAMAGE = false;
 
-        ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
+        ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
         define(builder);
         SPEC = builder.build();
     }
 
     // ---------------------------------------------------------------------
-    // ForgeConfigSpec backing values. Each ConfigValue is read in bake() and
+    // ModConfigSpec backing values. Each ConfigValue is read in bake() and
     // copied into the matching static field so the hundreds of callers keep
     // reading WarForgeConfig.FIELD unchanged.
     // ---------------------------------------------------------------------
 
     // Claims
-    private static ForgeConfigSpec.ConfigValue<List<? extends String>> CLAIM_DIM_WHITELIST_V;
-    private static ForgeConfigSpec.IntValue CLAIM_STRENGTH_CITADEL_V;
-    private static ForgeConfigSpec.IntValue CLAIM_STRENGTH_REINFORCED_V;
-    private static ForgeConfigSpec.IntValue CLAIM_STRENGTH_BASIC_V;
-    private static ForgeConfigSpec.IntValue SUPPORT_STRENGTH_CITADEL_V;
-    private static ForgeConfigSpec.IntValue SUPPORT_STRENGTH_REINFORCED_V;
-    private static ForgeConfigSpec.IntValue SUPPORT_STRENGTH_BASIC_V;
-    private static ForgeConfigSpec.IntValue FORCE_LOADED_CHUNKS_TOTAL_V;
-    private static ForgeConfigSpec.IntValue MAX_CLAIMS_PER_FACTION_V;
-    private static ForgeConfigSpec.IntValue MAX_FOBS_V;
-    private static ForgeConfigSpec.IntValue FOB_TICKET_LIMIT_V;
-    private static ForgeConfigSpec.IntValue FOB_TICKET_REGEN_PER_SIEGE_TICK_V;
-    private static ForgeConfigSpec.IntValue FOB_WARP_TICKS_V;
-    private static ForgeConfigSpec.BooleanValue FOB_BLOCK_BREAKABLE_V;
-    private static ForgeConfigSpec.IntValue FOB_CLAIM_EXCLUSION_RADIUS_V;
-    private static ForgeConfigSpec.ConfigValue<List<? extends String>> FOB_VEHICLE_TICKET_COST_V;
-    private static ForgeConfigSpec.IntValue MIN_DISTANCE_BETWEEN_FACTIONS_V;
-    private static ForgeConfigSpec.IntValue CLAIM_MANAGER_RADIUS_V;
-    private static ForgeConfigSpec.IntValue ISLAND_COLLECTOR_SLOTS_V;
-    private static ForgeConfigSpec.BooleanValue ENABLE_OFFLINE_RAID_PROTECTION_V;
-    private static ForgeConfigSpec.IntValue OFFLINE_RAID_PROTECTION_HOURS_V;
-    private static ForgeConfigSpec.BooleanValue ENABLE_SIEGE_GRACE_PERIOD_V;
-    private static ForgeConfigSpec.IntValue SIEGE_GRACE_PERIOD_HOURS_V;
-    private static ForgeConfigSpec.IntValue CITADEL_MOVE_COOLDOWN_SECONDS_V;
-    private static ForgeConfigSpec.IntValue CITADEL_MIN_Y_V;
-    private static ForgeConfigSpec.BooleanValue ENABLE_CITADEL_UPGRADES_V;
-    private static ForgeConfigSpec.BooleanValue ENABLE_ISOLATED_CLAIMS_V;
-    private static ForgeConfigSpec.BooleanValue BLOCK_FOREIGN_FLUID_INFLOW_V;
-    private static ForgeConfigSpec.BooleanValue BLOCK_FOREIGN_PISTON_PUSH_V;
-    private static ForgeConfigSpec.ConfigValue<List<? extends String>> INSURANCE_BLACKLIST_IDS_V;
-    private static ForgeConfigSpec.ConfigValue<List<? extends String>> DEFAULT_FLAG_IDS_V;
-    private static ForgeConfigSpec.ConfigValue<List<? extends String>> CUSTOM_FLAG_ALLOWLIST_V;
-    private static ForgeConfigSpec.ConfigValue<List<? extends String>> FLAG_WHITELIST_V;
-    private static ForgeConfigSpec.BooleanValue UNIQUE_FLAGS_V;
+    private static ModConfigSpec.ConfigValue<List<? extends String>> CLAIM_DIM_WHITELIST_V;
+    private static ModConfigSpec.IntValue CLAIM_STRENGTH_CITADEL_V;
+    private static ModConfigSpec.IntValue CLAIM_STRENGTH_REINFORCED_V;
+    private static ModConfigSpec.IntValue CLAIM_STRENGTH_BASIC_V;
+    private static ModConfigSpec.IntValue SUPPORT_STRENGTH_CITADEL_V;
+    private static ModConfigSpec.IntValue SUPPORT_STRENGTH_REINFORCED_V;
+    private static ModConfigSpec.IntValue SUPPORT_STRENGTH_BASIC_V;
+    private static ModConfigSpec.IntValue FORCE_LOADED_CHUNKS_TOTAL_V;
+    private static ModConfigSpec.IntValue MAX_CLAIMS_PER_FACTION_V;
+    private static ModConfigSpec.IntValue MAX_FOBS_V;
+    private static ModConfigSpec.IntValue FOB_TICKET_LIMIT_V;
+    private static ModConfigSpec.IntValue FOB_TICKET_REGEN_PER_SIEGE_TICK_V;
+    private static ModConfigSpec.IntValue FOB_WARP_TICKS_V;
+    private static ModConfigSpec.BooleanValue FOB_BLOCK_BREAKABLE_V;
+    private static ModConfigSpec.IntValue FOB_CLAIM_EXCLUSION_RADIUS_V;
+    private static ModConfigSpec.ConfigValue<List<? extends String>> FOB_VEHICLE_TICKET_COST_V;
+    private static ModConfigSpec.IntValue MIN_DISTANCE_BETWEEN_FACTIONS_V;
+    private static ModConfigSpec.IntValue CLAIM_MANAGER_RADIUS_V;
+    private static ModConfigSpec.IntValue ISLAND_COLLECTOR_SLOTS_V;
+    private static ModConfigSpec.BooleanValue ENABLE_OFFLINE_RAID_PROTECTION_V;
+    private static ModConfigSpec.IntValue OFFLINE_RAID_PROTECTION_HOURS_V;
+    private static ModConfigSpec.BooleanValue ENABLE_SIEGE_GRACE_PERIOD_V;
+    private static ModConfigSpec.IntValue SIEGE_GRACE_PERIOD_HOURS_V;
+    private static ModConfigSpec.IntValue CITADEL_MOVE_COOLDOWN_SECONDS_V;
+    private static ModConfigSpec.IntValue CITADEL_MIN_Y_V;
+    private static ModConfigSpec.BooleanValue ENABLE_CITADEL_UPGRADES_V;
+    private static ModConfigSpec.BooleanValue ENABLE_ISOLATED_CLAIMS_V;
+    private static ModConfigSpec.BooleanValue BLOCK_FOREIGN_FLUID_INFLOW_V;
+    private static ModConfigSpec.BooleanValue BLOCK_FOREIGN_PISTON_PUSH_V;
+    private static ModConfigSpec.ConfigValue<List<? extends String>> INSURANCE_BLACKLIST_IDS_V;
+    private static ModConfigSpec.ConfigValue<List<? extends String>> DEFAULT_FLAG_IDS_V;
+    private static ModConfigSpec.ConfigValue<List<? extends String>> CUSTOM_FLAG_ALLOWLIST_V;
+    private static ModConfigSpec.ConfigValue<List<? extends String>> FLAG_WHITELIST_V;
+    private static ModConfigSpec.BooleanValue UNIQUE_FLAGS_V;
 
     // Sieges
-    private static ForgeConfigSpec.IntValue ATTACK_STRENGTH_SIEGE_CAMP_V;
-    private static ForgeConfigSpec.DoubleValue LEECH_PROPORTION_SIEGE_CAMP_V;
-    private static ForgeConfigSpec.IntValue MAX_SIEGES_V;
-    private static ForgeConfigSpec.IntValue MAX_INCOMING_SIEGES_V;
-    private static ForgeConfigSpec.IntValue ATTACKER_DESERTION_TIMER_V;
-    private static ForgeConfigSpec.IntValue DEFENDER_DESERTION_TIMER_V;
-    private static ForgeConfigSpec.IntValue ATTACKER_CONQUERED_CHUNK_PERIOD_V;
-    private static ForgeConfigSpec.IntValue DEFENDER_CONQUERED_CHUNK_PERIOD_V;
-    private static ForgeConfigSpec.IntValue COMBAT_LOG_THRESHOLD_V;
-    private static ForgeConfigSpec.IntValue LIVE_QUIT_TIMER_V;
-    private static ForgeConfigSpec.BooleanValue SIEGE_ALLOW_UI_DECLARE_V;
-    private static ForgeConfigSpec.IntValue SIEGE_DECLARE_MAX_RANGE_V;
-    private static ForgeConfigSpec.BooleanValue SIEGE_DECLARE_REQUIRE_PRESENCE_V;
-    private static ForgeConfigSpec.IntValue QUITTER_FAIL_TIMER_V;
-    private static ForgeConfigSpec.IntValue MAX_OFFLINE_PLAYER_COUNT_MINIMUM_V;
-    private static ForgeConfigSpec.DoubleValue MAX_OFFLINE_PLAYER_PERCENT_V;
-    private static ForgeConfigSpec.IntValue VERTICAL_SIEGE_DIST_V;
-    private static ForgeConfigSpec.IntValue SIEGE_BATTLE_RADIUS_V;
-    private static ForgeConfigSpec.IntValue SIEGE_SIEGED_RADIUS_V;
-    private static ForgeConfigSpec.EnumValue<SiegeKillDetectionMode> SIEGE_KILL_DETECTION_MODE_V;
-    private static ForgeConfigSpec.IntValue SIEGE_ATTACKER_RADIUS_V;
-    private static ForgeConfigSpec.IntValue SIEGE_DEFENDER_RADIUS_V;
-    private static ForgeConfigSpec.IntValue SIEGE_SWING_PER_DEFENDER_DEATH_V;
-    private static ForgeConfigSpec.IntValue SIEGE_SWING_PER_ATTACKER_DEATH_V;
-    private static ForgeConfigSpec.IntValue SIEGE_STALL_ESCALATION_THRESHOLD_V;
-    private static ForgeConfigSpec.IntValue SIEGE_SWING_PER_DAY_ELAPSED_BASE_V;
-    private static ForgeConfigSpec.IntValue SIEGE_SWING_PER_DAY_ELAPSED_NO_ATTACKER_LOGINS_V;
-    private static ForgeConfigSpec.IntValue SIEGE_SWING_PER_DAY_ELAPSED_NO_DEFENDER_LOGINS_V;
-    private static ForgeConfigSpec.DoubleValue SIEGE_DAY_LENGTH_V;
-    private static ForgeConfigSpec.IntValue SIEGE_DEFENCE_THRESHOLD_V;
-    private static ForgeConfigSpec.BooleanValue SIEGE_END_ON_GOAL_REACHED_V;
-    private static ForgeConfigSpec.DoubleValue SIEGE_INFO_RADIUS_V;
-    private static ForgeConfigSpec.IntValue SIEGE_SWING_PER_DEFENDER_FLAG_V;
-    private static ForgeConfigSpec.IntValue SIEGE_COOLDOWN_FAIL_V;
-    private static ForgeConfigSpec.IntValue SIEGE_SWING_PER_ATTACKER_FLAG_V;
-    private static ForgeConfigSpec.IntValue SIEGE_DIFF_PER_MEMBER_V;
-    private static ForgeConfigSpec.BooleanValue SIEGE_CAPTURE_V;
-    private static ForgeConfigSpec.BooleanValue SIEGE_ENABLE_NEW_TIMER_V;
-    private static ForgeConfigSpec.IntValue SIEGE_MOMENTUM_DURATION_V;
-    private static ForgeConfigSpec.ConfigValue<List<? extends String>> SIEGE_MOMENTUM_MULTIPLIERS_V;
+    private static ModConfigSpec.IntValue ATTACK_STRENGTH_SIEGE_CAMP_V;
+    private static ModConfigSpec.DoubleValue LEECH_PROPORTION_SIEGE_CAMP_V;
+    private static ModConfigSpec.IntValue MAX_SIEGES_V;
+    private static ModConfigSpec.IntValue MAX_INCOMING_SIEGES_V;
+    private static ModConfigSpec.IntValue ATTACKER_DESERTION_TIMER_V;
+    private static ModConfigSpec.IntValue DEFENDER_DESERTION_TIMER_V;
+    private static ModConfigSpec.IntValue ATTACKER_CONQUERED_CHUNK_PERIOD_V;
+    private static ModConfigSpec.IntValue DEFENDER_CONQUERED_CHUNK_PERIOD_V;
+    private static ModConfigSpec.IntValue COMBAT_LOG_THRESHOLD_V;
+    private static ModConfigSpec.IntValue LIVE_QUIT_TIMER_V;
+    private static ModConfigSpec.BooleanValue SIEGE_ALLOW_UI_DECLARE_V;
+    private static ModConfigSpec.IntValue SIEGE_DECLARE_MAX_RANGE_V;
+    private static ModConfigSpec.BooleanValue SIEGE_DECLARE_REQUIRE_PRESENCE_V;
+    private static ModConfigSpec.IntValue QUITTER_FAIL_TIMER_V;
+    private static ModConfigSpec.IntValue MAX_OFFLINE_PLAYER_COUNT_MINIMUM_V;
+    private static ModConfigSpec.DoubleValue MAX_OFFLINE_PLAYER_PERCENT_V;
+    private static ModConfigSpec.IntValue VERTICAL_SIEGE_DIST_V;
+    private static ModConfigSpec.IntValue SIEGE_BATTLE_RADIUS_V;
+    private static ModConfigSpec.IntValue SIEGE_SIEGED_RADIUS_V;
+    private static ModConfigSpec.EnumValue<SiegeKillDetectionMode> SIEGE_KILL_DETECTION_MODE_V;
+    private static ModConfigSpec.IntValue SIEGE_ATTACKER_RADIUS_V;
+    private static ModConfigSpec.IntValue SIEGE_DEFENDER_RADIUS_V;
+    private static ModConfigSpec.IntValue SIEGE_SWING_PER_DEFENDER_DEATH_V;
+    private static ModConfigSpec.IntValue SIEGE_SWING_PER_ATTACKER_DEATH_V;
+    private static ModConfigSpec.IntValue SIEGE_STALL_ESCALATION_THRESHOLD_V;
+    private static ModConfigSpec.IntValue SIEGE_SWING_PER_DAY_ELAPSED_BASE_V;
+    private static ModConfigSpec.IntValue SIEGE_SWING_PER_DAY_ELAPSED_NO_ATTACKER_LOGINS_V;
+    private static ModConfigSpec.IntValue SIEGE_SWING_PER_DAY_ELAPSED_NO_DEFENDER_LOGINS_V;
+    private static ModConfigSpec.DoubleValue SIEGE_DAY_LENGTH_V;
+    private static ModConfigSpec.IntValue SIEGE_DEFENCE_THRESHOLD_V;
+    private static ModConfigSpec.BooleanValue SIEGE_END_ON_GOAL_REACHED_V;
+    private static ModConfigSpec.DoubleValue SIEGE_INFO_RADIUS_V;
+    private static ModConfigSpec.IntValue SIEGE_SWING_PER_DEFENDER_FLAG_V;
+    private static ModConfigSpec.IntValue SIEGE_COOLDOWN_FAIL_V;
+    private static ModConfigSpec.IntValue SIEGE_SWING_PER_ATTACKER_FLAG_V;
+    private static ModConfigSpec.IntValue SIEGE_DIFF_PER_MEMBER_V;
+    private static ModConfigSpec.BooleanValue SIEGE_CAPTURE_V;
+    private static ModConfigSpec.BooleanValue SIEGE_ENABLE_NEW_TIMER_V;
+    private static ModConfigSpec.IntValue SIEGE_MOMENTUM_DURATION_V;
+    private static ModConfigSpec.ConfigValue<List<? extends String>> SIEGE_MOMENTUM_MULTIPLIERS_V;
 
     // Alliances
-    private static ForgeConfigSpec.IntValue ALLIANCE_TRUCE_DURATION_MINUTES_V;
-    private static ForgeConfigSpec.IntValue MAX_ALLIES_V;
-    private static ForgeConfigSpec.BooleanValue VANILLA_TEAM_SYNC_V;
+    private static ModConfigSpec.IntValue ALLIANCE_TRUCE_DURATION_MINUTES_V;
+    private static ModConfigSpec.IntValue MAX_ALLIES_V;
+    private static ModConfigSpec.BooleanValue VANILLA_TEAM_SYNC_V;
 
     // Vault
-    private static ForgeConfigSpec.ConfigValue<List<? extends String>> VAULT_BLOCK_IDS_V;
+    private static ModConfigSpec.ConfigValue<List<? extends String>> VAULT_BLOCK_IDS_V;
 
     // Yields
-    private static ForgeConfigSpec.IntValue YIELD_DAY_LENGTH_V;
-    private static ForgeConfigSpec.BooleanValue TICK_YIELDS_V;
-    private static ForgeConfigSpec.BooleanValue TICK_SIEGES_V;
-    private static ForgeConfigSpec.BooleanValue TICK_MOMENTUM_V;
-    private static ForgeConfigSpec.BooleanValue TICK_OFFLINE_PROTECTION_V;
-    private static ForgeConfigSpec.BooleanValue TICK_SIEGE_GRACE_V;
-    private static ForgeConfigSpec.BooleanValue TICK_CITADEL_MOVE_V;
-    private static ForgeConfigSpec.BooleanValue TICK_TRUCES_V;
-    private static ForgeConfigSpec.DoubleValue POOR_QUAL_MULT_V;
-    private static ForgeConfigSpec.DoubleValue FAIR_QUAL_MULT_V;
-    private static ForgeConfigSpec.DoubleValue RICH_QUAL_MULT_V;
+    private static ModConfigSpec.IntValue YIELD_DAY_LENGTH_V;
+    private static ModConfigSpec.BooleanValue TICK_YIELDS_V;
+    private static ModConfigSpec.BooleanValue TICK_SIEGES_V;
+    private static ModConfigSpec.BooleanValue TICK_MOMENTUM_V;
+    private static ModConfigSpec.BooleanValue TICK_OFFLINE_PROTECTION_V;
+    private static ModConfigSpec.BooleanValue TICK_SIEGE_GRACE_V;
+    private static ModConfigSpec.BooleanValue TICK_CITADEL_MOVE_V;
+    private static ModConfigSpec.BooleanValue TICK_TRUCES_V;
+    private static ModConfigSpec.DoubleValue POOR_QUAL_MULT_V;
+    private static ModConfigSpec.DoubleValue FAIR_QUAL_MULT_V;
+    private static ModConfigSpec.DoubleValue RICH_QUAL_MULT_V;
 
     // Notoriety
-    private static ForgeConfigSpec.IntValue NOTORIETY_PER_PLAYER_KILL_V;
-    private static ForgeConfigSpec.IntValue NOTORIETY_PER_SIEGE_ATTACK_SUCCESS_V;
-    private static ForgeConfigSpec.IntValue NOTORIETY_PER_SIEGE_DEFEND_SUCCESS_V;
-    private static ForgeConfigSpec.IntValue NOTORIETY_KILL_CAP_PER_PLAYER_V;
+    private static ModConfigSpec.IntValue NOTORIETY_PER_PLAYER_KILL_V;
+    private static ModConfigSpec.IntValue NOTORIETY_PER_SIEGE_ATTACK_SUCCESS_V;
+    private static ModConfigSpec.IntValue NOTORIETY_PER_SIEGE_DEFEND_SUCCESS_V;
+    private static ModConfigSpec.IntValue NOTORIETY_KILL_CAP_PER_PLAYER_V;
 
     // Legacy
-    private static ForgeConfigSpec.IntValue LEGACY_PER_DAY_V;
-    private static ForgeConfigSpec.BooleanValue LEGACY_USES_YIELD_TIMER_V;
+    private static ModConfigSpec.IntValue LEGACY_PER_DAY_V;
+    private static ModConfigSpec.BooleanValue LEGACY_USES_YIELD_TIMER_V;
 
     // Visual / Client
-    private static ForgeConfigSpec.DoubleValue SHOW_NEW_AREA_TIMER_V;
-    private static ForgeConfigSpec.IntValue FACTION_NAME_LENGTH_MAX_V;
-    private static ForgeConfigSpec.ConfigValue<List<? extends String>> FACTION_NAME_BANLIST_V;
-    private static ForgeConfigSpec.BooleanValue SHOW_OPPONENT_BORDERS_V;
-    private static ForgeConfigSpec.BooleanValue SHOW_ALLY_BORDERS_V;
-    private static ForgeConfigSpec.BooleanValue SHOW_YIELD_TIMERS_V;
-    private static ForgeConfigSpec.BooleanValue FACTION_PREFIX_IN_CHAT_V;
-    private static ForgeConfigSpec.BooleanValue FACTION_PREFIX_IN_TABLIST_V;
-    private static ForgeConfigSpec.ConfigValue<String> JOURNEYMAP_CLAIM_MODE_V;
-    private static ForgeConfigSpec.ConfigValue<String> JOURNEYMAP_VEIN_MODE_V;
-    private static ForgeConfigSpec.IntValue JOURNEYMAP_VEIN_AUTO_RADIUS_V;
-    private static ForgeConfigSpec.IntValue VEIN_MEMBER_DISPLAY_TIME_MS_V;
-    private static ForgeConfigSpec.DoubleValue HUD_VERT_CUTOFF_PERCENT_V;
-    private static ForgeConfigSpec.ConfigValue<String> POS_TIMERS_V;
-    private static ForgeConfigSpec.ConfigValue<String> POS_SIEGE_V;
-    private static ForgeConfigSpec.ConfigValue<String> POS_TOAST_INDICATOR_V;
-    private static ForgeConfigSpec.ConfigValue<String> POS_VEIN_INDICATOR_V;
-    private static ForgeConfigSpec.BooleanValue DO_FANCY_RENDERING_V;
-    private static ForgeConfigSpec.IntValue RANDOM_BORDER_REDRAW_DENOMINATOR_V;
-    private static ForgeConfigSpec.IntValue BORDER_RENDER_DISTANCE_V;
+    private static ModConfigSpec.DoubleValue SHOW_NEW_AREA_TIMER_V;
+    private static ModConfigSpec.IntValue FACTION_NAME_LENGTH_MAX_V;
+    private static ModConfigSpec.ConfigValue<List<? extends String>> FACTION_NAME_BANLIST_V;
+    private static ModConfigSpec.BooleanValue SHOW_OPPONENT_BORDERS_V;
+    private static ModConfigSpec.BooleanValue SHOW_ALLY_BORDERS_V;
+    private static ModConfigSpec.BooleanValue SHOW_YIELD_TIMERS_V;
+    private static ModConfigSpec.BooleanValue FACTION_PREFIX_IN_CHAT_V;
+    private static ModConfigSpec.BooleanValue FACTION_PREFIX_IN_TABLIST_V;
+    private static ModConfigSpec.ConfigValue<String> JOURNEYMAP_CLAIM_MODE_V;
+    private static ModConfigSpec.ConfigValue<String> JOURNEYMAP_VEIN_MODE_V;
+    private static ModConfigSpec.IntValue JOURNEYMAP_VEIN_AUTO_RADIUS_V;
+    private static ModConfigSpec.IntValue VEIN_MEMBER_DISPLAY_TIME_MS_V;
+    private static ModConfigSpec.DoubleValue HUD_VERT_CUTOFF_PERCENT_V;
+    private static ModConfigSpec.ConfigValue<String> POS_TIMERS_V;
+    private static ModConfigSpec.ConfigValue<String> POS_SIEGE_V;
+    private static ModConfigSpec.ConfigValue<String> POS_TOAST_INDICATOR_V;
+    private static ModConfigSpec.ConfigValue<String> POS_VEIN_INDICATOR_V;
+    private static ModConfigSpec.BooleanValue DO_FANCY_RENDERING_V;
+    private static ModConfigSpec.IntValue RANDOM_BORDER_REDRAW_DENOMINATOR_V;
+    private static ModConfigSpec.IntValue BORDER_RENDER_DISTANCE_V;
 
     // General
-    private static ForgeConfigSpec.BooleanValue BLOCK_ENDER_CHEST_V;
-    private static ForgeConfigSpec.BooleanValue ENABLE_TPA_POTIONS_V;
-    private static ForgeConfigSpec.ConfigValue<String> FACTIONS_BOT_CHANNEL_ID_V;
+    private static ModConfigSpec.BooleanValue BLOCK_ENDER_CHEST_V;
+    private static ModConfigSpec.BooleanValue ENABLE_TPA_POTIONS_V;
+    private static ModConfigSpec.ConfigValue<String> FACTIONS_BOT_CHANNEL_ID_V;
 
     // Warps
-    private static ForgeConfigSpec.BooleanValue ENABLE_F_HOME_COMMAND_V;
-    private static ForgeConfigSpec.BooleanValue ENABLE_F_HOME_POTION_EFFECT_V;
-    private static ForgeConfigSpec.BooleanValue ALLOW_F_HOME_BETWEEN_DIMENSIONS_V;
-    private static ForgeConfigSpec.BooleanValue ENABLE_SPAWN_COMMAND_V;
-    private static ForgeConfigSpec.BooleanValue ENABLE_SPAWN_POTION_EFFECT_V;
-    private static ForgeConfigSpec.BooleanValue ALLOW_SPAWN_BETWEEN_DIMENSIONS_V;
-    private static ForgeConfigSpec.BooleanValue SPAWN_AT_CITADEL_V;
-    private static ForgeConfigSpec.BooleanValue ALLOW_BED_SPAWN_IN_CLAIMS_V;
-    private static ForgeConfigSpec.IntValue NUM_TICKS_FOR_WARP_COMMANDS_V;
-    private static ForgeConfigSpec.BooleanValue ENABLE_TPA_COMMAND_V;
-    private static ForgeConfigSpec.IntValue TPA_REQUEST_TIMEOUT_SECONDS_V;
+    private static ModConfigSpec.BooleanValue ENABLE_F_HOME_COMMAND_V;
+    private static ModConfigSpec.BooleanValue ENABLE_F_HOME_POTION_EFFECT_V;
+    private static ModConfigSpec.BooleanValue ALLOW_F_HOME_BETWEEN_DIMENSIONS_V;
+    private static ModConfigSpec.BooleanValue ENABLE_SPAWN_COMMAND_V;
+    private static ModConfigSpec.BooleanValue ENABLE_SPAWN_POTION_EFFECT_V;
+    private static ModConfigSpec.BooleanValue ALLOW_SPAWN_BETWEEN_DIMENSIONS_V;
+    private static ModConfigSpec.BooleanValue SPAWN_AT_CITADEL_V;
+    private static ModConfigSpec.BooleanValue ALLOW_BED_SPAWN_IN_CLAIMS_V;
+    private static ModConfigSpec.IntValue NUM_TICKS_FOR_WARP_COMMANDS_V;
+    private static ModConfigSpec.BooleanValue ENABLE_TPA_COMMAND_V;
+    private static ModConfigSpec.IntValue TPA_REQUEST_TIMEOUT_SECONDS_V;
 
     // Debug
-    private static ForgeConfigSpec.BooleanValue DEBUG_TRACE_SETBLOCK_V;
+    private static ModConfigSpec.BooleanValue DEBUG_TRACE_SETBLOCK_V;
 
     private static List<String> asList(String[] arr) {
         return new ArrayList<>(Arrays.asList(arr));
     }
 
-    private static void define(ForgeConfigSpec.Builder cfg) {
+    private static void define(ModConfigSpec.Builder cfg) {
         // Protections
         UNCLAIMED.define(cfg, "Unclaimed", "Unclaimed Chunks");
         SAFE_ZONE.define(cfg, "SafeZone", "Safe Zone");
@@ -734,7 +732,6 @@ public class WarForgeConfig {
     }
 
     public static void register() {
-        ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, SPEC);
     }
 
     public static final Path CONFIG_PATH = Paths.get("config", Tags.MODID + "-common.toml");
@@ -746,7 +743,9 @@ public class WarForgeConfig {
                 .writingMode(WritingMode.REPLACE)
                 .build();
         file.load();
-        SPEC.setConfig(file);
+        SPEC.correct(file);
+        pushIntoSpec(file);
+        file.close();
         bake();
     }
 
@@ -783,9 +782,28 @@ public class WarForgeConfig {
         }
 
         deepMerge(serverValues, merged);
-        SPEC.setConfig(merged);
+        SPEC.correct(merged);
+        pushIntoSpec(merged);
         bake();
         findAllProtectionBlocks();
+    }
+
+    private static boolean pushIntoSpec(UnmodifiableConfig source) {
+        try {
+            java.lang.reflect.Field field = ModConfigSpec.class.getDeclaredField("loadedConfig");
+            field.setAccessible(true);
+            Object loaded = field.get(SPEC);
+            if (loaded == null) {
+                return false;
+            }
+            CommentedConfig active = ((net.neoforged.fml.config.IConfigSpec.ILoadedConfig) loaded).config();
+            deepMerge(source, active);
+            SPEC.resetCaches(ModConfigSpec.RestartType.NONE);
+            return true;
+        } catch (Throwable t) {
+            WarForgeMod.LOGGER.error("Could not apply config values into the running spec; some synced/reloaded values may not take effect", t);
+            return false;
+        }
     }
 
     private static void deepMerge(UnmodifiableConfig from, CommentedConfig into) {
@@ -1034,7 +1052,7 @@ public class WarForgeConfig {
             return false;
         }
 
-        ResourceLocation registry = ForgeRegistries.ITEMS.getKey(stack.getItem());
+        ResourceLocation registry = BuiltInRegistries.ITEM.getKey(stack.getItem());
         if (registry == null) {
             return false;
         }
@@ -1167,42 +1185,41 @@ public class WarForgeConfig {
         private String[] MINETIME_WHITELIST_IDS = new String[]{};
         private String[] MINETIME_BLACKLIST_IDS = new String[]{};
 
-        // ForgeConfigSpec backing values for this protection category.
-        private ForgeConfigSpec.BooleanValue BREAK_BLOCKS_V;
-        private ForgeConfigSpec.BooleanValue PLACE_BLOCKS_V;
-        private ForgeConfigSpec.BooleanValue BLOCK_REMOVAL_V;
-        private ForgeConfigSpec.BooleanValue EXPLOSION_DAMAGE_V;
-        private ForgeConfigSpec.BooleanValue INTERACT_V;
-        private ForgeConfigSpec.BooleanValue USE_ITEM_V;
-        private ForgeConfigSpec.BooleanValue PLAYER_TAKE_DAMAGE_FROM_MOB_V;
-        private ForgeConfigSpec.BooleanValue PLAYER_TAKE_DAMAGE_FROM_PLAYER_V;
-        private ForgeConfigSpec.BooleanValue PLAYER_TAKE_DAMAGE_FROM_OTHER_V;
-        private ForgeConfigSpec.BooleanValue PLAYER_DEAL_DAMAGE_V;
-        private ForgeConfigSpec.ConfigValue<List<? extends String>> BLOCK_PLACE_WHITELIST_V;
-        private ForgeConfigSpec.ConfigValue<List<? extends String>> BLOCK_BREAK_WHITELIST_V;
-        private ForgeConfigSpec.ConfigValue<List<? extends String>> BLOCK_INTERACT_WHITELIST_V;
-        private ForgeConfigSpec.ConfigValue<List<? extends String>> ITEM_USE_WHITELIST_V;
-        private ForgeConfigSpec.ConfigValue<List<? extends String>> BLOCK_PLACE_BLACKLIST_V;
-        private ForgeConfigSpec.ConfigValue<List<? extends String>> BLOCK_BREAK_BLACKLIST_V;
-        private ForgeConfigSpec.ConfigValue<List<? extends String>> BLOCK_INTERACT_BLACKLIST_V;
-        private ForgeConfigSpec.ConfigValue<List<? extends String>> ITEM_USE_BLACKLIST_V;
-        private ForgeConfigSpec.BooleanValue ALLOW_MOB_SPAWNS_V;
-        private ForgeConfigSpec.BooleanValue ALLOW_MOB_ENTRY_V;
-        private ForgeConfigSpec.BooleanValue ALLOW_DISMOUNT_ENTITY_V;
-        private ForgeConfigSpec.BooleanValue ALLOW_MOUNT_ENTITY_V;
-        private ForgeConfigSpec.BooleanValue MINETIME_ENABLED_V;
-        private ForgeConfigSpec.ConfigValue<String> MINETIME_MODE_V;
-        private ForgeConfigSpec.DoubleValue MINETIME_VALUE_V;
-        private ForgeConfigSpec.ConfigValue<List<? extends String>> MINETIME_WHITELIST_V;
-        private ForgeConfigSpec.ConfigValue<List<? extends String>> MINETIME_BLACKLIST_V;
+        // ModConfigSpec backing values for this protection category.
+        private ModConfigSpec.BooleanValue BREAK_BLOCKS_V;
+        private ModConfigSpec.BooleanValue PLACE_BLOCKS_V;
+        private ModConfigSpec.BooleanValue BLOCK_REMOVAL_V;
+        private ModConfigSpec.BooleanValue EXPLOSION_DAMAGE_V;
+        private ModConfigSpec.BooleanValue INTERACT_V;
+        private ModConfigSpec.BooleanValue USE_ITEM_V;
+        private ModConfigSpec.BooleanValue PLAYER_TAKE_DAMAGE_FROM_MOB_V;
+        private ModConfigSpec.BooleanValue PLAYER_TAKE_DAMAGE_FROM_PLAYER_V;
+        private ModConfigSpec.BooleanValue PLAYER_TAKE_DAMAGE_FROM_OTHER_V;
+        private ModConfigSpec.BooleanValue PLAYER_DEAL_DAMAGE_V;
+        private ModConfigSpec.ConfigValue<List<? extends String>> BLOCK_PLACE_WHITELIST_V;
+        private ModConfigSpec.ConfigValue<List<? extends String>> BLOCK_BREAK_WHITELIST_V;
+        private ModConfigSpec.ConfigValue<List<? extends String>> BLOCK_INTERACT_WHITELIST_V;
+        private ModConfigSpec.ConfigValue<List<? extends String>> ITEM_USE_WHITELIST_V;
+        private ModConfigSpec.ConfigValue<List<? extends String>> BLOCK_PLACE_BLACKLIST_V;
+        private ModConfigSpec.ConfigValue<List<? extends String>> BLOCK_BREAK_BLACKLIST_V;
+        private ModConfigSpec.ConfigValue<List<? extends String>> BLOCK_INTERACT_BLACKLIST_V;
+        private ModConfigSpec.ConfigValue<List<? extends String>> ITEM_USE_BLACKLIST_V;
+        private ModConfigSpec.BooleanValue ALLOW_MOB_SPAWNS_V;
+        private ModConfigSpec.BooleanValue ALLOW_MOB_ENTRY_V;
+        private ModConfigSpec.BooleanValue ALLOW_DISMOUNT_ENTITY_V;
+        private ModConfigSpec.BooleanValue ALLOW_MOUNT_ENTITY_V;
+        private ModConfigSpec.BooleanValue MINETIME_ENABLED_V;
+        private ModConfigSpec.ConfigValue<String> MINETIME_MODE_V;
+        private ModConfigSpec.DoubleValue MINETIME_VALUE_V;
+        private ModConfigSpec.ConfigValue<List<? extends String>> MINETIME_WHITELIST_V;
+        private ModConfigSpec.ConfigValue<List<? extends String>> MINETIME_BLACKLIST_V;
 
         private Set<Block> findBlocks(String[] input) {
             Set<Block> output = new HashSet<>(input.length);
             for (String blockID : input) {
-                ResourceLocation rl = new ResourceLocation(blockID);
-                Block block = ForgeRegistries.BLOCKS.getValue(rl);
-                if (block != null) {
-                    output.add(block);
+                ResourceLocation rl = ResourceLocation.parse(blockID);
+                if (BuiltInRegistries.BLOCK.containsKey(rl)) {
+                    output.add(BuiltInRegistries.BLOCK.get(rl));
                 } else {
                     WarForgeMod.LOGGER.warn("Unknown block ID in config: {}", blockID);
                 }
@@ -1213,10 +1230,9 @@ public class WarForgeConfig {
         private Set<Item> findItems(String[] input) {
             Set<Item> output = new HashSet<>(input.length);
             for (String itemID : input) {
-                ResourceLocation rl = new ResourceLocation(itemID);
-                Item item = ForgeRegistries.ITEMS.getValue(rl);
-                if (item != null) {
-                    output.add(item);
+                ResourceLocation rl = ResourceLocation.parse(itemID);
+                if (BuiltInRegistries.ITEM.containsKey(rl)) {
+                    output.add(BuiltInRegistries.ITEM.get(rl));
                 } else {
                     WarForgeMod.LOGGER.warn("Unknown item ID in config: {}", itemID);
                 }
@@ -1236,7 +1252,7 @@ public class WarForgeConfig {
             ITEM_USE_BLACKLIST = findItems(ITEM_USE_BLACKLIST_IDS);
         }
 
-        public void define(ForgeConfigSpec.Builder cfg, String name, String desc) {
+        public void define(ModConfigSpec.Builder cfg, String name, String desc) {
             cfg.push(name);
 
             BREAK_BLOCKS_V = cfg.comment("Can players break blocks in " + desc).define(name + " - Break Blocks", BREAK_BLOCKS);

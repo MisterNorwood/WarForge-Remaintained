@@ -22,17 +22,17 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.piston.PistonStructureResolver;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.event.entity.EntityEvent.EnteringSection;
-import net.minecraftforge.event.entity.EntityMountEvent;
-import net.minecraftforge.event.entity.living.LivingDamageEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
-import net.minecraftforge.event.level.BlockEvent;
-import net.minecraftforge.event.level.ExplosionEvent;
-import net.minecraftforge.event.level.PistonEvent;
-import net.minecraftforge.event.level.LevelEvent.PotentialSpawns;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.neoforged.neoforge.event.entity.EntityEvent.EnteringSection;
+import net.neoforged.neoforge.event.entity.EntityMountEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.event.level.ExplosionEvent;
+import net.neoforged.neoforge.event.level.PistonEvent;
+import net.neoforged.neoforge.event.level.LevelEvent.PotentialSpawns;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -221,7 +221,7 @@ public class ProtectionsModule {
     }
 
     @SubscribeEvent
-    public void OnDamage(LivingDamageEvent event) {
+    public void OnDamage(LivingIncomingDamageEvent event) {
         if (event.getEntity().level().isClientSide)
             return;
 
@@ -293,7 +293,7 @@ public class ProtectionsModule {
 
         // best effort compat with mekanism
         Block placedBlock = event.getPlacedBlock().getBlock();
-        var blockId = ForgeRegistries.BLOCKS.getKey(placedBlock);
+        var blockId = BuiltInRegistries.BLOCK.getKey(placedBlock);
         if (blockId == null) { WarForgeMod.LOGGER.atDebug().log("Could not get id of block placed in event: " + event); }
         else if (blockId.getNamespace().equals("mekanism") && eventEntity == null) { return; }  // ignore mek place w/ null entity
 
@@ -440,7 +440,7 @@ public class ProtectionsModule {
             return;
 
         // Always allow food
-        if (event.getItemStack().getItem().isEdible())
+        if (event.getItemStack().has(net.minecraft.core.component.DataComponents.FOOD))
             return;
 
         DimBlockPos pos = new DimBlockPos(event.getEntity().level().dimension(), event.getPos());

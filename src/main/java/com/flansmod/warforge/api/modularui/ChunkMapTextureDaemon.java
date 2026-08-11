@@ -97,7 +97,7 @@ public class ChunkMapTextureDaemon {
         Minecraft mc = Minecraft.getInstance();
         for (String name : active) {
             ChunkDynamicTextureThread.PENDING.remove(name);
-            mc.getTextureManager().release(new ResourceLocation(Tags.MODID, name));
+            mc.getTextureManager().release(ResourceLocation.fromNamespaceAndPath(Tags.MODID, name));
         }
     }
 
@@ -116,7 +116,7 @@ public class ChunkMapTextureDaemon {
         for (String old : current) {
             if (!desired.contains(old)) {
                 ChunkDynamicTextureThread.PENDING.remove(old);
-                mc.getTextureManager().release(new ResourceLocation(Tags.MODID, old));
+                mc.getTextureManager().release(ResourceLocation.fromNamespaceAndPath(Tags.MODID, old));
             }
         }
         ACTIVE_TEXTURES.put(namespace, desired);

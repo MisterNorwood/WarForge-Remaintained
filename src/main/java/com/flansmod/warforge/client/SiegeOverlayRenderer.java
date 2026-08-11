@@ -1,6 +1,5 @@
 package com.flansmod.warforge.client;
 
-import brachy.modularui.drawable.GuiDraw;
 import com.flansmod.warforge.Tags;
 import com.flansmod.warforge.client.util.ScreenSpaceUtil;
 import com.flansmod.warforge.common.WarForgeConfig;
@@ -11,10 +10,12 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import org.joml.Matrix4f;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import java.util.UUID;
 
+@OnlyIn(Dist.CLIENT)
 public final class SiegeOverlayRenderer {
     private static final int STRIPE_W = 6;
     private static final int PAD = 6;
@@ -30,11 +31,14 @@ public final class SiegeOverlayRenderer {
     private static final int ICON_SIZE = 10;
     private static final int ABANDON_H = 12;
 
-    private static final ResourceLocation SHIELD_ICON = new ResourceLocation(Tags.MODID, "gui/icon_siege_shield.png");
-    private static final ResourceLocation AXE_ICON = new ResourceLocation(Tags.MODID, "gui/icon_siege_axe.png");
+    private static final ResourceLocation SHIELD_ICON = ResourceLocation.fromNamespaceAndPath(Tags.MODID, "gui/icon_siege_shield.png");
+    private static final ResourceLocation AXE_ICON = ResourceLocation.fromNamespaceAndPath(Tags.MODID, "gui/icon_siege_axe.png");
+
+    private static final int SECTION_FILL = 0xEE20262B;
+    private static final int SECTION_BORDER = 0xEE11161A;
 
     private static final int TRACK_FILL = argb(0xFF, 0x0E1216);
-    private static final int TRACK_BORDER = ModularGuiStyle.SECTION_BORDER;
+    private static final int TRACK_BORDER = SECTION_BORDER;
     private static final int NOTCH_MINOR = argb(0x77, 0xC7CCD1);
     private static final int CENTER_LINE = argb(0xFF, 0xFFFFFF);
     private static final int MARKER_FILL = argb(0xFF, 0xFFFFFF);
@@ -81,11 +85,11 @@ public final class SiegeOverlayRenderer {
 
         RenderSystem.enableBlend();
 
-        borderedFill(graphics, px, py, panelW, PANEL_H, ModularGuiStyle.SECTION_FILL, ModularGuiStyle.SECTION_BORDER);
-        GuiDraw.drawRect(graphics, px, py, STRIPE_W, PANEL_H, argb(0xFF, defendRGB));
-        GuiDraw.drawRect(graphics, px + panelW - STRIPE_W, py, STRIPE_W, PANEL_H, argb(0xFF, attackRGB));
-        GuiDraw.drawRect(graphics, px + STRIPE_W, py, 1, PANEL_H, ModularGuiStyle.SECTION_BORDER);
-        GuiDraw.drawRect(graphics, px + panelW - STRIPE_W - 1, py, 1, PANEL_H, ModularGuiStyle.SECTION_BORDER);
+        borderedFill(graphics, px, py, panelW, PANEL_H, SECTION_FILL, SECTION_BORDER);
+        graphics.fill(px, py, px + STRIPE_W, py + PANEL_H, argb(0xFF, defendRGB));
+        graphics.fill(px + panelW - STRIPE_W, py, px + panelW, py + PANEL_H, argb(0xFF, attackRGB));
+        graphics.fill(px + STRIPE_W, py, px + STRIPE_W + 1, py + PANEL_H, SECTION_BORDER);
+        graphics.fill(px + panelW - STRIPE_W - 1, py, px + panelW - STRIPE_W, py + PANEL_H, SECTION_BORDER);
 
         borderedFill(graphics, trackLeft, trackTop, trackWpx, TRACK_H, TRACK_FILL, TRACK_BORDER);
 
@@ -126,7 +130,7 @@ public final class SiegeOverlayRenderer {
         int light = argb(0xFF, lighten(baseRGB, 0.30f));
         int colorLeft = attackerSide ? dark : light;
         int colorRight = attackerSide ? light : dark;
-        GuiDraw.drawHorizontalGradientRect(graphics, left, trackTop + 1, width, TRACK_H - 2, colorLeft, colorRight);
+        drawHGradient(graphics, left, trackTop + 1, width, TRACK_H - 2, colorLeft, colorRight);
     }
 
     private static void renderNotches(GuiGraphics graphics, int trackLeft, int trackTop, float slotW, int defendPts, int attackPts, int attackRGB, int defendRGB) {
@@ -151,7 +155,11 @@ public final class SiegeOverlayRenderer {
         float nh = center ? TRACK_H + 4 : TRACK_H - 2;
         float nw = center ? 2f : 1f;
         float ny = trackTop + (TRACK_H - nh) / 2f;
-        GuiDraw.drawRect(graphics, nx - nw / 2f, ny, nw, nh, col);
+        int ix = Math.round(nx - nw / 2f);
+        int iy = Math.round(ny);
+        int iw = Math.round(nw);
+        int ih = Math.round(nh);
+        graphics.fill(ix, iy, ix + iw, iy + ih, col);
     }
 
     private static void renderMarker(GuiGraphics graphics, SiegeCampProgressInfo info, float markerX, int trackTop, int attackRGB, int defendRGB) {
@@ -171,8 +179,17 @@ public final class SiegeOverlayRenderer {
         }
         int glowAlpha = (int) (0x30 + pulse * 0x50);
 
-        GuiDraw.drawRect(graphics, markerX - glowW / 2f, top, glowW, height, argb(glowAlpha, leadRGB));
-        GuiDraw.drawRect(graphics, markerX - markerW / 2f, top, markerW, height, MARKER_FILL);
+        int gix = Math.round(markerX - glowW / 2f);
+        int giy = Math.round(top);
+        int giw = Math.round(glowW);
+        int gih = Math.round(height);
+        graphics.fill(gix, giy, gix + giw, giy + gih, argb(glowAlpha, leadRGB));
+
+        int mix = Math.round(markerX - markerW / 2f);
+        int miy = Math.round(top);
+        int miw = Math.round(markerW);
+        int mih = Math.round(height);
+        graphics.fill(mix, miy, mix + miw, miy + mih, MARKER_FILL);
     }
 
     private static void renderCounter(GuiGraphics graphics, Font font, int prog, int attackPts, int defendPts, int px, int panelW, int trackTop, int attackRGB, int defendRGB) {
@@ -200,10 +217,10 @@ public final class SiegeOverlayRenderer {
         int attColor = 0xFF000000 | attackRGB;
         int iconY = py + NAMES_Y - 1;
 
-        drawIcon(graphics, SHIELD_ICON, trackLeft, iconY, ICON_SIZE, ICON_SIZE);
+        drawIcon(graphics, SHIELD_ICON, trackLeft, iconY, ICON_SIZE, ICON_SIZE, 10, 11);
         drawOutlinedString(graphics, font, info.defendingName, trackLeft + ICON_SIZE + 3, py + NAMES_Y, defColor);
 
-        drawIcon(graphics, AXE_ICON, trackRight - ICON_SIZE, iconY, ICON_SIZE, ICON_SIZE);
+        drawIcon(graphics, AXE_ICON, trackRight - ICON_SIZE, iconY, ICON_SIZE, ICON_SIZE, 12, 12);
         int attackNameWidth = font.width(info.attackingName);
         drawOutlinedString(graphics, font, info.attackingName, trackRight - ICON_SIZE - 3 - attackNameWidth, py + NAMES_Y, attColor);
 
@@ -243,11 +260,10 @@ public final class SiegeOverlayRenderer {
         graphics.drawString(font, text, (int) (px + panelW / 2f - font.width(text) / 2f), py + PANEL_H + 2, color, true);
     }
 
-    private static void drawIcon(GuiGraphics graphics, ResourceLocation icon, int x, int y, int w, int h) {
+    private static void drawIcon(GuiGraphics graphics, ResourceLocation icon, int x, int y, int w, int h, int texW, int texH) {
         RenderSystem.enableBlend();
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
-        Matrix4f pose = graphics.pose().last().pose();
-        GuiDraw.drawTexture(pose, icon, x, y, x + w, y + h, 0f, 0f, 1f, 1f, true);
+        graphics.blit(icon, x, y, w, h, 0f, 0f, texW, texH, texW, texH);
         RenderSystem.setShaderColor(1f, 1f, 1f, 1f);
     }
 
@@ -268,11 +284,24 @@ public final class SiegeOverlayRenderer {
     }
 
     private static void borderedFill(GuiGraphics graphics, int x, int y, int w, int h, int fill, int border) {
-        GuiDraw.drawRect(graphics, x, y, w, h, fill);
-        GuiDraw.drawRect(graphics, x, y, w, 1, border);
-        GuiDraw.drawRect(graphics, x, y + h - 1, w, 1, border);
-        GuiDraw.drawRect(graphics, x, y, 1, h, border);
-        GuiDraw.drawRect(graphics, x + w - 1, y, 1, h, border);
+        graphics.fill(x, y, x + w, y + h, fill);
+        graphics.fill(x, y, x + w, y + 1, border);
+        graphics.fill(x, y + h - 1, x + w, y + h, border);
+        graphics.fill(x, y, x + 1, y + h, border);
+        graphics.fill(x + w - 1, y, x + w, y + h, border);
+    }
+
+    private static void drawHGradient(GuiGraphics g, float x, float y, float w, float h, int colLeft, int colRight) {
+        int ix = Math.round(x), iy = Math.round(y), iw = Math.round(w), ih = Math.round(h);
+        if (iw <= 0 || ih <= 0) return;
+        for (int i = 0; i < iw; i++) {
+            float t = iw == 1 ? 0f : (float) i / (iw - 1);
+            int a = (int)(((colLeft >>> 24) & 0xFF) + t * (((colRight >>> 24) & 0xFF) - ((colLeft >>> 24) & 0xFF)));
+            int r = (int)(((colLeft >> 16) & 0xFF) + t * (((colRight >> 16) & 0xFF) - ((colLeft >> 16) & 0xFF)));
+            int gg = (int)(((colLeft >> 8) & 0xFF) + t * (((colRight >> 8) & 0xFF) - ((colLeft >> 8) & 0xFF)));
+            int b = (int)((colLeft & 0xFF) + t * ((colRight & 0xFF) - (colLeft & 0xFF)));
+            g.fill(ix + i, iy, ix + i + 1, iy + ih, (a << 24) | (r << 16) | (gg << 8) | b);
+        }
     }
 
     private static float pointX(int trackLeft, float slotW, int defendPts, int point) {

@@ -1,17 +1,26 @@
 package com.flansmod.warforge.common.network;
 
+import com.flansmod.warforge.Tags;
 import com.flansmod.warforge.client.util.WarForgeNotifications;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.UUID;
 
 public class PacketClientNotification extends PacketBase {
-    // Common accent colours (mirror WarForgeNotifications) so server code can pick one without loading
-    // the client-only notification class.
+    public static final CustomPacketPayload.Type<PacketClientNotification> TYPE =
+        new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(Tags.MODID, "packetclientnotification"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, PacketClientNotification> STREAM_CODEC =
+        StreamCodec.ofMember(PacketClientNotification::encodeInto, buf -> { PacketClientNotification p = new PacketClientNotification(); p.decodeInto(buf); return p; });
+
+    @Override
+    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+
     public static final int COLOR_INFO = 0x708A97;
     public static final int COLOR_SUCCESS = 0x55AA55;
     public static final int COLOR_WARNING = 0xC79A3A;
@@ -64,7 +73,6 @@ public class PacketClientNotification extends PacketBase {
     }
 
     @Override
-    @OnlyIn(Dist.CLIENT)
     public void handleClientSide(Player clientPlayer) {
         WarForgeNotifications.show(token, title, subtitle.isEmpty() ? null : subtitle, accentColor, durationMs, playerId);
     }

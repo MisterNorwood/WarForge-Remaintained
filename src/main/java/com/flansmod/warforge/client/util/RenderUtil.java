@@ -6,7 +6,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.Heightmap;
 import org.joml.Matrix4f;
 
-//Trying to move that crap out of tick handler
 public class RenderUtil {
 
     public static void vertexAt(DimChunkPos chunkPos, Level world, Matrix4f matrix, VertexConsumer buffer, int color, int x, int z, double groundLevelBlend, double playerHeight) {
@@ -17,79 +16,73 @@ public class RenderUtil {
 
         double height = topHeight + (maxHeight - topHeight) * groundLevelBlend;
 
-        buffer.vertex(matrix, x, (float) height, z).color(color).uv(z / 16f, x / 16f).endVertex();
+        buffer.addVertex(matrix, x, (float) height, z).setColor(color).setUv(z / 16f, x / 16f);
     }
 
     public static void drawTexturedModalRect(Matrix4f matrix, VertexConsumer buffer, int color, int x, int y, float u, float v, int w, int h) {
         float texScale = 1f / 256f;
 
-        buffer.vertex(matrix, x, y + h, -90f).color(color).uv(u * texScale, (v + h) * texScale).endVertex();
-        buffer.vertex(matrix, x + w, y + h, -90f).color(color).uv((u + w) * texScale, (v + h) * texScale).endVertex();
-        buffer.vertex(matrix, x + w, y, -90f).color(color).uv((u + w) * texScale, (v) * texScale).endVertex();
-        buffer.vertex(matrix, x, y, -90f).color(color).uv(u * texScale, (v) * texScale).endVertex();
+        buffer.addVertex(matrix, x, y + h, -90f).setColor(color).setUv(u * texScale, (v + h) * texScale);
+        buffer.addVertex(matrix, x + w, y + h, -90f).setColor(color).setUv((u + w) * texScale, (v + h) * texScale);
+        buffer.addVertex(matrix, x + w, y, -90f).setColor(color).setUv((u + w) * texScale, (v) * texScale);
+        buffer.addVertex(matrix, x, y, -90f).setColor(color).setUv(u * texScale, (v) * texScale);
     }
 
     public static void renderZAlignedSquare(Matrix4f matrix, VertexConsumer buffer, int color, int x, int y, double z, int ori) {
-        buffer.vertex(matrix, x, y, (float) z).color(color).uv(((ori) / 2) % 2, ((ori + 3) / 2) % 2).endVertex();
-        buffer.vertex(matrix, x + 1, y, (float) z).color(color).uv(((ori + 1) / 2) % 2, ((ori) / 2) % 2).endVertex();
-        buffer.vertex(matrix, x + 1, y + 1, (float) z).color(color).uv(((ori + 2) / 2) % 2, ((ori + 1) / 2) % 2).endVertex();
-        buffer.vertex(matrix, x, y + 1, (float) z).color(color).uv(((ori + 3) / 2) % 2, ((ori + 2) / 2) % 2).endVertex();
+        buffer.addVertex(matrix, x, y, (float) z).setColor(color).setUv(((ori) / 2) % 2, ((ori + 3) / 2) % 2);
+        buffer.addVertex(matrix, x + 1, y, (float) z).setColor(color).setUv(((ori + 1) / 2) % 2, ((ori) / 2) % 2);
+        buffer.addVertex(matrix, x + 1, y + 1, (float) z).setColor(color).setUv(((ori + 2) / 2) % 2, ((ori + 1) / 2) % 2);
+        buffer.addVertex(matrix, x, y + 1, (float) z).setColor(color).setUv(((ori + 3) / 2) % 2, ((ori + 2) / 2) % 2);
     }
 
     public static void renderZAlignedRecangle(Matrix4f matrix, VertexConsumer buffer, int color, double x, int y, double z, int ori, double width) {
-        buffer.vertex(matrix, (float) (x + 0 - width), y, (float) z).color(color).uv(((ori) / 2) % 2, ((ori + 3) / 2) % 2).endVertex();
-        buffer.vertex(matrix, (float) (x + 1), y, (float) z).color(color).uv(((ori + 1) / 2) % 2, ((ori) / 2) % 2).endVertex();
-        buffer.vertex(matrix, (float) (x + 1), y + 1, (float) z).color(color).uv(((ori + 2) / 2) % 2, ((ori + 1) / 2) % 2).endVertex();
-        buffer.vertex(matrix, (float) (x + 0 - width), y + 1, (float) z).color(color).uv(((ori + 3) / 2) % 2, ((ori + 2) / 2) % 2).endVertex();
+        buffer.addVertex(matrix, (float) (x + 0 - width), y, (float) z).setColor(color).setUv(((ori) / 2) % 2, ((ori + 3) / 2) % 2);
+        buffer.addVertex(matrix, (float) (x + 1), y, (float) z).setColor(color).setUv(((ori + 1) / 2) % 2, ((ori) / 2) % 2);
+        buffer.addVertex(matrix, (float) (x + 1), y + 1, (float) z).setColor(color).setUv(((ori + 2) / 2) % 2, ((ori + 1) / 2) % 2);
+        buffer.addVertex(matrix, (float) (x + 0 - width), y + 1, (float) z).setColor(color).setUv(((ori + 3) / 2) % 2, ((ori + 2) / 2) % 2);
     }
 
     public static void renderXAlignedSquare(Matrix4f matrix, VertexConsumer buffer, int color, double x, int y, int z, int ori) {
-        buffer.vertex(matrix, (float) x, y, z).color(color).uv(((ori) / 2) % 2, ((ori + 3) / 2) % 2).endVertex();
-        buffer.vertex(matrix, (float) x, y, z + 1).color(color).uv(((ori + 1) / 2) % 2, ((ori) / 2) % 2).endVertex();
-        buffer.vertex(matrix, (float) x, y + 1, z + 1).color(color).uv(((ori + 2) / 2) % 2, ((ori + 1) / 2) % 2).endVertex();
-        buffer.vertex(matrix, (float) x, y + 1, z).color(color).uv(((ori + 3) / 2) % 2, ((ori + 2) / 2) % 2).endVertex();
+        buffer.addVertex(matrix, (float) x, y, z).setColor(color).setUv(((ori) / 2) % 2, ((ori + 3) / 2) % 2);
+        buffer.addVertex(matrix, (float) x, y, z + 1).setColor(color).setUv(((ori + 1) / 2) % 2, ((ori) / 2) % 2);
+        buffer.addVertex(matrix, (float) x, y + 1, z + 1).setColor(color).setUv(((ori + 2) / 2) % 2, ((ori + 1) / 2) % 2);
+        buffer.addVertex(matrix, (float) x, y + 1, z).setColor(color).setUv(((ori + 3) / 2) % 2, ((ori + 2) / 2) % 2);
     }
 
     public static void renderXAlignedRecangle(Matrix4f matrix, VertexConsumer buffer, int color, double x, int y, double z, int ori, double width) {
-        buffer.vertex(matrix, (float) x, y, (float) (z + 0 - width)).color(color).uv(((ori) / 2) % 2, ((ori + 3) / 2) % 2).endVertex();
-        buffer.vertex(matrix, (float) x, y, (float) (z + 1)).color(color).uv(((ori + 1) / 2) % 2, ((ori) / 2) % 2).endVertex();
-        buffer.vertex(matrix, (float) x, y + 1, (float) (z + 1)).color(color).uv(((ori + 2) / 2) % 2, ((ori + 1) / 2) % 2).endVertex();
-        buffer.vertex(matrix, (float) x, y + 1, (float) (z + 0 - width)).color(color).uv(((ori + 3) / 2) % 2, ((ori + 2) / 2) % 2).endVertex();
+        buffer.addVertex(matrix, (float) x, y, (float) (z + 0 - width)).setColor(color).setUv(((ori) / 2) % 2, ((ori + 3) / 2) % 2);
+        buffer.addVertex(matrix, (float) x, y, (float) (z + 1)).setColor(color).setUv(((ori + 1) / 2) % 2, ((ori) / 2) % 2);
+        buffer.addVertex(matrix, (float) x, y + 1, (float) (z + 1)).setColor(color).setUv(((ori + 2) / 2) % 2, ((ori + 1) / 2) % 2);
+        buffer.addVertex(matrix, (float) x, y + 1, (float) (z + 0 - width)).setColor(color).setUv(((ori + 3) / 2) % 2, ((ori + 2) / 2) % 2);
     }
 
-    // Helper for rendering horizontal edges (along Z-axis)
     public static void renderZEdge(Level world, Matrix4f matrix, VertexConsumer buffer, int color, int x, int y, int z, double align, boolean air0, boolean air1, int dir) {
-        if (!air0 && air1) RenderUtil.renderZAlignedSquare(matrix, buffer, color, x + 1, y, align, dir); // Entering air
-        if (air0 && !air1) RenderUtil.renderZAlignedSquare(matrix, buffer, color, x, y, align, 2 + dir); // Exiting air
+        if (!air0 && air1) RenderUtil.renderZAlignedSquare(matrix, buffer, color, x + 1, y, align, dir);
+        if (air0 && !air1) RenderUtil.renderZAlignedSquare(matrix, buffer, color, x, y, align, 2 + dir);
     }
 
-    // X-aligned horizontal edge
     public static void renderXEdge(Level world, Matrix4f matrix, VertexConsumer buffer, int color, int x, int y, int z, double align, boolean air0, boolean air1, int dir) {
         if (!air0 && air1) RenderUtil.renderXAlignedSquare(matrix, buffer, color, align, y, z + 1, dir);
         if (air0 && !air1) RenderUtil.renderXAlignedSquare(matrix, buffer, color, align, y, z, 2 + dir);
     }
 
-    // X-aligned vertical edge
     public static void renderXVerticalEdge(Level world, Matrix4f matrix, VertexConsumer buffer, int color, int x, int y, int z, double align, boolean air0, boolean air1, int dir) {
         if (!air0 && air1) RenderUtil.renderXAlignedSquare(matrix, buffer, color, align, y + 1, z, 3 + dir);
         if (air0 && !air1) RenderUtil.renderXAlignedSquare(matrix, buffer, color, align, y, z, 1 + dir);
     }
 
-    // X-aligned vertical corner
     public static void renderXVerticalCorner(Level world, Matrix4f matrix, VertexConsumer buffer, int color, double x, int y, double z, boolean air0, boolean air1, int dir, double width) {
         if (!air0 && air1) RenderUtil.renderXAlignedRecangle(matrix, buffer, color, x, y + 1, z, 3 + dir, width);
         if (air0 && !air1) RenderUtil.renderXAlignedRecangle(matrix, buffer, color, x, y, z, 1 + dir, width);
     }
 
-    // Z-aligned vertical corner
     public static void renderZVerticalCorner(Level world, Matrix4f matrix, VertexConsumer buffer, int color, double x, int y, double z, boolean air0, boolean air1, int dir, double width) {
         if (!air0 && air1) RenderUtil.renderZAlignedRecangle(matrix, buffer, color, x, y + 1, z, 3 + dir, width);
         if (air0 && !air1) RenderUtil.renderZAlignedRecangle(matrix, buffer, color, x, y, z, 1 + dir, width);
     }
 
-    // Z-aligned vertical edge
     public static void renderZVerticalEdge(Level world, Matrix4f matrix, VertexConsumer buffer, int color, int x, int y, int z, double align, boolean air0, boolean air1, int dir) {
-        if (!air0 && air1) RenderUtil.renderZAlignedSquare(matrix, buffer, color, x, y + 1, align, 3 + dir); // Entering air upward
-        if (air0 && !air1) RenderUtil.renderZAlignedSquare(matrix, buffer, color, x, y, align, 1 + dir);     // Exiting air downward
+        if (!air0 && air1) RenderUtil.renderZAlignedSquare(matrix, buffer, color, x, y + 1, align, 3 + dir);
+        if (air0 && !air1) RenderUtil.renderZAlignedSquare(matrix, buffer, color, x, y, align, 1 + dir);
     }
 }

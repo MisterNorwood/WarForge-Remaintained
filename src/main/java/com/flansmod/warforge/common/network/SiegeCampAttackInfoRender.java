@@ -6,8 +6,6 @@ import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import javax.annotation.Nullable;
 
@@ -32,13 +30,11 @@ public class SiegeCampAttackInfoRender extends SiegeCampAttackInfo {
     @Nullable
     public ResourceLocation centerIcon = null;
 
-    @OnlyIn(Dist.CLIENT)
     public SiegeCampAttackInfoRender(SiegeCampAttackInfo info) {
         super(info);
         retrieveVeinIcon();
     }
 
-    @OnlyIn(Dist.CLIENT)
     public void retrieveVeinIcon() {
         if (mWarforgeVein == null) {
             return;

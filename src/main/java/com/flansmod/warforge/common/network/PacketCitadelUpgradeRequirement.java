@@ -1,8 +1,13 @@
 package com.flansmod.warforge.common.network;
 
+import com.flansmod.warforge.Tags;
 import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.server.ItemMatcher;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 
@@ -10,6 +15,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class PacketCitadelUpgradeRequirement extends PacketBase {
+
+    public static final CustomPacketPayload.Type<PacketCitadelUpgradeRequirement> TYPE =
+        new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(Tags.MODID, "packetcitadelupgraderequirement"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, PacketCitadelUpgradeRequirement> STREAM_CODEC =
+        StreamCodec.ofMember(PacketCitadelUpgradeRequirement::encodeInto, buf -> { PacketCitadelUpgradeRequirement p = new PacketCitadelUpgradeRequirement(); p.decodeInto(buf); return p; });
+
+    @Override
+    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
 
     public int level;
     public HashMap<ItemMatcher, Integer> requirements;

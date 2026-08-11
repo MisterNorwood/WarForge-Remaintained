@@ -1,6 +1,5 @@
 package com.flansmod.warforge.common.factories;
 
-import brachy.modularui.factory.GuiData;
 import com.flansmod.warforge.common.util.DimBlockPos;
 import com.flansmod.warforge.server.Faction;
 import net.minecraft.world.entity.player.Player;
@@ -9,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class OperationsGuiData extends GuiData {
+public class OperationsGuiData {
     public boolean hasFaction;
     public UUID factionId = Faction.nullUuid;
     public String factionName = "";
@@ -39,6 +38,5 @@ public class OperationsGuiData extends GuiData {
     }
 
     public OperationsGuiData(Player player) {
-        super(player);
     }
 }

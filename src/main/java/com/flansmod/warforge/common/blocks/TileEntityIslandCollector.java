@@ -1,13 +1,5 @@
 package com.flansmod.warforge.common.blocks;
 
-import brachy.modularui.api.IUIHolder;
-import brachy.modularui.factory.PosGuiData;
-import brachy.modularui.screen.ModularPanel;
-import brachy.modularui.screen.ModularScreen;
-import brachy.modularui.screen.UISettings;
-import brachy.modularui.value.sync.PanelSyncManager;
-import com.flansmod.warforge.Tags;
-import com.flansmod.warforge.client.GuiIslandCollector;
 import com.flansmod.warforge.common.Content;
 import com.flansmod.warforge.common.WarForgeConfig;
 import com.flansmod.warforge.common.WarForgeMod;
@@ -16,25 +8,20 @@ import com.flansmod.warforge.common.util.DimChunkPos;
 import com.flansmod.warforge.common.util.PullOnlyItemHandler;
 import com.flansmod.warforge.server.Faction;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.common.capabilities.Capability;
-import net.minecraftforge.common.capabilities.ForgeCapabilities;
-import net.minecraftforge.common.util.LazyOptional;
-import net.minecraftforge.items.IItemHandler;
-import net.minecraftforge.items.IItemHandlerModifiable;
-import net.minecraftforge.items.ItemHandlerHelper;
-import net.minecraftforge.items.ItemStackHandler;
+import net.neoforged.neoforge.items.IItemHandler;
+import net.neoforged.neoforge.items.IItemHandlerModifiable;
+import net.neoforged.neoforge.items.ItemHandlerHelper;
+import net.neoforged.neoforge.items.ItemStackHandler;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.Set;
 
-public class TileEntityIslandCollector extends TileEntityYieldCollector implements IUIHolder<PosGuiData> {
+public class TileEntityIslandCollector extends TileEntityYieldCollector {
     /** Slot count for the faction yield collector, configurable via {@link WarForgeConfig#ISLAND_COLLECTOR_SLOTS}. */
     private static int slotCount() {
         return Math.max(1, WarForgeConfig.ISLAND_COLLECTOR_SLOTS);
@@ -50,7 +37,10 @@ public class TileEntityIslandCollector extends TileEntityYieldCollector implemen
 
     // The view exposed to automation: pull-only, available from every side.
     private final IItemHandler pullOnlyView = new PullOnlyItemHandler(storage);
-    private LazyOptional<IItemHandler> pullOnlyCap = LazyOptional.of(() -> pullOnlyView);
+
+    public IItemHandler getPullOnlyView() {
+        return pullOnlyView;
+    }
 
     public TileEntityIslandCollector(BlockPos pos, BlockState state) {
         super(Content.TE_ISLAND_COLLECTOR.get(), pos, state);
@@ -125,20 +115,10 @@ public class TileEntityIslandCollector extends TileEntityYieldCollector implemen
         }
     }
 
-    // ----------------------------------------------------------
-    // Capability: expose the storage as a pull-only item handler on every side.
-    @Override
-    public <T> LazyOptional<T> getCapability(@Nonnull Capability<T> capability, @Nullable Direction facing) {
-        if (capability == ForgeCapabilities.ITEM_HANDLER) {
-            return pullOnlyCap.cast();
-        }
-        return super.getCapability(capability, facing);
-    }
-
     @Override
     public void setRemoved() {
         super.setRemoved();
-        pullOnlyCap.invalidate();
+        invalidateCapabilities();
     }
 
     // ----------------------------------------------------------
@@ -200,14 +180,14 @@ public class TileEntityIslandCollector extends TileEntityYieldCollector implemen
 
     // ----------------------------------------------------------
     @Override
-    public void saveAdditional(CompoundTag nbt) {
-        super.saveAdditional(nbt);
-        nbt.put("storage", storage.serializeNBT());
+    public void saveAdditional(CompoundTag nbt, HolderLookup.Provider registries) {
+        super.saveAdditional(nbt, registries);
+        nbt.put("storage", storage.serializeNBT(registries));
     }
 
     @Override
-    public void load(CompoundTag nbt) {
-        super.load(nbt);
+    protected void loadAdditional(CompoundTag nbt, HolderLookup.Provider registries) {
+        super.loadAdditional(nbt, registries);
 
         // Load the saved items into the (config-sized) handler manually, rather than via
         // deserializeNBT, so that the configured slot count always wins. Items whose saved slot no
@@ -217,7 +197,7 @@ public class TileEntityIslandCollector extends TileEntityYieldCollector implemen
             for (int i = 0; i < items.size(); i++) {
                 CompoundTag itemTags = items.getCompound(i);
                 int slot = itemTags.getInt("Slot");
-                ItemStack stack = ItemStack.of(itemTags);
+                ItemStack stack = ItemStack.parseOptional(registries, itemTags);
                 if (stack.isEmpty()) {
                     continue;
                 }
@@ -239,13 +219,4 @@ public class TileEntityIslandCollector extends TileEntityYieldCollector implemen
         }
     }
 
-    @Override
-    public ModularPanel<?> buildUI(PosGuiData guiData, PanelSyncManager syncManager, UISettings settings) {
-        return GuiIslandCollector.buildUI(guiData, syncManager, settings, this);
-    }
-
-    @Override
-    public ModularScreen createScreen(PosGuiData guiData, ModularPanel<?> mainPanel) {
-        return new ModularScreen(Tags.MODID, mainPanel);
-    }
 }

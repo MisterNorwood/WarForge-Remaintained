@@ -1,6 +1,5 @@
 package com.flansmod.warforge.common.factories;
 
-import brachy.modularui.factory.GuiData;
 import com.flansmod.warforge.server.Faction;
 import net.minecraft.world.entity.player.Player;
 
@@ -8,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class FactionMemberManagerGuiData extends GuiData {
+public class FactionMemberManagerGuiData {
     public enum Page {
         MEMBERS,
         INVITES,
@@ -67,7 +66,6 @@ public class FactionMemberManagerGuiData extends GuiData {
     public final List<AllianceEntry> alliances = new ArrayList<>();
 
     public FactionMemberManagerGuiData(Player player, Page page) {
-        super(player);
         this.page = page;
     }
 }

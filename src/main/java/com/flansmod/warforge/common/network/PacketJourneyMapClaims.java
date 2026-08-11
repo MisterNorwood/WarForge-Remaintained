@@ -1,15 +1,17 @@
 package com.flansmod.warforge.common.network;
 
+import com.flansmod.warforge.Tags;
 import com.flansmod.warforge.client.JourneyMapClaimCache;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,6 +24,14 @@ import java.util.List;
  * learn about claims it is not entitled to see.
  */
 public class PacketJourneyMapClaims extends PacketBase {
+    public static final CustomPacketPayload.Type<PacketJourneyMapClaims> TYPE =
+        new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(Tags.MODID, "packetjourneymapclaims"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, PacketJourneyMapClaims> STREAM_CODEC =
+        StreamCodec.ofMember(PacketJourneyMapClaims::encodeInto, buf -> { PacketJourneyMapClaims p = new PacketJourneyMapClaims(); p.decodeInto(buf); return p; });
+
+    @Override
+    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+
     public static final class Set {
         public final ResourceKey<Level> dim;
         public final int x, z, colour;
@@ -74,12 +84,12 @@ public class PacketJourneyMapClaims extends PacketBase {
         clear = data.readBoolean();
         int setCount = data.readInt();
         for (int i = 0; i < setCount; i++) {
-            ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(data.readUtf()));
+            ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(data.readUtf()));
             sets.add(new Set(dim, data.readInt(), data.readInt(), data.readInt()));
         }
         int removeCount = data.readInt();
         for (int i = 0; i < removeCount; i++) {
-            ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(data.readUtf()));
+            ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(data.readUtf()));
             removes.add(new Remove(dim, data.readInt(), data.readInt()));
         }
     }
@@ -90,7 +100,6 @@ public class PacketJourneyMapClaims extends PacketBase {
     }
 
     @Override
-    @OnlyIn(Dist.CLIENT)
     public void handleClientSide(Player clientPlayer) {
         if (clear) {
             JourneyMapClaimCache.applyClear();

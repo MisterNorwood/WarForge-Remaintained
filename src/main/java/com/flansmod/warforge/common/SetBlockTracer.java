@@ -7,7 +7,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.registries.ForgeRegistries;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 import java.util.UUID;
 
@@ -71,7 +71,7 @@ public final class SetBlockTracer {
             return "<null>";
         }
         try {
-            ResourceLocation id = ForgeRegistries.BLOCKS.getKey(state.getBlock());
+            ResourceLocation id = BuiltInRegistries.BLOCK.getKey(state.getBlock());
             return id == null ? state.getBlock().toString() : id.toString();
         } catch (Throwable ignored) {
             return "<unknown>";

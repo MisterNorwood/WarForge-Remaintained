@@ -10,7 +10,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 
 public final class WarforgeIconButton extends AbstractButton {
-    public static final ResourceLocation WARFORGE_BUTTONS_TEXTURE = new ResourceLocation(Tags.MODID, "gui/icon_claim.png");
+    public static final ResourceLocation WARFORGE_BUTTONS_TEXTURE = ResourceLocation.fromNamespaceAndPath(Tags.MODID, "gui/icon_claim.png");
     public static final int WARFORGE_BUTTON_SIZE = 18;
 
     private final int textureX;

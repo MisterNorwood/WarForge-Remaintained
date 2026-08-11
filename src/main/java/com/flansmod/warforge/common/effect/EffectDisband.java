@@ -11,8 +11,8 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import java.util.Random;
 
@@ -37,7 +37,7 @@ public class EffectDisband implements IEffect {
     @Override
     public void runEffect(Level world, Player player, TextureManager man, Random rand, double x, double y, double z, CompoundTag data) {
 
-        world.playLocalSound(x, y, z, SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 1.0F, 0.9F, false);
+        world.playLocalSound(x, y, z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 1.0F, 0.9F, false);
         world.playLocalSound(x, y, z, SoundEvents.ANVIL_DESTROY, SoundSource.PLAYERS, 1.0F, 0.9F, false);
 
         for (int i = 0; i < 32; i++) {

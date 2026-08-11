@@ -142,7 +142,7 @@ public class DimBlockPos extends BlockPos
 			int[] data = tag.getIntArray("pos");
 			if (data.length == 3)
 			{
-				ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(tag.getString("dim")));
+				ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(tag.getString("dim")));
 				return new DimBlockPos(dim, data[0], data[1], data[2]);
 			}
 		}

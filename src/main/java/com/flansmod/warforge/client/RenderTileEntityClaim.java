@@ -5,6 +5,8 @@ import com.flansmod.warforge.server.Faction;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
 
 public class RenderTileEntityClaim implements BlockEntityRenderer<TileEntityClaim> {
 
@@ -27,5 +29,11 @@ public class RenderTileEntityClaim implements BlockEntityRenderer<TileEntityClai
     @Override
     public int getViewDistance() {
         return Integer.MAX_VALUE;
+    }
+
+    @Override
+    public AABB getRenderBoundingBox(TileEntityClaim be) {
+       BlockPos p = be.getBlockPos();
+        return new AABB(p.getX() - 1, p.getY(), p.getZ() - 1, p.getX() + 2, p.getY() + 16, p.getZ() + 2);
     }
 }

@@ -14,15 +14,13 @@ import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ChatScreen;
-import net.minecraft.client.renderer.ItemBlockRenderTypes;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.client.event.EntityRenderersEvent;
-import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
-import net.minecraftforge.client.settings.KeyConflictContext;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.neoforged.neoforge.client.settings.KeyConflictContext;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
@@ -50,22 +48,12 @@ public class ClientProxy extends CommonProxy
 	// Invoked from the WarForgeMod constructor with the client mod event bus.
 	public void clientSetup(FMLClientSetupEvent event)
 	{
-		MinecraftForge.EVENT_BUS.register(new ClientTickHandler());
-		MinecraftForge.EVENT_BUS.register(new SiegeUiDebugCommand());
-		MinecraftForge.EVENT_BUS.register(new AnimatedEffectHandler());
-		MinecraftForge.EVENT_BUS.register(new ClaimFlagRenderer());
-		MinecraftForge.EVENT_BUS.register(new ClientMineTimePredictor());
-		MinecraftForge.EVENT_BUS.register(new ClientPlacementPredictor());
-
-		// MUI factories are registered in WarForgeMod.commonSetup (needed on both sides).
-
-		event.enqueueWork(() -> {
-			ItemBlockRenderTypes.setRenderLayer(Content.CITADEL_BLOCK.get(), RenderType.cutout());
-			ItemBlockRenderTypes.setRenderLayer(Content.BASIC_CLAIM_BLOCK.get(), RenderType.cutout());
-			ItemBlockRenderTypes.setRenderLayer(Content.REINFORCED_CLAIM_BLOCK.get(), RenderType.cutout());
-			ItemBlockRenderTypes.setRenderLayer(Content.SIEGE_CAMP_BLOCK.get(), RenderType.cutout());
-			ItemBlockRenderTypes.setRenderLayer(Content.DUMMY_TRANSLUSENT.get(), RenderType.translucent());
-		});
+		NeoForge.EVENT_BUS.register(new ClientTickHandler());
+		NeoForge.EVENT_BUS.register(new SiegeUiDebugCommand());
+		NeoForge.EVENT_BUS.register(new AnimatedEffectHandler());
+		NeoForge.EVENT_BUS.register(new ClaimFlagRenderer());
+		NeoForge.EVENT_BUS.register(new ClientMineTimePredictor());
+		NeoForge.EVENT_BUS.register(new ClientPlacementPredictor());
 	}
 
 	public void registerRenderers(EntityRenderersEvent.RegisterRenderers event)

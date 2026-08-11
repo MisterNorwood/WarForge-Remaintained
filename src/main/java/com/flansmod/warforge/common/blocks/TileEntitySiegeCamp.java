@@ -15,6 +15,7 @@ import com.flansmod.warforge.server.Faction;
 
 import com.flansmod.warforge.server.Siege;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -373,8 +374,8 @@ public class TileEntitySiegeCamp extends TileEntityClaim
 	}
 
 	@Override
-	public void saveAdditional(CompoundTag nbt) {
-		super.saveAdditional(nbt);
+	public void saveAdditional(CompoundTag nbt, HolderLookup.Provider registries) {
+		super.saveAdditional(nbt, registries);
 
 		nbt.putUUID("placer", placer);
 		nbt.putBoolean("started", siegeTarget != null);
@@ -387,8 +388,8 @@ public class TileEntitySiegeCamp extends TileEntityClaim
 	}
 
 	@Override
-	public void load(CompoundTag nbt) {
-		super.load(nbt);
+	protected void loadAdditional(CompoundTag nbt, HolderLookup.Provider registries) {
+		super.loadAdditional(nbt, registries);
 
 		placer = nbt.getUUID("placer");
 

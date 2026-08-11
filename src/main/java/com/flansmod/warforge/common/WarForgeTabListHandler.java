@@ -5,16 +5,11 @@ import com.flansmod.warforge.common.util.FactionDisplay;
 import com.flansmod.warforge.server.Faction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
-/**
- * Replaces a player's tab-list display name with their faction-prefixed name when the
- * {@code Faction Prefix In Tab List} setting is enabled. Leaving the display name untouched
- * keeps the vanilla plain name.
- */
-@Mod.EventBusSubscriber(modid = Tags.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
+@EventBusSubscriber(modid = Tags.MODID)
 public final class WarForgeTabListHandler {
 
     @SubscribeEvent

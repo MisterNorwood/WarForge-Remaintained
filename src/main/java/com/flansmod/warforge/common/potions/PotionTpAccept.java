@@ -12,12 +12,13 @@ public class PotionTpAccept extends MobEffect
 	}
 
 	@Override
-	public void applyEffectTick(LivingEntity living, int amplifier)
+	public boolean applyEffectTick(LivingEntity living, int amplifier)
 	{
+		return true;
 	}
 
 	@Override
-	public boolean isDurationEffectTick(int duration, int amplifier)
+	public boolean shouldApplyEffectTickThisTick(int duration, int amplifier)
 	{
 		return duration % 20 == 0;
 	}

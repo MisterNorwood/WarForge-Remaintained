@@ -17,7 +17,7 @@ public class PotionTpRequest extends MobEffect
 	}
 
 	@Override
-	public void applyEffectTick(LivingEntity living, int amplifier)
+	public boolean applyEffectTick(LivingEntity living, int amplifier)
 	{
 		LivingEntity bestEntity = null;
 		double bestDistanceSq = Double.MAX_VALUE;
@@ -26,7 +26,7 @@ public class PotionTpRequest extends MobEffect
 		List<LivingEntity> candidates = living.level().getEntitiesOfClass(LivingEntity.class, searchBox);
 		for (LivingEntity entity : candidates)
 		{
-			if (entity.hasEffect(WarForgeMod.POTIONS.tpAccept.get()))
+			if (entity.hasEffect(WarForgeMod.POTIONS.tpAccept))
 			{
 				double distanceSq = entity.distanceToSqr(living);
 				if (distanceSq < bestDistanceSq)
@@ -41,13 +41,14 @@ public class PotionTpRequest extends MobEffect
 		{
 			if (living.randomTeleport(bestEntity.getX(), bestEntity.getY(), bestEntity.getZ(), true))
 			{
-				living.removeEffect(this);
+				living.removeEffect(WarForgeMod.POTIONS.tpRequest);
 			}
 		}
+		return true;
 	}
 
 	@Override
-	public boolean isDurationEffectTick(int duration, int amplifier)
+	public boolean shouldApplyEffectTickThisTick(int duration, int amplifier)
 	{
 		return duration % 20 == 0;
 	}

@@ -16,9 +16,11 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.event.entity.player.PlayerSetSpawnEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraft.world.level.portal.DimensionTransition;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerSetSpawnEvent;
+import net.neoforged.bus.api.SubscribeEvent;
 
 public class SpawnModule {
     private static BlockPos findCitadelSpawn(ServerLevel level, DimBlockPos citadel) {
@@ -116,7 +118,9 @@ public class SpawnModule {
         BlockPos spawn = findCitadelSpawn(level, citadel);
 
         if (player.level().dimension() != citadel.dim) {
-            Entity result = player.changeDimension(level, new WfTeleporter());
+            Entity result = player.changeDimension(new DimensionTransition(level,
+                    new Vec3(spawn.getX() + 0.5D, spawn.getY(), spawn.getZ() + 0.5D),
+                    player.getDeltaMovement(), player.getYRot(), player.getXRot(), DimensionTransition.DO_NOTHING));
             if (result == null) return;
         }
 

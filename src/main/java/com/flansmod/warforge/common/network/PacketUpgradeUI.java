@@ -1,24 +1,35 @@
 package com.flansmod.warforge.common.network;
 
-import brachy.modularui.factory.ClientGUI;
-import com.flansmod.warforge.client.GUIUpgradePanel;
+import com.flansmod.warforge.Tags;
 import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.server.Faction;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.util.UUID;
 
 public class PacketUpgradeUI extends PacketBase {
 
+    public static final CustomPacketPayload.Type<PacketUpgradeUI> TYPE =
+        new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(Tags.MODID, "packetupgradeui"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, PacketUpgradeUI> STREAM_CODEC =
+        StreamCodec.ofMember(PacketUpgradeUI::encodeInto, buf -> { PacketUpgradeUI p = new PacketUpgradeUI(); p.decodeInto(buf); return p; });
+
+    @Override
+    public CustomPacketPayload.Type<? extends CustomPacketPayload> type() { return TYPE; }
+
+    public static PacketUpgradeUI latest = null;
+
     public UUID mFactionID = Faction.nullUuid;
     public String mFactionName = "";
-    int level = 0;
-    int color = 0xffff;
-    boolean outrankingOfficer = false;
+    public int level = 0;
+    public int color = 0xffff;
+    public boolean outrankingOfficer = false;
 
     @Override
     public void encodeInto(FriendlyByteBuf data) {
@@ -44,14 +55,8 @@ public class PacketUpgradeUI extends PacketBase {
     }
 
     @Override
-    @OnlyIn(Dist.CLIENT)
     public void handleClientSide(Player clientPlayer) {
-        ClientGUI.open(GUIUpgradePanel.createGui(
-                mFactionID,
-                mFactionName,
-                level,
-                color,
-                outrankingOfficer
-                ));
+        latest = this;
+        com.flansmod.warforge.common.factories.FactionUpgradeGuiFactory.INSTANCE.openUpgradeScreen();
     }
 }

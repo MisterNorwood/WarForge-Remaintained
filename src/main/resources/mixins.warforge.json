@@ -1,16 +1,12 @@
 {
 	"package": "com.flansmod.warforge.common.mixins",
 	"required": false,
-	"refmap": "mixins.warforge.refmap.json",
 	"target": "@env(DEFAULT)",
 	"minVersion": "0.8.5",
-	"compatibilityLevel": "JAVA_17",
+	"compatibilityLevel": "JAVA_21",
 	"mixins": [
-		"FluidClaimBorderMixin",
-		"SurvivalHelperMixin"
+		"FluidClaimBorderMixin"
 	],
 	"server": [],
-	"client": [
-		"RenderTargetStencilConfigMixin"
-	]
+	"client": []
 }

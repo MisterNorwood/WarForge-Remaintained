@@ -1,12 +1,11 @@
 package com.flansmod.warforge.common.factories;
 
-import brachy.modularui.factory.GuiData;
 import com.flansmod.warforge.server.Faction;
 import net.minecraft.world.entity.player.Player;
 
 import java.util.UUID;
 
-public class FactionStatsGuiData extends GuiData {
+public class FactionStatsGuiData {
     public UUID requestedFactionId = Faction.nullUuid;
     public boolean hasFaction;
     public UUID factionId = Faction.nullUuid;
@@ -31,7 +30,6 @@ public class FactionStatsGuiData extends GuiData {
     public boolean canUpgrade;
 
     public FactionStatsGuiData(Player player, UUID requestedFactionId) {
-        super(player);
         this.requestedFactionId = requestedFactionId;
     }
 }

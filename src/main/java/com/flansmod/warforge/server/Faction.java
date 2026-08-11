@@ -210,6 +210,7 @@ public class Faction {
         FactionDisplayInfo info = new FactionDisplayInfo();
         info.factionId = uuid;
         info.factionName = name;
+        info.colour = colour;
         info.notoriety = notoriety;
         info.wealth = wealth;
         info.legacy = legacy;
@@ -858,7 +859,7 @@ public class Faction {
         for (Tag base : insuranceList) {
             CompoundTag insuranceTag = (CompoundTag) base;
             int slot = insuranceTag.getInt("slot");
-            ItemStack stack = ItemStack.of(insuranceTag.getCompound("stack"));
+            ItemStack stack = ItemStack.parseOptional(WarForgeMod.MC_SERVER.registryAccess(), insuranceTag.getCompound("stack"));
             ensureInsuranceSize(slot + 1);
             insuranceStacks.set(slot, stack);
         }
@@ -983,7 +984,7 @@ public class Faction {
             CompoundTag insuranceTag = new CompoundTag();
             insuranceTag.putInt("slot", i);
             CompoundTag stackTag = new CompoundTag();
-            stack.save(stackTag);
+            stack.save(WarForgeMod.MC_SERVER.registryAccess(), stackTag);
             insuranceTag.put("stack", stackTag);
             insuranceList.add(insuranceTag);
         }
@@ -1004,7 +1005,7 @@ public class Faction {
         if (tag.contains("dim") && tag.contains("pos")) {
             int[] data = tag.getIntArray("pos");
             if (data.length == 2) {
-                ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(tag.getString("dim")));
+                ResourceKey<Level> dim = ResourceKey.create(Registries.DIMENSION, ResourceLocation.parse(tag.getString("dim")));
                 return new DimChunkPos(dim, data[0], data[1]);
             }
         }

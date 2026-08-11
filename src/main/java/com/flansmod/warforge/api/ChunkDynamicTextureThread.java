@@ -174,7 +174,7 @@ public class ChunkDynamicTextureThread extends Thread {
 
         public void register() {
             Minecraft mc = Minecraft.getInstance();
-            ResourceLocation location = new ResourceLocation(Tags.MODID, name);
+            ResourceLocation location = ResourceLocation.fromNamespaceAndPath(Tags.MODID, name);
             mc.getTextureManager().release(location);
             mc.getTextureManager().register(location, new DynamicTexture(toNativeImage(argbPixels, size)));
         }

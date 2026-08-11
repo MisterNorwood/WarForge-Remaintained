@@ -4,8 +4,14 @@ import com.flansmod.warforge.common.Content;
 import com.flansmod.warforge.common.WarForgeConfig;
 import com.flansmod.warforge.common.WarForgeMod;
 import com.flansmod.warforge.common.blocks.structure.StructureStamper;
-import com.flansmod.warforge.common.factories.FobGuiFactory;
+import com.flansmod.warforge.common.util.DimBlockPos;
 import com.flansmod.warforge.common.util.DimChunkPos;
+import com.lowdragmc.lowdraglib2.gui.factory.BlockUIMenuType;
+import com.lowdragmc.lowdraglib2.gui.ui.ModularUI;
+import com.lowdragmc.lowdraglib2.gui.ui.UI;
+import com.lowdragmc.lowdraglib2.gui.ui.UIElement;
+import com.lowdragmc.lowdraglib2.gui.ui.elements.Button;
+import net.minecraft.network.chat.Component;
 import com.flansmod.warforge.server.Faction;
 import com.flansmod.warforge.server.fob.Fob;
 import net.minecraft.core.BlockPos;
@@ -30,7 +36,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import javax.annotation.Nullable;
 import java.util.UUID;
 
-public class BlockFob extends Block implements EntityBlock {
+public class BlockFob extends Block implements EntityBlock, BlockUIMenuType.BlockUI {
     private static final float FOB_HARDNESS = 100.0F;
 
     public BlockFob() {
@@ -77,7 +83,7 @@ public class BlockFob extends Block implements EntityBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    public InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult hit) {
         if (world.isClientSide) {
             return InteractionResult.CONSUME;
         }
@@ -105,9 +111,43 @@ public class BlockFob extends Block implements EntityBlock {
             if (packet != null) {
                 serverPlayer.connection.send(packet);
             }
-            FobGuiFactory.INSTANCE.open(serverPlayer, pos);
+            BlockUIMenuType.openUI(serverPlayer, pos);
         }
         return InteractionResult.SUCCESS;
+    }
+
+    @Override
+    public ModularUI createUI(BlockUIMenuType.BlockUIHolder holder) {
+        UIElement root = new UIElement();
+        UIElement body = com.flansmod.warforge.api.modularui.WarForgeUiTheme.frame(root, 280);
+        body.addChild(com.flansmod.warforge.api.modularui.WarForgeUiTheme.header("Forward Operating Base"));
+
+        BlockEntity be = holder.player.level().getBlockEntity(holder.pos);
+        if (be instanceof TileEntityFob fob) {
+            boolean established = !fob.ownerFaction.equals(new UUID(0, 0)) && !fob.name.isEmpty();
+            if (established) {
+                UIElement section = com.flansmod.warforge.api.modularui.WarForgeUiTheme.section();
+                section.addChild(com.flansmod.warforge.api.modularui.WarForgeUiTheme.text("FOB: " + fob.name, com.flansmod.warforge.api.modularui.WarForgeUiTheme.TEXT_PRIMARY));
+                section.addChild(com.flansmod.warforge.api.modularui.WarForgeUiTheme.text("Tickets: " + fob.tickets, com.flansmod.warforge.api.modularui.WarForgeUiTheme.TEXT_SECONDARY));
+                Button warpBtn = new Button().setText("Warp to FOB");
+                com.flansmod.warforge.api.modularui.WarForgeUiTheme.styleButton(warpBtn, 100);
+                warpBtn.setOnServerClick(event -> {
+                    if (holder.player instanceof ServerPlayer sp) {
+                        DimBlockPos dpos = new DimBlockPos(sp.level().dimension(), holder.pos);
+                        Fob warpTarget = WarForgeMod.FOBS.getFobAt(dpos.toChunkPos());
+                        if (warpTarget != null) {
+                            WarForgeMod.FOBS.requestFobWarp(sp, warpTarget);
+                        }
+                    }
+                });
+                section.addChild(warpBtn);
+                body.addChild(section);
+            } else {
+                body.addChild(com.flansmod.warforge.api.modularui.WarForgeUiTheme.text("This FOB is not established.", com.flansmod.warforge.api.modularui.WarForgeUiTheme.TEXT_MUTED));
+            }
+        }
+
+        return ModularUI.of(UI.of(root), holder.player);
     }
 
     @Override

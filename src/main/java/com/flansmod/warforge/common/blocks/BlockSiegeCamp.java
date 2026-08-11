@@ -128,7 +128,7 @@ public class BlockSiegeCamp extends MultiBlockColumn implements EntityBlock {
     }
 
     @Override
-    public InteractionResult use(BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+    public InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult hit) {
         if (player.isShiftKeyDown()) {
             if (!world.isClientSide) return InteractionResult.SUCCESS;
             TileEntityClaim te = (TileEntityClaim) world.getBlockEntity(pos);
