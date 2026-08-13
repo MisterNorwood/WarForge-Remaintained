@@ -85,6 +85,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Mod(Tags.MODID)
 public class WarForgeMod {
@@ -918,28 +922,94 @@ public class WarForgeMod {
         CommandFactions.register(event.getDispatcher());
     }
 
+    /** A serialised snapshot waiting to be gzipped and written by {@link #saveExecutor()}. */
+    private static final class PendingSave {
+        private final CompoundTag tags;
+        private final Path file;
+        private final Path backup;
+        private final String event;
+
+        private PendingSave(CompoundTag tags, Path file, Path backup, String event) {
+            this.tags = tags;
+            this.file = file;
+            this.backup = backup;
+            this.event = event;
+        }
+    }
+
+
+    private static final AtomicReference<PendingSave> PENDING_SAVE = new AtomicReference<>();
+
+    private static ExecutorService saveExecutor;
+
+
+    private static synchronized ExecutorService saveExecutor() {
+        if (saveExecutor == null || saveExecutor.isShutdown()) {
+            saveExecutor = Executors.newSingleThreadExecutor(runnable -> {
+                Thread thread = new Thread(runnable, "WarForge Save Writer");
+                thread.setDaemon(true);
+                return thread;
+            });
+        }
+        return saveExecutor;
+    }
+
+
     private void save(String event) {
-        if (MC_SERVER == null) {
+        PendingSave pending = snapshot(event);
+        if (pending == null) {
             return;
         }
 
+        PENDING_SAVE.set(pending);
+        saveExecutor().execute(() -> {
+            PendingSave next = PENDING_SAVE.getAndSet(null);
+            if (next == null) {
+                return;
+            }
+
+            try {
+                writeSnapshot(next);
+            } catch (Exception e) {
+                LOGGER.error("Failed to save warforgefactions.dat on event - " + next.event, e);
+            }
+        });
+    }
+
+    private void saveBlocking(String event) {
+        PendingSave pending = snapshot(event);
+        if (pending == null) {
+            return;
+        }
+
+        PENDING_SAVE.set(null);
         try {
-            CompoundTag tags = new CompoundTag();
-            WriteToNBT(tags);
-
-            Path factionsFile = getFactionsFile();
-            Files.createDirectories(factionsFile.getParent());
-            if (Files.exists(factionsFile)) {
-                Files.copy(factionsFile, getFactionsFileBackup(), StandardCopyOption.REPLACE_EXISTING);
-            }
-
-            try (OutputStream output = Files.newOutputStream(factionsFile)) {
-                NbtIo.writeCompressed(tags, output);
-            }
-            LOGGER.info("Successfully saved warforgefactions.dat on event - " + event);
+            writeSnapshot(pending);
         } catch (Exception e) {
             throw new RuntimeException("Failed to save warforgefactions.dat", e);
         }
+    }
+
+    private PendingSave snapshot(String event) {
+        if (MC_SERVER == null) {
+            return null;
+        }
+
+        CompoundTag tags = new CompoundTag();
+        WriteToNBT(tags);
+        return new PendingSave(tags, getFactionsFile(), getFactionsFileBackup(), event);
+    }
+
+    private static void writeSnapshot(PendingSave pending) throws IOException {
+        Files.createDirectories(pending.file.getParent());
+        if (Files.exists(pending.file)) {
+            Files.copy(pending.file, pending.backup, StandardCopyOption.REPLACE_EXISTING);
+        }
+
+        try (OutputStream output = Files.newOutputStream(pending.file)) {
+            NbtIo.writeCompressed(pending.tags, output);
+        }
+        LOGGER.info("Successfully saved warforgefactions.dat on event - " + pending.event);
     }
 
     @SubscribeEvent
@@ -951,7 +1021,18 @@ public class WarForgeMod {
 
     @SubscribeEvent
     public void serverStopped(ServerStoppingEvent event) {
-        save("Server Stop");
+        saveBlocking("Server Stop");
+
+        ExecutorService executor = saveExecutor();
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(30, TimeUnit.SECONDS)) {
+                LOGGER.warn("WarForge save writer did not finish within 30s of shutdown");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         CHUNK_LOADING_MANAGER.shutdown();
         MC_SERVER = null;
     }
