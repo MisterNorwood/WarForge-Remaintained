@@ -85,6 +85,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Mod(Tags.MODID)
 public class WarForgeMod {
@@ -925,28 +929,109 @@ public class WarForgeMod {
         CommandFactions.register(event.getDispatcher());
     }
 
+    /** A serialised snapshot waiting to be gzipped and written by {@link #saveExecutor()}. */
+    private static final class PendingSave {
+        private final CompoundTag tags;
+        private final Path file;
+        private final Path backup;
+        private final String event;
+
+        private PendingSave(CompoundTag tags, Path file, Path backup, String event) {
+            this.tags = tags;
+            this.file = file;
+            this.backup = backup;
+            this.event = event;
+        }
+    }
+
+    /**
+     * Newest snapshot awaiting a write. Replaced rather than queued: {@link LevelEvent.Save} fires once per
+     * dimension and each one carries the same whole-mod snapshot, so only the last is worth writing.
+     */
+    private static final AtomicReference<PendingSave> PENDING_SAVE = new AtomicReference<>();
+
+    private static ExecutorService saveExecutor;
+
+    /**
+     * Lazily (re)creates the writer. Recreated after a shutdown so an integrated server can be stopped and
+     * started again in the same JVM without every later save being rejected.
+     */
+    private static synchronized ExecutorService saveExecutor() {
+        if (saveExecutor == null || saveExecutor.isShutdown()) {
+            saveExecutor = Executors.newSingleThreadExecutor(runnable -> {
+                Thread thread = new Thread(runnable, "WarForge Save Writer");
+                thread.setDaemon(true);
+                return thread;
+            });
+        }
+        return saveExecutor;
+    }
+
+    /**
+     * Serialises on the calling (server) thread and hands the write to a background thread.
+     *
+     * <p>Building the tag has to stay on the server thread to get a consistent view of faction state, but
+     * that is the cheap half — profiling a live server put ~89% of this method in
+     * {@code NbtIo.writeCompressed}, i.e. gzip and file I/O, which has no reason to block ticking.
+     */
     private void save(String event) {
-        if (MC_SERVER == null) {
+        PendingSave pending = snapshot(event);
+        if (pending == null) {
             return;
         }
 
+        PENDING_SAVE.set(pending);
+        saveExecutor().execute(() -> {
+            PendingSave next = PENDING_SAVE.getAndSet(null);
+            if (next == null) {
+                return; // A later snapshot superseded this one and its own task will write it.
+            }
+
+            try {
+                writeSnapshot(next);
+            } catch (Exception e) {
+                // Nothing to propagate to off this thread, so make it loud in the log instead.
+                LOGGER.error("Failed to save warforgefactions.dat on event - " + next.event, e);
+            }
+        });
+    }
+
+    /** Serialises and writes before returning; used on shutdown, where losing the write is not acceptable. */
+    private void saveBlocking(String event) {
+        PendingSave pending = snapshot(event);
+        if (pending == null) {
+            return;
+        }
+
+        PENDING_SAVE.set(null); // Supersede anything queued; this snapshot is newer.
         try {
-            CompoundTag tags = new CompoundTag();
-            WriteToNBT(tags);
-
-            Path factionsFile = getFactionsFile();
-            Files.createDirectories(factionsFile.getParent());
-            if (Files.exists(factionsFile)) {
-                Files.copy(factionsFile, getFactionsFileBackup(), StandardCopyOption.REPLACE_EXISTING);
-            }
-
-            try (OutputStream output = Files.newOutputStream(factionsFile)) {
-                NbtIo.writeCompressed(tags, output);
-            }
-            LOGGER.info("Successfully saved warforgefactions.dat on event - " + event);
+            writeSnapshot(pending);
         } catch (Exception e) {
             throw new RuntimeException("Failed to save warforgefactions.dat", e);
         }
+    }
+
+    /** Captures mod state and resolves paths, both of which need {@link #MC_SERVER} and the server thread. */
+    private PendingSave snapshot(String event) {
+        if (MC_SERVER == null) {
+            return null;
+        }
+
+        CompoundTag tags = new CompoundTag();
+        WriteToNBT(tags);
+        return new PendingSave(tags, getFactionsFile(), getFactionsFileBackup(), event);
+    }
+
+    private static void writeSnapshot(PendingSave pending) throws IOException {
+        Files.createDirectories(pending.file.getParent());
+        if (Files.exists(pending.file)) {
+            Files.copy(pending.file, pending.backup, StandardCopyOption.REPLACE_EXISTING);
+        }
+
+        try (OutputStream output = Files.newOutputStream(pending.file)) {
+            NbtIo.writeCompressed(pending.tags, output);
+        }
+        LOGGER.info("Successfully saved warforgefactions.dat on event - " + pending.event);
     }
 
     @SubscribeEvent
@@ -958,7 +1043,18 @@ public class WarForgeMod {
 
     @SubscribeEvent
     public void serverStopped(ServerStoppingEvent event) {
-        save("Server Stop");
+        saveBlocking("Server Stop");
+
+        ExecutorService executor = saveExecutor();
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(30, TimeUnit.SECONDS)) {
+                LOGGER.warn("WarForge save writer did not finish within 30s of shutdown");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         CHUNK_LOADING_MANAGER.shutdown();
         MC_SERVER = null;
     }
