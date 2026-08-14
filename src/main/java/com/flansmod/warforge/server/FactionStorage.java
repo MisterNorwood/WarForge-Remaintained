@@ -84,6 +84,9 @@ public class FactionStorage {
     //This is all chunks that are under the "Grace" period
     public HashMap<DimChunkPos, ObjectIntPair<UUID>> conqueredChunks = new HashMap<>();
     private final HashMap<UUID, ArrayList<ItemStack>> redeemableInsuranceVaults = new HashMap<UUID, ArrayList<ItemStack>>();
+    private final HashMap<UUID, Long> factionRejoinCooldowns = new HashMap<>();
+    private static final int SIEGE_INFO_HEARTBEAT_TICKS = 100;
+    private int siegeInfoHeartbeatTicks = 0;
 
     public FactionStorage() {
         InitNeutralZones();
@@ -1122,6 +1125,7 @@ public class FactionStorage {
             if (siege.tickCamplessPresence()) {
                 Siege.notifyAbandoned(getFaction(siege.attackingFaction), getFaction(siege.defendingFaction), true);
                 siege.setAttackProgress(-siege.GetDefenceThreshold()); // attacker abandoned -> defenders hold
+                siege.forceOutcome(false); // an abandoned siege is a failed siege, whatever the points say
                 finishedSiegeQueue.add(kvp.getKey());
                 continue;
             }
@@ -1236,11 +1240,14 @@ public class FactionStorage {
         DimBlockPos blockPos = defenders.getSpecificPosForClaim(chunkPos);
         if (blockPos == null) {
             WarForgeMod.LOGGER.error("Defending claim position null for siege at {}", chunkPos);
-            siege.onCompleted(false);
             sieges.remove(chunkPos);
+            siege.onCompleted(false);
+            broadcastSiegeEnded(siege);
+            clearDefendingFlagIfNoSieges(siege.defendingFaction);
             return;
         }
 
+        boolean attackersWon = false;
         switch (termType) {
             case WIN -> {
                 if (WarForgeConfig.ATTACKER_CONQUERED_CHUNK_PERIOD > 0) {
@@ -1275,7 +1282,7 @@ public class FactionStorage {
                 }
 
                 attackers.increaseSiegeMomentum(true);
-                siege.onCompleted(true);
+                attackersWon = true;
             }
 
             case LOSE -> {
@@ -1294,19 +1301,20 @@ public class FactionStorage {
 
                 attackers.stopMomentum(true);
                 attackers.messageAll(Component.translatable("warforge.info_momentum_lost"));
-
-                siege.onCompleted(false);
             }
 
             case NEUTRAL -> {
                 attackers.messageAll(Component.translatable("warforge.info.siege_cancelled_attackers", attackers.name, blockPos.toFancyString()));
                 defenders.messageAll(Component.translatable("warforge.info.siege_cancelled_defenders", defenders.name, blockPos.toFancyString()));
-                siege.onCompleted(false); // tbh Idk what to put here
             }
         }
 
-        WarForgeMod.FACTIONS.sendSiegeInfoToNearby(siege.defendingClaim.toChunkPos());
+        // Drop the siege before the camps tear themselves down: requestRemoveClaimServer refuses to
+        // unclaim a chunk that still belongs to a live siege, so cleaning up first would leave a ghost
+        // siege camp claiming the chunk it was launched from.
         sieges.remove(chunkPos);
+        siege.onCompleted(attackersWon);
+        broadcastSiegeEnded(siege);
         clearDefendingFlagIfNoSieges(siege.defendingFaction);
         WarForgeMod.FOBS.onDefendingSiegeEnded(siege.defendingFaction);
     }
@@ -1329,8 +1337,10 @@ public class FactionStorage {
         DimBlockPos blockPos = defenders.getSpecificPosForClaim(chunkPos);
         if (blockPos == null) {
             LOGGER.error("Defending claim position was null for completed siege at {} against faction {}", chunkPos, defenders.name);
-            siege.onCompleted(false);
             sieges.remove(chunkPos);
+            siege.onCompleted(false);
+            broadcastSiegeEnded(siege);
+            clearDefendingFlagIfNoSieges(siege.defendingFaction);
             return;
         }
         boolean successful = siege.WasSuccessful();
@@ -1377,10 +1387,15 @@ public class FactionStorage {
             attackers.stopMomentum(true);
         }
 
+        // Remove the siege first: the camp cleanup below unclaims the camp chunks, and
+        // requestRemoveClaimServer refuses to unclaim a chunk that is still part of a live siege.
+        sieges.remove(chunkPos);
+
         if (doCleanup) siege.onCompleted(successful);
 
-        // Then remove the siege
-        sieges.remove(chunkPos);
+        // Tell every client that could be showing this siege that it is over; nothing else ever prunes
+        // the client-side siege HUD entry, so without this it keeps ticking forever.
+        broadcastSiegeEnded(siege);
 
         WarForgeMod.FOBS.onDefendingSiegeEnded(defenders.uuid);
 
@@ -1390,6 +1405,69 @@ public class FactionStorage {
                 return;
         }
         defenders.isCurrentlyDefending = false;
+    }
+
+    // A siege only leaves a client's HUD when the client is told it ended: sSiegeInfo is keyed by the
+    // attacking camp and is never otherwise pruned, which is why a finished siege used to leave an
+    // endlessly ticking progress bar for anyone who walks back into the area. Sent to everyone in
+    // siege-info range plus both factions, since camp conclusions also push info faction-wide.
+    private void broadcastSiegeEnded(Siege siege) {
+        if (siege == null || siege.defendingClaim == null) {
+            return;
+        }
+
+        SiegeCampProgressInfo info = siege.GetSiegeInfo();
+        if (info == null) {
+            // Either faction is already gone (pruned/disbanded siege) - clients still hold the entry,
+            // so synthesise the minimum needed to identify and retire it.
+            info = new SiegeCampProgressInfo();
+            info.attackingPos = siege.attackingCamps.isEmpty() || siege.attackingCamps.get(0) == null
+                    ? siege.defendingClaim
+                    : siege.attackingCamps.get(0);
+            info.defendingPos = siege.defendingClaim;
+            info.attackingName = "";
+            info.defendingName = "";
+        }
+        info.finished = true;
+        info.attackerAbandonSeconds = 0;
+
+        PacketSiegeCampProgressUpdate packet = new PacketSiegeCampProgressUpdate();
+        packet.info = info;
+
+        DimChunkPos chunk = siege.defendingClaim.toChunkPos();
+        NETWORK.sendToAllAround(packet, chunk.x * 16, 128d, chunk.z * 16, WarForgeConfig.SIEGE_INFO_RADIUS + 128f, chunk.dim);
+        sendSiegeEndedToFaction(getFaction(siege.attackingFaction), packet);
+        sendSiegeEndedToFaction(getFaction(siege.defendingFaction), packet);
+    }
+
+    private void sendSiegeEndedToFaction(Faction faction, PacketSiegeCampProgressUpdate packet) {
+        if (faction == null) {
+            return;
+        }
+        for (Player member : faction.getOnlinePlayers(java.util.Objects::nonNull)) {
+            if (member instanceof ServerPlayer serverMember) {
+                NETWORK.sendTo(packet, serverMember);
+            }
+        }
+    }
+
+    // Periodic re-send of every live siege to nearby players. Clients drop siege entries they have not
+    // heard about for a while, so this doubles as the recovery path for anyone who was out of range
+    // (or offline) when a siege ended and therefore missed its end broadcast.
+    public void tickSiegeInfoHeartbeat() {
+        if (sieges.isEmpty()) {
+            siegeInfoHeartbeatTicks = 0;
+            return;
+        }
+        if (++siegeInfoHeartbeatTicks < SIEGE_INFO_HEARTBEAT_TICKS) {
+            return;
+        }
+        siegeInfoHeartbeatTicks = 0;
+        // Deliberately not sendAllSiegeInfoToNearby(): that also recalculates every siege's base power,
+        // which is not this heartbeat's job.
+        for (DimChunkPos siegePos : new ArrayList<>(sieges.keySet())) {
+            sendSiegeInfoToNearby(siegePos);
+        }
     }
 
     // Immediately ends every siege the given faction attacks or defends. Used when the faction is
@@ -1412,6 +1490,7 @@ public class FactionStorage {
             } catch (Throwable t) {
                 LOGGER.error("Error cleaning up siege at {} during faction removal", key, t);
             }
+            broadcastSiegeEnded(siege);
             Faction other = getFaction(factionID.equals(siege.attackingFaction) ? siege.defendingFaction : siege.attackingFaction);
             if (other != null) {
                 other.messageAll(Component.literal("A siege was cancelled because the opposing faction no longer exists."));
@@ -1446,6 +1525,7 @@ public class FactionStorage {
             } catch (Throwable t) {
                 LOGGER.error("Error cleaning up dangling siege at {}", key, t);
             }
+            broadcastSiegeEnded(siege);
             clearDefendingFlagIfNoSieges(siege.defendingFaction);
             LOGGER.warn("Pruned dangling siege at {} (participant or target no longer valid)", key);
         }
@@ -1765,12 +1845,95 @@ public class FactionStorage {
             sendFactionMemberLeftNotification(faction, toRemove, userProfile.getName(), !removingSelf);
         }
 
+        if (removingSelf) {
+            beginFactionRejoinCooldown(toRemove);
+            ServerPlayer leaver = MC_SERVER.getPlayerList().getPlayer(toRemove);
+            long cooldown = getFactionRejoinCooldownRemaining(toRemove);
+            if (leaver != null && cooldown > 0L) {
+                leaver.sendSystemMessage(Component.literal("You can join a faction again in " + TimeHelper.formatTime(cooldown)));
+            }
+        }
+
         if (faction.getMemberCount() < 1)
             disbandAndCleanup(faction);
 
         sendAllSiegeInfoToNearby();
 
         return true;
+    }
+
+    // --- Faction rejoin cooldown ---------------------------------------------------------------
+    // Leaving a faction of your own accord locks you out of joining any faction (the one you left
+    // included) for a while, so members cannot hop between factions on demand. Kicks and disbands do
+    // not start it: those are not the leaving player's choice.
+
+    public void beginFactionRejoinCooldown(UUID playerID) {
+        if (playerID == null || WarForgeConfig.FACTION_REJOIN_COOLDOWN_MINUTES <= 0) {
+            return;
+        }
+        factionRejoinCooldowns.put(playerID,
+                WarForgeMod.factionRejoinClock() + TimeHelper.minToMs(WarForgeConfig.FACTION_REJOIN_COOLDOWN_MINUTES));
+    }
+
+    // Milliseconds left on the cooldown, or 0 when the player may join. Expired entries are dropped.
+    public long getFactionRejoinCooldownRemaining(UUID playerID) {
+        if (playerID == null || WarForgeConfig.FACTION_REJOIN_COOLDOWN_MINUTES <= 0) {
+            return 0L;
+        }
+        Long readyAt = factionRejoinCooldowns.get(playerID);
+        if (readyAt == null) {
+            return 0L;
+        }
+        long remaining = readyAt - WarForgeMod.factionRejoinClock();
+        if (remaining <= 0L) {
+            factionRejoinCooldowns.remove(playerID);
+            return 0L;
+        }
+        return remaining;
+    }
+
+    public void clearFactionRejoinCooldown(UUID playerID) {
+        factionRejoinCooldowns.remove(playerID);
+    }
+
+    // Returns true (and tells the player why) when the join must be refused.
+    private boolean isBlockedByRejoinCooldown(Player player) {
+        if (player == null || isOp(player)) {
+            return false;
+        }
+        long remaining = getFactionRejoinCooldownRemaining(player.getUUID());
+        if (remaining <= 0L) {
+            return false;
+        }
+        player.sendSystemMessage(Component.literal("You recently left a faction. You can join a faction again in " + TimeHelper.formatTime(remaining)));
+        return true;
+    }
+
+    private void readFactionRejoinCooldowns(CompoundTag tags) {
+        factionRejoinCooldowns.clear();
+        ListTag list = tags.getList("factionRejoinCooldowns", Tag.TAG_COMPOUND);
+        for (Tag base : list) {
+            CompoundTag entry = (CompoundTag) base;
+            if (!entry.hasUUID("player")) {
+                continue;
+            }
+            factionRejoinCooldowns.put(entry.getUUID("player"), entry.getLong("readyAt"));
+        }
+    }
+
+    private void writeFactionRejoinCooldowns(CompoundTag tags) {
+        ListTag list = new ListTag();
+        long now = WarForgeMod.factionRejoinClock();
+        for (Map.Entry<UUID, Long> kvp : factionRejoinCooldowns.entrySet()) {
+            if (kvp.getValue() <= now) {
+                continue; // already expired, no point persisting it
+            }
+            CompoundTag entry = new CompoundTag();
+            entry.putUUID("player", kvp.getKey());
+            entry.putLong("readyAt", kvp.getValue());
+            list.add(entry);
+        }
+        tags.put("factionRejoinCooldowns", list);
     }
 
     public boolean requestInvitePlayerToMyFaction(Player factionOfficer, UUID invitee) {
@@ -1840,6 +2003,10 @@ public class FactionStorage {
             return;
         }
 
+        if (isBlockedByRejoinCooldown(player)) {
+            return;
+        }
+
         invalidateRedeemableInsuranceVault(player.getUUID(), player);
         inviter.addPlayer(player.getUUID());
         sendFactionMemberJoinedNotification(inviter, player);
@@ -1848,6 +2015,10 @@ public class FactionStorage {
     public void RequestAcceptInvite(Player player, String factionName) {
         if (getFactionOfPlayer(player.getUUID()) != null) {
             player.sendSystemMessage(Component.literal("You are already in a faction"));
+            return;
+        }
+
+        if (isBlockedByRejoinCooldown(player)) {
             return;
         }
 
@@ -3254,6 +3425,7 @@ public class FactionStorage {
 
         readConqueredChunks(tags);
         readRedeemableInsurance(tags);
+        readFactionRejoinCooldowns(tags);
 
         for (Siege siege : sieges.values()) {
             Faction defending = getFaction(siege.defendingFaction);
@@ -3317,6 +3489,7 @@ public class FactionStorage {
 
         writeConqueredChunks(tags);
         writeRedeemableInsurance(tags);
+        writeFactionRejoinCooldowns(tags);
     }
 
     private void readRedeemableInsurance(CompoundTag tags) {

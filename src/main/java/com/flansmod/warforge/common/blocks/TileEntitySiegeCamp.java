@@ -151,18 +151,20 @@ public class TileEntitySiegeCamp extends TileEntityClaim
 		if (!siegeStatus.isCleanup() && siege != null) {
 			// update siege info and notify all nearby
 			SiegeCampProgressInfo info = siege.GetSiegeInfo();
-			info.progress = siegeStatus.isFailed() ? -5 : info.completionPoint;
-			PacketSiegeCampProgressUpdate packet = new PacketSiegeCampProgressUpdate();
-			packet.info = info;
+			if (info != null) {
+				info.progress = siegeStatus.isFailed() ? -5 : info.completionPoint;
+				PacketSiegeCampProgressUpdate packet = new PacketSiegeCampProgressUpdate();
+				packet.info = info;
 
-			for (Player attacker : getAttacking().getOnlinePlayers(Objects::nonNull))
-				WarForgeMod.NETWORK.sendTo(packet, (ServerPlayer) attacker);
-			for (Player defender : defenders.getOnlinePlayers(Objects::nonNull))
-				WarForgeMod.NETWORK.sendTo(packet, (ServerPlayer) defender);
+				for (Player attacker : getAttacking().getOnlinePlayers(Objects::nonNull))
+					WarForgeMod.NETWORK.sendTo(packet, (ServerPlayer) attacker);
+				for (Player defender : defenders.getOnlinePlayers(Objects::nonNull))
+					WarForgeMod.NETWORK.sendTo(packet, (ServerPlayer) defender);
+			}
 
-			// attempt to actually modify siege information, now that all nearby have been updated
 			try {
 				siege.setAttackProgress(siegeStatus.isFailed() ? -5 : siege.GetAttackSuccessThreshold()); // ends siege
+				siege.forceOutcome(!siegeStatus.isFailed());
 				WarForgeMod.FACTIONS.handleCompletedSiege(siegeTarget.toChunkPos(), false); // performs check on completed sieges without invoking checks on unrelated sieges
 			} catch (Exception e) {
 				WarForgeMod.LOGGER.atError().log("Got exception when attempting to force end siege of: " + e + " with siegeTarget of: " + siegeTarget + " and pos of: " + getClaimPos());
@@ -216,7 +218,8 @@ public class TileEntitySiegeCamp extends TileEntityClaim
 
 			// if there are no players in the presence zone
 			Siege activeSiege = WarForgeMod.FACTIONS.getSieges().get(siegeTarget.toChunkPos());
-			if (activeSiege == null || !activeSiege.hasPresentAttacker()) {
+			boolean attackersPresent = activeSiege != null && activeSiege.hasPresentAttacker();
+			if (!attackersPresent) {
 				if (handleDesertion(true)) return; // cancel update if siege concludes
 			} else {
 				// stops at 0 and decrements gradually to stop attackers from popping into and out of warzone
@@ -245,8 +248,12 @@ public class TileEntitySiegeCamp extends TileEntityClaim
 			if (defenders.onlinePlayerCount > largestSeenDefenderCount) largestSeenDefenderCount = defenders.onlinePlayerCount; // update largest number of defenders seen
 			int numActiveDefenders = defenders.getOnlinePlayers(this::isDefenderInWarzone).size();
 
+			// Defender-side timers only advance while the siege is actually being pressed. With no
+			// attacker in the presence zone there is nothing to defend against, so the attackers can
+			// no longer win by the defenders "deserting" a siege that nobody is fighting: the attacker
+			// desertion timer above is then the only one running, and it fails the siege.
 			// check if the defenders have quit, and if not check if they are actively defending
-			boolean haveDefendersQuit = haveDefendersLiveQuit();
+			boolean haveDefendersQuit = attackersPresent && haveDefendersLiveQuit();
 			if (haveDefendersQuit) {
 				incrementOfflineTimer(WarForgeMod.currTickTimestamp - previousTimestamp); // if defenders have quit, tick up the offline timer
 				if (defenderOfflineTimerMs >= WarForgeConfig.LIVE_QUIT_TIMER) {
@@ -258,7 +265,7 @@ public class TileEntitySiegeCamp extends TileEntityClaim
 			} else {
 				// decrement offline timer
 				decrementOfflineTimer(WarForgeMod.currTickTimestamp - previousTimestamp);
-				if (numActiveDefenders < 1) {
+				if (attackersPresent && numActiveDefenders < 1) {
 					// if no active defenders, handle desertion status and increment timer accordingly
 					if (handleDesertion(false)) return; // calls appropriate siege end method
 				} else {

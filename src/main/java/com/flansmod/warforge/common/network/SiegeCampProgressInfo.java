@@ -36,6 +36,9 @@ public class SiegeCampProgressInfo {
     public int expiredTicks = 0;
     public boolean finished = false;
 
+    public static final int STALE_TICKS = 400;
+    public int staleTicks = 0;
+
     public static SiegeCampProgressInfo getDebugInfo() {
         SiegeCampProgressInfo info = new SiegeCampProgressInfo();
         info.defendingPos = new DimBlockPos(Level.OVERWORLD, 100, 64, 100);
@@ -57,12 +60,13 @@ public class SiegeCampProgressInfo {
 
 
     public void ClientTick() {
-        if ((progress <= -5 || progress >= completionPoint) || finished)  {
+        staleTicks++;
+        if (finished)  {
             expiredTicks++;
         }
     }
 
     public boolean Completed() {
-        return expiredTicks >= 100;
+        return expiredTicks >= 100 || staleTicks >= STALE_TICKS;
     }
 }

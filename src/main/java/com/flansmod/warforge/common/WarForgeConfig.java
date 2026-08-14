@@ -73,6 +73,7 @@ public class WarForgeConfig {
     public static boolean TICK_SIEGE_GRACE = false;
     public static boolean TICK_CITADEL_MOVE = false;
     public static boolean TICK_TRUCES = false;
+    public static boolean TICK_FACTION_REJOIN = false;
     public static long VEIN_MEMBER_DISPLAY_TIME_MS = 1000;
     public static float POOR_QUAL_MULT = 0.5f;
     public static float FAIR_QUAL_MULT = 1f;
@@ -104,6 +105,7 @@ public class WarForgeConfig {
     public static int OFFLINE_RAID_PROTECTION_HOURS = 24;
     public static boolean ENABLE_SIEGE_GRACE_PERIOD = true;
     public static int SIEGE_GRACE_PERIOD_HOURS = 24;
+    public static int FACTION_REJOIN_COOLDOWN_MINUTES = 10;
     public static int ATTACK_STRENGTH_SIEGE_CAMP = 1;
     public static float LEECH_PROPORTION_SIEGE_CAMP = 0.25f;
     public static boolean ENABLE_ISOLATED_CLAIMS = true;
@@ -375,6 +377,7 @@ public class WarForgeConfig {
     private static ForgeConfigSpec.IntValue OFFLINE_RAID_PROTECTION_HOURS_V;
     private static ForgeConfigSpec.BooleanValue ENABLE_SIEGE_GRACE_PERIOD_V;
     private static ForgeConfigSpec.IntValue SIEGE_GRACE_PERIOD_HOURS_V;
+    private static ForgeConfigSpec.IntValue FACTION_REJOIN_COOLDOWN_MINUTES_V;
     private static ForgeConfigSpec.IntValue CITADEL_MOVE_COOLDOWN_SECONDS_V;
     private static ForgeConfigSpec.IntValue CITADEL_MIN_Y_V;
     private static ForgeConfigSpec.BooleanValue ENABLE_CITADEL_UPGRADES_V;
@@ -446,6 +449,7 @@ public class WarForgeConfig {
     private static ForgeConfigSpec.BooleanValue TICK_SIEGE_GRACE_V;
     private static ForgeConfigSpec.BooleanValue TICK_CITADEL_MOVE_V;
     private static ForgeConfigSpec.BooleanValue TICK_TRUCES_V;
+    private static ForgeConfigSpec.BooleanValue TICK_FACTION_REJOIN_V;
     private static ForgeConfigSpec.DoubleValue POOR_QUAL_MULT_V;
     private static ForgeConfigSpec.DoubleValue FAIR_QUAL_MULT_V;
     private static ForgeConfigSpec.DoubleValue RICH_QUAL_MULT_V;
@@ -549,6 +553,7 @@ public class WarForgeConfig {
         OFFLINE_RAID_PROTECTION_HOURS_V = cfg.comment("How many hours a faction remains protected from new sieges after the last member goes offline.").defineInRange("Offline Raid Protection Hours", OFFLINE_RAID_PROTECTION_HOURS, 0, 168);
         ENABLE_SIEGE_GRACE_PERIOD_V = cfg.comment("If enabled, freshly created factions cannot be sieged for a grace period. If a graced faction starts a siege of its own, it forfeits its grace instantly.").define("Enable New Faction Siege Grace", ENABLE_SIEGE_GRACE_PERIOD);
         SIEGE_GRACE_PERIOD_HOURS_V = cfg.comment("How many hours a newly created faction stays unsiegeable. Disabling the feature above removes grace from all existing factions immediately.").defineInRange("New Faction Siege Grace Hours", SIEGE_GRACE_PERIOD_HOURS, 0, 8760);
+        FACTION_REJOIN_COOLDOWN_MINUTES_V = cfg.comment("How many minutes a player must wait after leaving a faction before they may join any faction again, including the one they just left. Stops faction hopping / join spam. Set to 0 to disable. Being kicked, or losing your faction to a disband, does not start the cooldown.").defineInRange("Faction Rejoin Cooldown Minutes", FACTION_REJOIN_COOLDOWN_MINUTES, 0, 100000);
         CITADEL_MOVE_COOLDOWN_SECONDS_V = cfg.comment("How many real-world seconds a faction has to wait before moving their citadel across chunks again.").defineInRange("Citadel Move Cooldown Seconds", CITADEL_MOVE_COOLDOWN_SECONDS, 0, Integer.MAX_VALUE);
         CITADEL_MIN_Y_V = cfg.comment("The minimum Y level a citadel can be placed or moved to. Placement below this is rejected. Defaults to sea level (63). Set at or below the world floor to disable.").defineInRange("Citadel Minimum Y", CITADEL_MIN_Y, -2048, 2048);
         ENABLE_CITADEL_UPGRADES_V = cfg.comment("Applies claim limits that require upgrading to extend your faction's claim limit").define("Enable Citadel Upgrade System", ENABLE_CITADEL_UPGRADES);
@@ -638,6 +643,7 @@ public class WarForgeConfig {
         TICK_SIEGE_GRACE_V = cfg.comment("New-faction siege grace period. " + tickComment).define("Tick-Based Siege Grace", TICK_SIEGE_GRACE);
         TICK_CITADEL_MOVE_V = cfg.comment("Citadel move cooldown. " + tickComment).define("Tick-Based Citadel Move Cooldown", TICK_CITADEL_MOVE);
         TICK_TRUCES_V = cfg.comment("Truce durations. " + tickComment).define("Tick-Based Truces", TICK_TRUCES);
+        TICK_FACTION_REJOIN_V = cfg.comment("Faction rejoin cooldown. " + tickComment).define("Tick-Based Faction Rejoin Cooldown", TICK_FACTION_REJOIN);
         POOR_QUAL_MULT_V = cfg.comment(String.format(qualityText, Quality.POOR)).defineInRange("Global Poor Quality Multiplier", (double) POOR_QUAL_MULT, 0d, 512d);
         FAIR_QUAL_MULT_V = cfg.comment(String.format(qualityText, Quality.FAIR)).defineInRange("Global Fair Quality Multiplier", (double) FAIR_QUAL_MULT, 0d, 512d);
         RICH_QUAL_MULT_V = cfg.comment(String.format(qualityText, Quality.RICH)).defineInRange("Global Rich Quality Multiplier", (double) RICH_QUAL_MULT, 0d, 512d);
@@ -873,6 +879,7 @@ public class WarForgeConfig {
         OFFLINE_RAID_PROTECTION_HOURS = OFFLINE_RAID_PROTECTION_HOURS_V.get();
         ENABLE_SIEGE_GRACE_PERIOD = ENABLE_SIEGE_GRACE_PERIOD_V.get();
         SIEGE_GRACE_PERIOD_HOURS = SIEGE_GRACE_PERIOD_HOURS_V.get();
+        FACTION_REJOIN_COOLDOWN_MINUTES = FACTION_REJOIN_COOLDOWN_MINUTES_V.get();
         CITADEL_MOVE_COOLDOWN_SECONDS = CITADEL_MOVE_COOLDOWN_SECONDS_V.get();
         CITADEL_MIN_Y = CITADEL_MIN_Y_V.get();
         ENABLE_CITADEL_UPGRADES = ENABLE_CITADEL_UPGRADES_V.get();
@@ -958,6 +965,7 @@ public class WarForgeConfig {
         TICK_SIEGE_GRACE = TICK_SIEGE_GRACE_V.get();
         TICK_CITADEL_MOVE = TICK_CITADEL_MOVE_V.get();
         TICK_TRUCES = TICK_TRUCES_V.get();
+        TICK_FACTION_REJOIN = TICK_FACTION_REJOIN_V.get();
         POOR_QUAL_MULT = POOR_QUAL_MULT_V.get().floatValue();
         FAIR_QUAL_MULT = FAIR_QUAL_MULT_V.get().floatValue();
         RICH_QUAL_MULT = RICH_QUAL_MULT_V.get().floatValue();

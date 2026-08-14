@@ -10,11 +10,13 @@ import com.flansmod.warforge.server.Faction;
 import com.flansmod.warforge.server.fob.Fob;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
@@ -86,6 +88,12 @@ public class BlockFob extends Block implements EntityBlock {
             return InteractionResult.SUCCESS;
         }
 
+        // Sneak-interact takes the FOB back instead of opening its UI.
+        if (player.isSecondaryUseActive()) {
+            tryPickUp(world, pos, player, fob);
+            return InteractionResult.SUCCESS;
+        }
+
         Faction playerFaction = WarForgeMod.FACTIONS.getFactionOfPlayer(player.getUUID());
         boolean established = !fob.ownerFaction.equals(Faction.nullUuid);
         boolean isOfficer = playerFaction != null
@@ -108,6 +116,47 @@ public class BlockFob extends Block implements EntityBlock {
             FobGuiFactory.INSTANCE.open(serverPlayer, pos);
         }
         return InteractionResult.SUCCESS;
+    }
+
+    public static void tryPickUp(Level world, BlockPos pos, Player player, TileEntityFob fobTe) {
+        DimChunkPos chunk = new DimChunkPos(world.dimension(), pos);
+        Fob fob = WarForgeMod.FOBS.getFobAt(chunk);
+        boolean established = !fobTe.ownerFaction.equals(Faction.nullUuid);
+        boolean isOp = WarForgeMod.isOp(player);
+        Faction playerFaction = WarForgeMod.FACTIONS.getFactionOfPlayer(player.getUUID());
+        boolean isOfficer = playerFaction != null
+                && playerFaction.isPlayerRoleInFaction(player.getUUID(), Faction.Role.OFFICER);
+
+        if (established) {
+            if (!isOp && (playerFaction == null || !playerFaction.uuid.equals(fobTe.ownerFaction) || !isOfficer)) {
+                player.sendSystemMessage(Component.literal("Only an officer of the owning faction can pick up this FOB"));
+                return;
+            }
+            if (WarForgeMod.FACTIONS.isFactionInActiveSiege(fobTe.ownerFaction)) {
+                player.sendSystemMessage(Component.literal("You cannot pick up a FOB while your faction is in a siege"));
+                return;
+            }
+        } else if (!isOp && !player.getUUID().equals(fobTe.placer) && !isOfficer) {
+            player.sendSystemMessage(Component.literal("You are not allowed to pick up this FOB"));
+            return;
+        }
+
+        if (WarForgeMod.FACTIONS.isChunkContested(chunk)) {
+            player.sendSystemMessage(Component.literal("You cannot pick up a FOB inside a siege zone"));
+            return;
+        }
+
+        if (fob != null) {
+            WarForgeMod.FOBS.destroyFob(fob);
+        } else {
+            world.removeBlock(pos, false);
+        }
+
+        ItemStack drop = new ItemStack(Content.FOB_BLOCK_ITEM.get());
+        if (!player.getInventory().add(drop)) {
+            player.drop(drop, false);
+        }
+        player.sendSystemMessage(Component.literal("Picked up the FOB"));
     }
 
     @Override
